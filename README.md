@@ -1,1 +1,1 @@
-# [surrplexie](https://surrplexie.github.io/)
+# [Surrplexie](https://surrplexie.github.io/)
