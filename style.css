@@ -1,27 +1,126 @@
+/* Import a tech-friendly font */
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap');
+
+:root {
+    /* Color Palette */
+    --color-bg: #1e1e1e;       /* Dark background */
+    --color-text: #f0f0f0;     /* Light text */
+    --color-primary: #00bcd4;  /* Cyan/Aqua highlight for tech feel */
+    --color-secondary: #333333;/* Card/Box background */
+    --color-accent: #ff9800;   /* Orange for buttons/links */
+}
+
 body {
-    font-family: Arial, sans-serif;
-    line-height: 1.6;
+    font-family: 'Roboto Mono', monospace;
+    background-color: var(--color-bg);
+    color: var(--color-text);
     margin: 0;
     padding: 0;
-    text-align: center;
+    line-height: 1.6;
 }
 
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* --- Header & Navigation --- */
 header {
-    background: #333;
-    color: white;
-    padding: 1em 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 0;
+    border-bottom: 2px solid var(--color-secondary);
 }
 
-#about {
-    padding: 20px;
+.logo {
+    font-size: 1.5em;
+    color: var(--color-primary);
 }
 
-button {
-    background-color: #007bff;
-    color: white;
+nav a {
+    color: var(--color-text);
+    text-decoration: none;
+    margin-left: 20px;
+    transition: color 0.3s;
+}
+
+nav a:hover {
+    color: var(--color-primary);
+}
+
+/* --- Main Content Cards --- */
+main {
+    padding: 40px 0;
+}
+
+.card {
+    background-color: var(--color-secondary);
+    padding: 30px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    border-left: 5px solid var(--color-primary); /* Unique accent line */
+}
+
+h2 {
+    color: var(--color-primary);
+    border-bottom: 1px solid var(--color-secondary);
+    padding-bottom: 5px;
+}
+
+/* --- Buttons & Links (Interactivity) --- */
+.cta-button {
+    background-color: var(--color-accent);
+    color: var(--color-bg); /* Dark text on bright button */
     border: none;
     padding: 10px 20px;
-    margin-top: 10px;
+    margin-top: 15px;
     cursor: pointer;
+    font-family: inherit;
+    font-weight: 700;
+    border-radius: 4px;
+    transition: background-color 0.3s;
 }
 
+.cta-button:hover {
+    background-color: #e68900;
+}
+
+.snippet-box {
+    margin-top: 20px;
+    padding: 15px;
+    border: 1px dashed var(--color-text);
+    background-color: #282828;
+}
+
+.cta-link {
+    color: var(--color-accent);
+    text-decoration: none;
+    font-weight: 700;
+    display: block;
+    margin-top: 10px;
+}
+
+/* --- Focus Grid Section --- */
+.grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    padding: 0; /* Remove padding from .card */
+}
+
+.focus-item {
+    background-color: #282828; /* Slightly different background */
+    padding: 20px;
+    border-radius: 4px;
+}
+
+/* --- Footer --- */
+footer {
+    text-align: center;
+    padding: 20px 0;
+    border-top: 1px solid var(--color-secondary);
+    font-size: 0.8em;
+    color: #888;
+}
