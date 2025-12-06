@@ -3,31 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Interactive Profile</title>
+    <title>Surrplexie | Tech Profile</title>
     <link rel="stylesheet" href="style.css"> 
 </head>
 <body>
-    
-    <header>
-        <h1>Hello, I'm [Your Name]</h1>
+    <header class="container">
+        <h1 class="logo">Surrplexie // Profile</h1>
         <nav>
-            <a href="projects/">View My Projects</a> | 
-            <a href="contact.html">Contact Me</a> 
+            <a href="#about">About</a>
+            <a href="certs/">Certifications</a> 
+            <a href="labs/">Labs & Projects</a> 
+            <a href="contact.html">Contact</a>
         </nav>
     </header>
 
-    <main>
-        <section id="about">
-            <h2>About Me</h2>
-            <p>This is a paragraph about me. I'm excited to learn web development!</p>
-            <button id="toggleButton">Click for a surprise!</button>
-            <p id="surpriseText" style="display:none;">🎉 This text appeared using JavaScript! 🎉</p>
+    <main class="container">
+        <section id="about" class="card">
+            <h2>> Hello World.</h2>
+            <p>I'm Surrplexie, a tech enthusiast dedicated to continuous learning in networking, security, and cloud infrastructure. This profile showcases my hands-on labs, certifications, and expertise in modern IT environments.</p>
+            <button id="toggleButton" class="cta-button">View Resume Snippet</button>
+            <div id="surpriseText" class="snippet-box" style="display:none;">
+                <p><strong>Focus Areas:</strong> Cybersecurity, Cloud Services (AWS/Azure), and Network Administration.</p>
+            </div>
         </section>
-        
-        </main>
+
+        <section id="focus" class="card grid-2">
+            <div class="focus-item">
+                <h3>Certified Skills</h3>
+                <p>Explore my validated expertise in industry-standard technologies.</p>
+                <a href="certs/" class="cta-link">View Certifications &rarr;</a>
+            </div>
+            <div class="focus-item">
+                <h3>Hands-on Labs</h3>
+                <p>See practical applications of my knowledge in real-world scenarios.</p>
+                <a href="labs/" class="cta-link">View Labs & Projects &rarr;</a>
+            </div>
+        </section>
+
+    </main>
 
     <footer>
-        <p>&copy; 2025</p>
+        <p>&#169; 2025 Surrplexie | Built on GitHub Pages</p>
     </footer>
 
     <script src="script.js"></script>
