@@ -3,20 +3,28 @@
 
 :root {
     /* Color Palette */
-    --color-bg: #1e1e1e;       /* Dark background */
+    --color-bg: rgba(30, 30, 30, 0.85); /* Slightly transparent background for content boxes */
     --color-text: #f0f0f0;     /* Light text */
     --color-primary: #00bcd4;  /* Cyan/Aqua highlight for tech feel */
-    --color-secondary: #333333;/* Card/Box background */
+    --color-secondary: rgba(51, 51, 51, 0.95); /* Card/Box background (slightly less transparent) */
     --color-accent: #ff9800;   /* Orange for buttons/links */
 }
 
 body {
     font-family: 'Roboto Mono', monospace;
-    background-color: var(--color-bg);
+    /* --- NEW BACKGROUND IMAGE CSS --- */
+    background-image: url('https://i.imgur.com/h3b8Ota.jpeg');
+    background-size: cover;          /* Ensures the image covers the entire body */
+    background-repeat: no-repeat;    /* Prevents the image from tiling */
+    background-attachment: fixed;    /* Keeps the image static in the viewport */
+    background-position: center center; /* Centers the image */
+    /* --- END NEW BACKGROUND IMAGE CSS --- */
+
     color: var(--color-text);
     margin: 0;
     padding: 0;
     line-height: 1.6;
+    /* We remove the background-color here since we're using the image */
 }
 
 .container {
@@ -31,6 +39,8 @@ header {
     justify-content: space-between;
     align-items: center;
     padding: 20px 0;
+    /* Use a dark, slightly transparent color for the header background */
+    background-color: rgba(30, 30, 30, 0.95); 
     border-bottom: 2px solid var(--color-secondary);
 }
 
@@ -56,11 +66,12 @@ main {
 }
 
 .card {
-    background-color: var(--color-secondary);
+    /* Set the content cards to a slightly transparent dark background to let the image show through */
+    background-color: var(--color-secondary); 
     padding: 30px;
     border-radius: 8px;
     margin-bottom: 30px;
-    border-left: 5px solid var(--color-primary); /* Unique accent line */
+    border-left: 5px solid var(--color-primary);
 }
 
 h2 {
@@ -72,19 +83,8 @@ h2 {
 /* --- Buttons & Links (Interactivity) --- */
 .cta-button {
     background-color: var(--color-accent);
-    color: var(--color-bg); /* Dark text on bright button */
-    border: none;
-    padding: 10px 20px;
-    margin-top: 15px;
-    cursor: pointer;
-    font-family: inherit;
-    font-weight: 700;
-    border-radius: 4px;
-    transition: background-color 0.3s;
-}
-
-.cta-button:hover {
-    background-color: #e68900;
+    color: #1e1e1e; /* Ensure dark text on bright button */
+    /* ... (rest of the button styles) */
 }
 
 .snippet-box {
@@ -107,11 +107,11 @@ h2 {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
-    padding: 0; /* Remove padding from .card */
+    padding: 0;
 }
 
 .focus-item {
-    background-color: #282828; /* Slightly different background */
+    background-color: rgba(40, 40, 40, 0.95); /* Slightly different, semi-transparent background */
     padding: 20px;
     border-radius: 4px;
 }
@@ -120,6 +120,7 @@ h2 {
 footer {
     text-align: center;
     padding: 20px 0;
+    background-color: rgba(30, 30, 30, 0.9); /* Dark, semi-transparent footer */
     border-top: 1px solid var(--color-secondary);
     font-size: 0.8em;
     color: #888;
