@@ -1,1 +1,161 @@
-text
+/* Import a tech-friendly font */
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap');
+
+:root {
+    --color-bg: rgba(30, 30, 30, 0.85);
+    --color-text: #f0f0f0;
+    --color-primary: #00bcd4;  /* Cyan */
+    --color-secondary: rgba(51, 51, 51, 0.95);
+    --color-accent: #ff9800;   /* Orange */
+}
+
+/* --- Base Styles --- */
+body {
+    font-family: 'Roboto Mono', monospace;
+    background-image: url('https://i.imgur.com/tmrviyl.png');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-position: center center;
+    color: var(--color-text);
+    margin: 0;
+    padding: 0;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* --- Navigation --- */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 0;
+    background-color: rgba(30, 30, 30, 0.95); 
+    border-bottom: 2px solid var(--color-secondary);
+}
+
+.logo {
+    font-size: 1.5em;
+    color: var(--color-primary);
+}
+
+nav a {
+    color: var(--color-text);
+    text-decoration: none;
+    margin-left: 20px;
+    transition: color 0.3s;
+}
+
+nav a:hover {
+    color: var(--color-primary);
+}
+
+/* --- Content Cards (MERGED) --- */
+main {
+    padding: 40px 0;
+}
+
+.card {
+    /* Combined styles for transparency, glassmorphism, and borders */
+    background: rgba(30, 30, 30, 0.6); 
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 30px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    border-left: 5px solid var(--color-primary);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+h2 {
+    color: var(--color-primary);
+    border-bottom: 1px solid var(--color-secondary);
+    padding-bottom: 5px;
+}
+
+/* --- Interactive Elements --- */
+.focus-item {
+    background-color: rgba(40, 40, 40, 0.95);
+    padding: 20px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.focus-item:hover {
+    transform: translateY(-5px);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 15px rgba(0, 188, 212, 0.2);
+}
+
+.cta-button {
+    background-color: var(--color-accent);
+    color: #1e1e1e;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.cta-link {
+    color: var(--color-accent);
+    text-decoration: none;
+    font-weight: 700;
+    display: block;
+    margin-top: 10px;
+}
+
+/* --- Layout Grid --- */
+.grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+/* --- Scroll Reveal Classes --- */
+.reveal-hidden {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: all 0.8s ease-out;
+}
+
+.reveal-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* --- Footer --- */
+footer {
+    text-align: center;
+    padding: 20px 0;
+    background-color: rgba(30, 30, 30, 0.9);
+    border-top: 1px solid var(--color-secondary);
+    font-size: 0.8em;
+    color: #888;
+}
+
+/* --- Mobile Responsiveness --- */
+@media (max-width: 600px) {
+    .grid-2 {
+        grid-template-columns: 1fr;
+    }
+    header {
+        flex-direction: column;
+        text-align: center;
+    }
+    nav {
+        margin-top: 15px;
+    }
+    nav a {
+        margin: 0 10px;
+    }
+}
