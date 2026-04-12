@@ -74,15 +74,19 @@ main {
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
-/* Ensure all images inside cards/items never overflow */
+/* Ensure images never exceed container boundaries and maintain aspect ratio */
 .card img, 
 .focus-item img {
-    max-width: 100%;
-    height: auto;
-    display: block;
-    margin: 15px 0; /* Adds spacing above/below the image */
-    border-radius: 4px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    max-width: 100%;    /* Won't grow wider than the box */
+    height: auto;       /* Maintains original aspect ratio */
+    display: block;     /* Removes bottom whitespace/line-height gaps */
+    box-sizing: border-box; /* Includes padding/border in the width calculation */
+    object-fit: contain;    /* Ensures the whole image fits if a height is set */
+}
+
+/* Safety measure for the parent container */
+.card, .focus-item {
+    overflow: hidden;   /* Clips any content that might try to leak out */
 }
 
 h2 {
