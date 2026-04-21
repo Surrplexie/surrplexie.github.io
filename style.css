@@ -12,7 +12,8 @@
 /* --- Base Styles --- */
 body {
     font-family: 'Roboto Mono', monospace;
-    background-image: url('https://raw.githubusercontent.com/Surrplexie/surrplexie.github.io/Media/Untitled.png');    background-size: cover;
+    background-image: url('images/Untitled.png');
+    background-size: cover;
     background-repeat: no-repeat;
     background-attachment: fixed;
     background-position: center center;
