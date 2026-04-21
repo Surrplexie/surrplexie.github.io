@@ -9,6 +9,8 @@
     --color-accent: #ff9800;   /* Orange */
     --container-max: 1000px;
     --container-pad: clamp(16px, 4vw, 40px);
+    /* Top nav bar width as % of viewport (80–90% range) */
+    --banner-width: clamp(80vw, 86vw, 90vw);
 }
 
 /* --- Base Styles --- */
@@ -33,14 +35,25 @@ body {
     box-sizing: border-box;
 }
 
-/* --- Navigation --- */
-header {
+/* --- Navigation (banner spans ~85% of screen width, centered) --- */
+.site-banner {
+    width: var(--banner-width);
+    max-width: 100%;
+    margin: 0 auto;
+    box-sizing: border-box;
+    background-color: rgba(30, 30, 30, 0.95);
+    border-bottom: 2px solid var(--color-secondary);
+    border-radius: 0 0 10px 10px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+}
+
+.site-banner .banner-inner {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px 0;
-    background-color: rgba(30, 30, 30, 0.95); 
-    border-bottom: 2px solid var(--color-secondary);
+    gap: 16px;
+    padding: 20px var(--container-pad);
+    box-sizing: border-box;
 }
 
 .logo {
@@ -264,9 +277,8 @@ footer {
 
 /* --- Mobile Responsiveness --- */
 @media (max-width: 900px) {
-    header {
+    .site-banner .banner-inner {
         flex-wrap: wrap;
-        gap: 12px;
     }
 
     nav a {
@@ -282,7 +294,11 @@ footer {
     .grid-2 {
         grid-template-columns: 1fr;
     }
-    header {
+    .site-banner {
+        width: min(var(--banner-width), 100%);
+        border-radius: 0;
+    }
+    .site-banner .banner-inner {
         flex-direction: column;
         text-align: center;
     }
