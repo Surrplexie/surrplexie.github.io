@@ -1,0 +1,49 @@
+/* Container for the boxes */
+.social-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 15px;
+    padding: 20px;
+    list-style: none; /* Removes bullet points if using <li> */
+}
+
+/* Base style for each box */
+.social-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 25px;
+    text-decoration: none;
+    border-radius: 15px;
+    color: white !important; /* Forces text to stay white */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.social-box i {
+    font-size: 2.5rem;
+    margin-bottom: 12px;
+}
+
+.social-box:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 20px rgba(0,0,0,0.2);
+    filter: brightness(1.1);
+}
+
+/* Brand Colors */
+.proton { background-color: #6d4aff; }
+.gmail { background-color: #DB4437; }
+.discord { background-color: #5865F2; }
+.linkedin { background-color: #0077B5; }
+.instagram { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
+.pinterest { background-color: #BD081C; }
+.reddit { background-color: #FF4500; }
+.snapchat { background-color: #FFFC00; color: #000 !important; } /* Snap is yellow, text must be black */
+.tiktok { background-color: #000000; border: 1px solid #ff0050; }
+.twitch { background-color: #9146FF; }
+.youtube { background-color: #FF0000; }
+.x-twitter { background-color: #000000; }
