@@ -1,0 +1,11 @@
+title: "Kai Morgan"
+footer_text: "© Surrplexie | Built on GitHub Pages"
+url: "https://surrplexie.github.io"
+baseurl: ""
+
+exclude:
+  - README.md
+  - SECURITY.md
+  - Gemfile
+  - Gemfile.lock
+  - images/README.md

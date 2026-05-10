@@ -1,26 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kai Morgan | IT Support &amp; Help Desk</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css"> 
-</head>
-<body>
-    <header class="site-banner">
-        <div class="banner-inner">
-            <h1 class="logo">Kai Morgan // IT Support &amp; Help Desk</h1>
-            <nav>
-                <a href="index.html">Home</a>
-                <a href="certs/">Certifications</a> 
-                <a href="labs/">Labs & Projects</a> 
-                <a href="socials/">Socials</a>
-            </nav>
-        </div>
-    </header>
-
-    <main class="container">
+---
+layout: default
+title: Kai Morgan | IT Support & Help Desk
+banner_title: "Kai Morgan // IT Support & Help Desk"
+scripts:
+  - /script.js
+---
         <div class="layout-intro">
         <section id="about" class="card">
             <h2>IT support &amp; help desk</h2>
@@ -39,7 +23,7 @@
             </p>
             <p>
                 I am open to <strong>internships and part-time IT support</strong> roles where I can take tickets, learn
-                your stack, and contribute reliably on a team. You can reach me on my <a href="socials/">socials
+                your stack, and contribute reliably on a team. You can reach me on my <a href="{{ '/socials/' | relative_url }}">socials
                 page</a>.
             </p>
             <p>
@@ -47,7 +31,7 @@
             </p>
 
             <button id="toggleButton" class="cta-button">View Resume Snippet</button>
-            
+
             <div id="surpriseText" class="snippet-box" style="display:none; margin-top: 15px; padding: 15px; border-left: 3px solid #00ff00; background: #1a1a1a; line-height: 1.6;">
                 <p><strong>Goal:</strong> Internship or entry-level IT support / help desk.</p>
                 <p><strong>Support-focused:</strong> Windows 10/11, troubleshooting mindset, documentation, VirtualBox.</p>
@@ -75,7 +59,7 @@
             </ul>
             <h3 class="aside-subheading">Links</h3>
             <ul class="aside-links">
-                <li><a href="socials/">Contact &amp; socials</a></li>
+                <li><a href="{{ '/socials/' | relative_url }}">Contact &amp; socials</a></li>
                 <li><a href="https://www.linkedin.com/in/surrplexie/">LinkedIn</a></li>
                 <li><a href="https://github.com/surrplexie">GitHub</a></li>
             </ul>
@@ -86,20 +70,11 @@
             <div class="focus-item">
                 <h3>Certifications</h3>
                 <p>Credentials and coursework that support an IT support and help desk path.</p>
-                <a href="certs/" class="cta-link">View Certifications &rarr;</a>
+                <a href="{{ '/certs/' | relative_url }}" class="cta-link">View Certifications &rarr;</a>
             </div>
             <div class="focus-item">
                 <h3>Labs &amp; projects</h3>
                 <p>Hands-on work: tools, lab write-ups, and projects I can talk through in an interview.</p>
-                <a href="labs/" class="cta-link">View Labs & Projects &rarr;</a>
+                <a href="{{ '/labs/' | relative_url }}" class="cta-link">View Labs & Projects &rarr;</a>
             </div>
         </section>
-
-    </main>
-
-    <footer>
-        <p>&#169; Surrplexie | Built on GitHub Pages</p>
-    </footer>
-        <script src="script.js"></script>
-</body>
-</html>

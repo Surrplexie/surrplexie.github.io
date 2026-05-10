@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if page.title %}{{ page.title | xml_escape }}{% else %}{{ site.title | xml_escape }}{% endif %}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ '/style.css' | relative_url }}">
+    {% if page.extra_stylesheets %}
+    {% for sheet in page.extra_stylesheets %}
+    <link rel="stylesheet" href="{{ sheet | prepend: '/' | relative_url }}">
+    {% endfor %}
+    {% endif %}
+</head>
+<body>
+    <header class="site-banner">
+        <div class="banner-inner">
+            <h1 class="logo">{{ page.banner_title | default: site.title }}</h1>
+            <nav>
+                <a href="{{ '/' | relative_url }}">Home</a>
+                <a href="{{ '/certs/' | relative_url }}">Certifications</a>
+                <a href="{{ '/labs/' | relative_url }}">Labs &amp; Projects</a>
+                <a href="{{ '/socials/' | relative_url }}">Socials</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        {{ content }}
+    </main>
+
+    <footer>
+        <p>{{ site.footer_text }}</p>
+    </footer>
+    {% if page.scripts %}
+    {% for script in page.scripts %}
+    <script src="{{ script | relative_url }}"></script>
+    {% endfor %}
+    {% endif %}
+</body>
+</html>
