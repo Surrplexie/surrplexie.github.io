@@ -7,74 +7,84 @@ scripts:
 ---
         <div class="layout-intro">
         <section id="about" class="card">
-            <h2>IT support &amp; help desk</h2>
+            <h2>IT Support &amp; Help Desk</h2>
             <p>
-                Hi, I am <strong>Kai Morgan</strong>. I am pursuing my first role in <strong>IT support, help desk, or
-                desktop support</strong>. I enjoy troubleshooting hardware and software, walking users through fixes,
-                documenting what I did, and learning how systems fit together in a real environment.
+                I am <strong>Kai Morgan</strong>, an IT student actively pursuing an entry-level role in
+                <strong>IT support, help desk, or desktop support</strong>. My focus is on methodical
+                troubleshooting, clear user communication, thorough documentation, and understanding how
+                systems integrate in a production environment.
             </p>
             <p>
-                I am earning an Associate degree in <strong>IT Computer Support Specialist</strong> at MATC (GPA:
-                3.2/4.0), with optional plans to add <strong>IT Information Systems Security</strong>. Day-one skills I
-                am building include <strong>Windows 10/11</strong>, <strong>virtual machines</strong> (VirtualBox),
-                basic <strong>networking</strong> concepts, and comfort on <strong>Linux</strong> (Ubuntu, Kali) for
-                labs. I am also exploring <strong>reverse engineering and security analysis</strong> through CTFs and
-                personal projects—that is a growth area, not what I am leading with for a first IT job.
+                I am completing an Associate of Applied Science in <strong>IT Computer Support Specialist</strong>
+                at Milwaukee Area Technical College (GPA: 3.2&thinsp;/&thinsp;4.0), with a planned concentration in
+                <strong>IT Information Systems Security</strong>. Core technical areas include
+                <strong>Windows 10/11</strong> administration, <strong>virtualization</strong> (VirtualBox),
+                foundational <strong>networking</strong> (TCP/IP, DNS, DHCP), and hands-on
+                <strong>Linux</strong> experience (Ubuntu, Kali) through lab environments. I supplement this
+                with independent study in security analysis, reverse engineering, and CTF participation—
+                treated as a growth discipline separate from my primary support focus.
             </p>
             <p>
-                I am open to <strong>internships and part-time IT support</strong> roles where I can take tickets, learn
-                your stack, and contribute reliably on a team. You can reach me on my <a href="{{ '/socials/' | relative_url }}">socials
-                page</a>.
-            </p>
-            <p>
-                <strong>Site is WIP!</strong>
+                I am available for <strong>internships, part-time IT support positions, and entry-level
+                help desk roles</strong> where I can contribute reliably, learn your environment, and build
+                toward a long-term career in IT. Professional inquiries are welcome via the
+                <a href="{{ '/socials/' | relative_url }}">contact page</a>.
             </p>
 
-            <button id="toggleButton" class="cta-button">View Resume Snippet</button>
+            <button
+                id="resumeToggle"
+                class="cta-button"
+                aria-expanded="false"
+                aria-controls="resumeSnippet"
+            >View Key Qualifications</button>
 
-            <div id="surpriseText" class="snippet-box" style="display:none; margin-top: 15px; padding: 15px; border-left: 3px solid #00ff00; background: #1a1a1a; line-height: 1.6;">
-                <p><strong>Goal:</strong> Internship or entry-level IT support / help desk.</p>
-                <p><strong>Support-focused:</strong> Windows 10/11, troubleshooting mindset, documentation, VirtualBox.</p>
-                <p><strong>Also learning:</strong> Linux (Ubuntu/Kali), Wireshark, Nmap; IDA/Ghidra for lab and CTF work.</p>
-                <p><strong>Education:</strong> IT Computer Support Specialist @ MATC (GPA: 3.2).</p>
-                <p><strong>Certifications:</strong> CompTIA A+ &amp; Security+ (in progress); Microsoft Enterprise Desktop Support Specialist.</p>
+            <div id="resumeSnippet" class="snippet-box" role="region" aria-label="Key qualifications summary">
+                <p><strong>Objective:</strong> Internship or entry-level IT support / help desk role.</p>
+                <p><strong>Support skills:</strong> Windows 10/11 administration, hardware and software troubleshooting, user communication, ticket documentation, VirtualBox.</p>
+                <p><strong>Also proficient:</strong> Linux (Ubuntu, Kali), Wireshark, Nmap; IDA Pro / Ghidra for lab and CTF work.</p>
+                <p><strong>Education:</strong> A.A.S. IT Computer Support Specialist &mdash; Milwaukee Area Technical College (GPA: 3.2).</p>
+                <p><strong>Certifications:</strong> Microsoft Enterprise Desktop Support Specialist (earned); CompTIA A+ &amp; Security+ (in progress).</p>
             </div>
         </section>
 
         <aside class="card card-aside" aria-label="Profile summary">
-            <h3>At a glance</h3>
+            <h3>At a Glance</h3>
             <ul class="aside-list">
                 <li><strong>Target roles:</strong> Help desk, desktop support, IT internship</li>
-                <li><strong>Program:</strong> MATC — IT Computer Support Specialist (A.A.S.)</li>
+                <li><strong>Program:</strong> MATC &mdash; IT Computer Support Specialist (A.A.S.)</li>
                 <li><strong>GPA:</strong> 3.2 / 4.0</li>
             </ul>
-            <h3 class="aside-subheading">Skills in progress</h3>
+            <h3 class="aside-subheading">Technical Skills</h3>
             <ul class="skill-tags">
                 <li>Windows 10/11</li>
                 <li>Troubleshooting</li>
                 <li>Documentation</li>
                 <li>VirtualBox</li>
-                <li>Networking basics</li>
-                <li>Linux (labs)</li>
+                <li>Networking</li>
+                <li>Linux</li>
+                <li>Wireshark</li>
+                <li>Python</li>
             </ul>
             <h3 class="aside-subheading">Links</h3>
             <ul class="aside-links">
-                <li><a href="{{ '/socials/' | relative_url }}">Contact &amp; socials</a></li>
-                <li><a href="https://www.linkedin.com/in/surrplexie/">LinkedIn</a></li>
-                <li><a href="https://github.com/surrplexie">GitHub</a></li>
+                <li><a href="{{ '/socials/' | relative_url }}">Contact &amp; Socials</a></li>
+                <li><a href="https://www.linkedin.com/in/surrplexie/" rel="noopener noreferrer" target="_blank">LinkedIn</a></li>
+                <li><a href="https://github.com/surrplexie" rel="noopener noreferrer" target="_blank">GitHub</a></li>
+                <li><a href="{{ '/certs/' | relative_url }}">Certifications</a></li>
+                <li><a href="{{ '/labs/' | relative_url }}">Labs &amp; Projects</a></li>
             </ul>
         </aside>
         </div>
 
-        <section id="focus" class="card grid-2">
+        <section id="focus" class="card grid-2" aria-label="Site sections">
             <div class="focus-item">
                 <h3>Certifications</h3>
-                <p>Credentials and coursework that support an IT support and help desk path.</p>
+                <p>Industry credentials and coursework validating a structured IT support and help desk skill set.</p>
                 <a href="{{ '/certs/' | relative_url }}" class="cta-link">View Certifications &rarr;</a>
             </div>
             <div class="focus-item">
-                <h3>Labs &amp; projects</h3>
-                <p>Hands-on work: tools, lab write-ups, and projects I can talk through in an interview.</p>
-                <a href="{{ '/labs/' | relative_url }}" class="cta-link">View Labs & Projects &rarr;</a>
+                <h3>Labs &amp; Projects</h3>
+                <p>Hands-on technical work including tools, documented lab exercises, and projects suitable for interview discussion.</p>
+                <a href="{{ '/labs/' | relative_url }}" class="cta-link">View Labs &amp; Projects &rarr;</a>
             </div>
         </section>

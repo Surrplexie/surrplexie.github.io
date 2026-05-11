@@ -4,13 +4,39 @@
 :root {
     --color-bg: rgba(30, 30, 30, 0.85);
     --color-text: #f0f0f0;
-    --color-primary: #00bcd4;  /* Cyan */
+    --color-primary: #00bcd4;
     --color-secondary: rgba(51, 51, 51, 0.95);
-    --color-accent: #ff9800;   /* Orange */
+    --color-accent: #ff9800;
+    --color-success: #4caf50;
+    --color-muted: #888;
     --container-max: 1000px;
     --container-pad: clamp(16px, 4vw, 40px);
-    /* Top nav bar width as % of viewport (80–90% range) */
     --banner-width: clamp(80vw, 86vw, 90vw);
+    --focus-outline: 2px solid var(--color-primary);
+    --focus-offset: 3px;
+}
+
+/* --- Skip Link --- */
+.skip-link {
+    position: absolute;
+    top: -100%;
+    left: 16px;
+    z-index: 9999;
+    background: var(--color-primary);
+    color: #000;
+    font-family: 'Roboto Mono', monospace;
+    font-weight: 700;
+    font-size: 0.9em;
+    padding: 8px 16px;
+    border-radius: 0 0 6px 6px;
+    text-decoration: none;
+    transition: top 0.15s ease;
+}
+
+.skip-link:focus {
+    top: 0;
+    outline: var(--focus-outline);
+    outline-offset: var(--focus-offset);
 }
 
 /* --- Base Styles --- */
@@ -35,7 +61,7 @@ body {
     box-sizing: border-box;
 }
 
-/* --- Navigation (banner spans ~85% of screen width, centered) --- */
+/* --- Navigation --- */
 .site-banner {
     width: var(--banner-width);
     max-width: 100%;
@@ -67,21 +93,33 @@ nav a {
     color: var(--color-text);
     text-decoration: none;
     margin-left: 20px;
-    transition: color 0.3s;
+    padding-bottom: 2px;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
 }
 
 nav a:hover {
     color: var(--color-primary);
 }
 
-/* --- Content Cards (MERGED) --- */
+nav a[aria-current="page"] {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+}
+
+nav a:focus-visible {
+    outline: var(--focus-outline);
+    outline-offset: var(--focus-offset);
+    border-radius: 2px;
+}
+
+/* --- Content Cards --- */
 main {
     padding: 40px 0;
 }
 
 .card {
-    /* Combined styles for transparency, glassmorphism, and borders */
-    background: rgba(30, 30, 30, 0.6); 
+    background: rgba(30, 30, 30, 0.6);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     padding: 30px;
@@ -94,25 +132,24 @@ main {
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
-/* Ensure images never exceed container boundaries and maintain aspect ratio */
-.card img, 
+.card img,
 .focus-item img {
-    max-width: 100%;    /* Won't grow wider than the box */
-    height: auto;       /* Maintains original aspect ratio */
-    display: block;     /* Removes bottom whitespace/line-height gaps */
-    box-sizing: border-box; /* Includes padding/border in the width calculation */
-    object-fit: contain;    /* Ensures the whole image fits if a height is set */
+    max-width: 100%;
+    height: auto;
+    display: block;
+    box-sizing: border-box;
+    object-fit: contain;
 }
 
-/* Safety measure for the parent container */
 .card, .focus-item {
-    overflow: hidden;   /* Clips any content that might try to leak out */
+    overflow: hidden;
 }
 
 h2 {
     color: var(--color-primary);
     border-bottom: 1px solid var(--color-secondary);
     padding-bottom: 5px;
+    margin-top: 0;
 }
 
 /* --- Interactive Elements --- */
@@ -121,7 +158,7 @@ h2 {
     padding: 20px;
     border-radius: 4px;
     border: 1px solid transparent;
-    transition: all 0.3s ease;
+    transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .focus-item:hover {
@@ -131,6 +168,8 @@ h2 {
 }
 
 .cta-button {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 0.9em;
     background-color: var(--color-accent);
     color: #1e1e1e;
     padding: 10px 20px;
@@ -138,14 +177,200 @@ h2 {
     border-radius: 4px;
     cursor: pointer;
     font-weight: bold;
+    margin-top: 8px;
+}
+
+.cta-button:hover {
+    background-color: #e68900;
+}
+
+.cta-button:focus-visible {
+    outline: var(--focus-outline);
+    outline-offset: var(--focus-offset);
 }
 
 .cta-link {
     color: var(--color-accent);
     text-decoration: none;
     font-weight: 700;
-    display: block;
+    display: inline-block;
     margin-top: 10px;
+}
+
+.cta-link:hover {
+    text-decoration: underline;
+}
+
+.cta-link:focus-visible {
+    outline: var(--focus-outline);
+    outline-offset: var(--focus-offset);
+    border-radius: 2px;
+}
+
+/* --- Resume Snippet Toggle --- */
+.snippet-box {
+    display: none;
+    margin-top: 18px;
+    padding: 16px 20px;
+    border-left: 3px solid var(--color-primary);
+    background: rgba(0, 188, 212, 0.06);
+    border-radius: 0 4px 4px 0;
+    line-height: 1.7;
+}
+
+.snippet-box.is-open {
+    display: block;
+}
+
+.snippet-box p {
+    margin: 0 0 0.5rem;
+    font-size: 0.9em;
+}
+
+.snippet-box p:last-child {
+    margin-bottom: 0;
+}
+
+/* --- Project Cards (Labs) --- */
+.project-card {
+    background-color: rgba(40, 40, 40, 0.95);
+    padding: 22px 24px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-left: 4px solid var(--color-primary);
+    margin-top: 20px;
+    transition: box-shadow 0.3s ease;
+}
+
+.project-card:hover {
+    box-shadow: 0 4px 20px rgba(0, 188, 212, 0.15);
+}
+
+.project-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.project-header h3 {
+    margin: 0;
+    font-size: 1em;
+    color: var(--color-text);
+}
+
+.project-stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.stack-tag {
+    font-size: 0.75em;
+    padding: 3px 10px;
+    border-radius: 3px;
+    background: rgba(0, 188, 212, 0.1);
+    border: 1px solid rgba(0, 188, 212, 0.3);
+    color: var(--color-primary);
+    font-family: 'Roboto Mono', monospace;
+}
+
+.project-description {
+    font-size: 0.88em;
+    color: #ddd;
+    margin: 0 0 10px;
+    line-height: 1.65;
+}
+
+.project-outcomes {
+    margin: 0;
+    padding-left: 1.2rem;
+    font-size: 0.85em;
+    color: #ccc;
+    line-height: 1.65;
+}
+
+.project-outcomes li {
+    margin-bottom: 0.3rem;
+}
+
+/* --- Status Badges --- */
+.status-badge {
+    display: inline-block;
+    font-size: 0.72em;
+    font-family: 'Roboto Mono', monospace;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 3px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.status-complete {
+    background: rgba(76, 175, 80, 0.15);
+    border: 1px solid rgba(76, 175, 80, 0.45);
+    color: var(--color-success);
+}
+
+.status-progress {
+    background: rgba(255, 152, 0, 0.12);
+    border: 1px solid rgba(255, 152, 0, 0.4);
+    color: var(--color-accent);
+}
+
+/* --- Certification Entries --- */
+.cert-entry {
+    background-color: rgba(40, 40, 40, 0.95);
+    padding: 22px 24px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-left: 4px solid var(--color-primary);
+    margin-bottom: 16px;
+    transition: box-shadow 0.3s ease;
+}
+
+.cert-entry:hover {
+    box-shadow: 0 4px 20px rgba(0, 188, 212, 0.15);
+}
+
+.cert-entry:last-of-type {
+    margin-bottom: 0;
+}
+
+.cert-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.cert-header h3 {
+    margin: 0;
+    font-size: 1em;
+    color: var(--color-text);
+}
+
+.cert-meta {
+    font-size: 0.82em;
+    color: var(--color-muted);
+    margin: 0 0 12px;
+}
+
+.cert-image {
+    margin-top: 14px;
+}
+
+.cert-image img {
+    max-width: 220px;
+    height: auto;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* --- Layout Grid --- */
@@ -155,7 +380,6 @@ h2 {
     gap: 20px;
 }
 
-/* Homepage: use wide screens — main column + sidebar */
 .layout-intro {
     display: grid;
     gap: 24px;
@@ -185,6 +409,7 @@ h2 {
     }
 }
 
+/* --- Sidebar (Aside) --- */
 .card-aside h3 {
     margin-top: 0;
     color: var(--color-primary);
@@ -253,16 +478,41 @@ h2 {
     text-decoration: underline;
 }
 
-/* --- Scroll Reveal Classes --- */
+.aside-links a:focus-visible {
+    outline: var(--focus-outline);
+    outline-offset: var(--focus-offset);
+    border-radius: 2px;
+}
+
+/* --- Scroll Reveal --- */
 .reveal-hidden {
     opacity: 0;
     transform: translateY(30px);
-    transition: all 0.8s ease-out;
+    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
 }
 
 .reveal-visible {
     opacity: 1;
     transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .reveal-hidden {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+
+    .focus-item {
+        transition: none;
+    }
+
+    .site-banner,
+    nav a,
+    .cta-button,
+    .social-box {
+        transition: none;
+    }
 }
 
 /* --- Footer --- */
@@ -288,23 +538,33 @@ footer {
     nav a:first-child {
         margin-left: 0;
     }
+
+    .project-header,
+    .cert-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 }
 
 @media (max-width: 600px) {
     .grid-2 {
         grid-template-columns: 1fr;
     }
+
     .site-banner {
         width: min(var(--banner-width), 100%);
         border-radius: 0;
     }
+
     .site-banner .banner-inner {
         flex-direction: column;
         text-align: center;
     }
+
     nav {
         margin-top: 15px;
     }
+
     nav a {
         margin: 0 10px;
     }

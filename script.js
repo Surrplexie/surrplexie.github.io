@@ -1,41 +1,42 @@
 document.addEventListener('DOMContentLoaded', () => {
-    
-    /* --- 1. Resume Toggle Logic --- */
-    const button = document.getElementById('toggleButton');
-    const surprise = document.getElementById('surpriseText');
 
-    if (button && surprise) {
-        button.addEventListener('click', () => {
-            const isHidden = surprise.style.display === 'none' || surprise.style.display === '';
+    /* --- 1. Resume Snippet Toggle ---
+       Uses aria-expanded to communicate state to assistive technology.
+       Visibility is driven by the CSS class .is-open rather than inline styles. */
+    const toggleBtn = document.getElementById('resumeToggle');
+    const snippet   = document.getElementById('resumeSnippet');
 
-            if (isHidden) {
-                surprise.style.display = 'block';
-                button.textContent = 'Hide Resume Snippet';
-            } else {
-                surprise.style.display = 'none';
-                button.textContent = 'View Resume Snippet';
-            }
+    if (toggleBtn && snippet) {
+        toggleBtn.addEventListener('click', () => {
+            const isOpen = snippet.classList.contains('is-open');
+            snippet.classList.toggle('is-open', !isOpen);
+            toggleBtn.setAttribute('aria-expanded', String(!isOpen));
+            toggleBtn.textContent = isOpen ? 'View Key Qualifications' : 'Hide Key Qualifications';
         });
     }
 
-    /* --- 2. Scroll Reveal Logic (Intersection Observer) --- */
-    const observerOptions = { 
-        threshold: 0.1 
-    };
+    /* --- 2. Scroll Reveal ---
+       Gated behind prefers-reduced-motion so users who opt out of motion
+       never see content start invisible and potentially miss it. */
+    const prefersMotion = window.matchMedia('(prefers-reduced-motion: no-preference)');
 
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('reveal-visible');
-            }
+    if (prefersMotion.matches) {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('reveal-visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            },
+            { threshold: 0.1 }
+        );
+
+        document.querySelectorAll('.card').forEach((card) => {
+            card.classList.add('reveal-hidden');
+            observer.observe(card);
         });
-    }, observerOptions);
-
-    // Select all cards and start observing them
-    const cards = document.querySelectorAll('.card');
-    cards.forEach(card => {
-        card.classList.add('reveal-hidden');
-        observer.observe(card);
-    });
+    }
 
 });

@@ -1,30 +1,87 @@
 ---
 layout: default
 title: Labs & Projects | Kai Morgan
-banner_title: "Kai // Labs"
+banner_title: "Kai // Labs &amp; Projects"
 ---
         <section class="card">
-            <h2>> Hands-on Work</h2>
-            <div class="focus-item" style="margin-top: 20px;">
-                <h3>Binary Analysis Tool</h3>
-                <p>• Primarily coded with Python for Windows and Linux.</p>
-                <p>• Developed a basic tool to analyze binary files and extract readable strings for inspection and suspicious patterns.</p>
-                <p>• Applied foundational reverse engineering concepts to understand binary structure and behavior.</p>
-                <p>• Tested tool functionality against sample files and documented results.</p>
-            </div>
-            <div class="focus-item" style="margin-top: 20px;">
-                <h3>Personal 2FA Authenticator App</h3>
-                <p>• Work in Progress: Developing a mobile-friendly TOTP (Time-based One-Time Password) generator.</p>
-                <p>• Integrating HMAC-based algorithms for secure code generation.</p>
-                <p>• Integrating encryption during generation.</p>
-                <p>• Developing in Rust for Windows, Linux, iOS, and Android.</p>
-            </div>
-            <div class="focus-item" style="margin-top: 20px;">
-                <h3>Homemade Virus via Hash Scanner</h3>
-                <p>• Primarily coded with Python for Windows and Linux.</p>
-                <p>• Developed a basic tool to compute SHA-256 hashes and upload results to VirusTotal via API.</p>
-                <p>• Automatically scans files within a drive or folder.</p>
-                <p>• Continuously testing and refining functionality.</p>
-            </div>
-            <a href="{{ '/' | relative_url }}" class="cta-link" style="margin-top: 20px;">&larr; Back to Profile</a>
+            <h2>Labs &amp; Projects</h2>
+            <p>
+                The following projects represent independent technical work completed outside of coursework.
+                Each entry documents the problem addressed, the tools and languages used, the approach taken,
+                and the outcome. These are written to be discussed in a technical interview context.
+            </p>
+
+            <article class="project-card">
+                <div class="project-header">
+                    <h3>Binary Analysis Tool</h3>
+                    <span class="status-badge status-complete">Completed</span>
+                </div>
+                <div class="project-stack">
+                    <span class="stack-tag">Python</span>
+                    <span class="stack-tag">Windows</span>
+                    <span class="stack-tag">Linux</span>
+                </div>
+                <p class="project-description">
+                    A command-line utility that ingests binary files and extracts human-readable strings,
+                    flagging patterns consistent with known suspicious content. The tool applies foundational
+                    static analysis concepts to assist in triage without executing the target file.
+                </p>
+                <ul class="project-outcomes">
+                    <li>Implemented file parsing and string extraction using Python's <code>struct</code> and standard I/O libraries.</li>
+                    <li>Applied basic reverse engineering concepts to interpret binary structure and offset data.</li>
+                    <li>Tested against sample files and documented findings in a structured report format.</li>
+                    <li>Designed to run on both Windows and Linux without external dependencies.</li>
+                </ul>
+            </article>
+
+            <article class="project-card">
+                <div class="project-header">
+                    <h3>File Hash Scanner with VirusTotal Integration</h3>
+                    <span class="status-badge status-progress">In Progress</span>
+                </div>
+                <div class="project-stack">
+                    <span class="stack-tag">Python</span>
+                    <span class="stack-tag">VirusTotal API</span>
+                    <span class="stack-tag">Windows</span>
+                    <span class="stack-tag">Linux</span>
+                </div>
+                <p class="project-description">
+                    A defensive security utility that recursively scans a specified drive or directory,
+                    computes SHA-256 hashes for each file, and submits them to the VirusTotal public API
+                    for threat intelligence lookup. Results are collected and summarized for review.
+                </p>
+                <ul class="project-outcomes">
+                    <li>Implemented SHA-256 hashing via Python's <code>hashlib</code> module.</li>
+                    <li>Integrated the VirusTotal v3 API to retrieve scan results programmatically.</li>
+                    <li>Added recursive directory traversal with configurable scope.</li>
+                    <li>Continuously refining rate-limit handling and output formatting.</li>
+                </ul>
+            </article>
+
+            <article class="project-card">
+                <div class="project-header">
+                    <h3>TOTP Authenticator Application</h3>
+                    <span class="status-badge status-progress">In Progress</span>
+                </div>
+                <div class="project-stack">
+                    <span class="stack-tag">Rust</span>
+                    <span class="stack-tag">Windows</span>
+                    <span class="stack-tag">Linux</span>
+                    <span class="stack-tag">iOS</span>
+                    <span class="stack-tag">Android</span>
+                </div>
+                <p class="project-description">
+                    A cross-platform TOTP (Time-based One-Time Password) generator built in Rust,
+                    targeting RFC 6238 compliance. The goal is a self-hosted authenticator with
+                    local encrypted secret storage and no third-party cloud dependency.
+                </p>
+                <ul class="project-outcomes">
+                    <li>Implemented HMAC-SHA1 based OTP generation per RFC 6238.</li>
+                    <li>Integrating AES encryption for at-rest secret storage.</li>
+                    <li>Targeting Rust's cross-compilation toolchain for Windows, Linux, iOS, and Android builds.</li>
+                    <li>Designing a minimal, mobile-friendly UI suitable for daily use.</li>
+                </ul>
+            </article>
+
+            <a href="{{ '/' | relative_url }}" class="cta-link" style="margin-top: 24px;">&larr; Back to Profile</a>
         </section>

@@ -13,23 +13,25 @@
     {% endif %}
 </head>
 <body>
-    <header class="site-banner">
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+
+    <header class="site-banner" role="banner">
         <div class="banner-inner">
             <h1 class="logo">{{ page.banner_title | default: site.title }}</h1>
-            <nav>
-                <a href="{{ '/' | relative_url }}">Home</a>
-                <a href="{{ '/certs/' | relative_url }}">Certifications</a>
-                <a href="{{ '/labs/' | relative_url }}">Labs &amp; Projects</a>
-                <a href="{{ '/socials/' | relative_url }}">Socials</a>
+            <nav aria-label="Primary navigation">
+                <a href="{{ '/' | relative_url }}"{% if page.url == '/' %} aria-current="page"{% endif %}>Home</a>
+                <a href="{{ '/certs/' | relative_url }}"{% if page.url contains '/certs' %} aria-current="page"{% endif %}>Certifications</a>
+                <a href="{{ '/labs/' | relative_url }}"{% if page.url contains '/labs' %} aria-current="page"{% endif %}>Labs &amp; Projects</a>
+                <a href="{{ '/socials/' | relative_url }}"{% if page.url contains '/socials' %} aria-current="page"{% endif %}>Socials</a>
             </nav>
         </div>
     </header>
 
-    <main class="container">
+    <main class="container" id="main-content" tabindex="-1">
         {{ content }}
     </main>
 
-    <footer>
+    <footer role="contentinfo">
         <p>{{ site.footer_text }}</p>
     </footer>
     {% if page.scripts %}
