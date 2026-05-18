@@ -42,7 +42,7 @@
 /* --- Base Styles --- */
 body {
     font-family: 'Roboto Mono', monospace;
-    background-image: url('images/Untitled.png');
+    background-image: url('images/bgrd.png');
     background-size: cover;
     background-repeat: no-repeat;
     background-attachment: fixed;
