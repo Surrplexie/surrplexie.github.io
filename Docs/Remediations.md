@@ -1,1004 +1,128 @@
-Dev logs, simple terms; REM-1, REM-2 = major logs entered here, REM-1.2, REM-1.4 etc. GitHub pushing only, not named here.
+Dev logs rules; REM-1, REM-2 any of these terms are the new 'updates' like "Update 1", all major logs entered here. Note; REM-1.2, REM-1.4 etc. are only for GitHub commits and pushing, never named here.
+
+---
 
 ## REM-1
 
+**Navigation and internal links** — fixed broken routing before and during the Jekyll migration.
+
+- Home page nav used wrong `../certs/`, `../labs/`, `../socials/` from site root; changed to `certs/`, `labs/`, `socials/` so links resolve on `/`.
+- Socials page nav used bare `index.html` and same-folder paths; updated to `../index.html`, `../certs/`, `../labs/` so links work from the `socials/` subfolder.
+- Standardized labels on all pages: **Home**, **Certifications**, **Labs & Projects**, **Socials** (socials had shortened “Certs” / “Labs” before).
+- After Jekyll: primary nav moved into `_layouts/default.html` with `{{ '/' | relative_url }}` (and section paths) plus `aria-current="page"` on the active link.
+
+---
+
 ## REM-2
 
+**Homepage copy** — repositioned **surrplexie.github.io** for IT support / help desk internships and entry-level roles.
+
+- Page title and banner set to **Kai Morgan | IT Support & Help Desk** (replacing generic portfolio / cyber-first headline).
+- About section leads with help desk, desktop support, troubleshooting, documentation, and MATC **IT Computer Support Specialist** program.
+- Security, reversing, and CTF framed as a **growth area**, not the primary job-search message.
+- Resume toggle retitled **View Key Qualifications**; removed stray `[cite: …]` placeholders; bullet order: objective → support skills → also proficient → education → certifications.
+- Focus cards reframed toward **certifications** and **labs** as interview talking points for IT roles (not malware-first security framing).
+- Removed **Site is WIP!** line from final copy.
+
+---
+
 ## REM-3
 
-## REM-4
+**HTML, grammar, and accessibility** — cleanup and assistive-tech improvements across pages.
 
-## REM-2
+- Fixed broken `<strong>` close tag on homepage (WIP banner era).
+- Removed stray extra `</p>` tags on labs project blocks.
+- Grammar and clarity pass on homepage and labs (e.g. “Primarily” vs “Primally”, SHA-256 / VirusTotal wording, clearer project descriptions).
+- Cert images: alt text changed from generic “My Photo” to certificate-specific descriptions.
+- Socials: `aria-label` on every icon-only link (email, Discord, LinkedIn, GitHub, Instagram, X, YouTube, Twitch, TikTok, Reddit, Pinterest, Snapchat).
+- Jekyll layout: skip-to-main-content link; resume toggle uses `aria-expanded` / `aria-controls`; scroll-reveal in `script.js` only runs when `prefers-reduced-motion: no-preference`; `:focus-visible` styles added in CSS.
 
-## REM-3
-
-## REM-4
-
-## REM-5
-
-## REM-3
-
-## REM-4
-
-## REM-5
-
-## REM-6
+---
 
 ## REM-4
 
+**Media paths (`images/` folder)** — local assets instead of remote GitHub Media URLs.
+
+- Stopped hotlinking certificate and background assets from repo **Media/** raw URLs.
+- Background in `style.css`: `images/bgrd.png` (renamed from `Untitled.png`).
+- Microsoft cert image path updated from `IMG_5697.png` to **`Microsoft Enterprise Desktop Support Specialist.png`**.
+- CompTIA competency images stored under `/images/` with full certificate titles as filenames:
+  - `Competency in IT Hardware and Network Support.png`
+  - `Competency in IT Software and Systems Support.png`
+- Cert page image `src` values use Jekyll `{{ '/images/…' | relative_url }}` so paths work on GitHub Pages from any route.
+
+---
+
 ## REM-5
 
-## REM-6
+**Layout and wide-screen UX** — homepage structure and header bar for large monitors.
 
-## REM-7
+- Added **`layout-intro`** grid: main about card plus **At a glance** sidebar (target roles, program, GPA, skill tags, quick links).
+- Widened `.container` at large breakpoints (`1160px` / `1280px`) with `clamp()` horizontal padding.
+- Added **`site-banner`** header at ~80–90% viewport width (`clamp(80vw, 86vw, 90vw)`), centered, `.banner-inner` flex for title + nav (later owned by Jekyll layout on all pages).
 
-## REM-5
-
-## REM-6
-
-## REM-7
-
-## REM-8
+---
 
 ## REM-6
 
+**Jekyll / GitHub Pages structure** — shared layout and build config.
+
+- Added **`Gemfile`** with `github-pages` gem.
+- Added **`_config.yml`**: site title (Kai Morgan), footer text, `url`, `baseurl`, exclude list (README, SECURITY, Gemfile, etc.).
+- Added **`_layouts/default.html`**: charset/viewport, title, Font Awesome CDN, `style.css`, optional per-page `extra_stylesheets` / `scripts`, banner nav, footer, `{{ content }}`.
+- Converted **`index.html`**, **`certs/index.html`**, **`labs/index.html`**, **`socials/index.html`** to front matter + layout (removed duplicated full HTML shells per page).
+- Removed unused **`script.js`** copies under `certs/`, `labs/`, `socials/`; kept root **`script.js`** for homepage toggle and scroll reveal.
+- Expanded **`style.css`**: cert entries, status badges (Earned / In Progress), labs project cards, responsive rules, reveal animation classes; **`socials.css`** for contact grid.
+
+---
+
 ## REM-7
 
+**Certifications page (`certs/index.html`)** — rebuilt list with renamed images and CompTIA slots.
+
+- Replaced single Microsoft block with **`.cert-entry`** rows: header, issuer/meta line, optional image, status badge.
+- **Microsoft Enterprise Desktop Support Specialist** — **Earned**, date issued 13 December 2025, image `Microsoft Enterprise Desktop Support Specialist.png`.
+- Added two **earned** CompTIA competency entries (user-requested extra slots), each with image and **Earned** badge:
+  - **Competency in IT Hardware and Network Support** — `Competency in IT Hardware and Network Support.png`, meta **Date Issued: 17 May 2025**.
+  - **Competency in IT Software and Systems Support** — `Competency in IT Software and Systems Support.png`, meta **Date Issued: 17 May 2025**.
+- **CompTIA Security+** — **In Progress** only (not attained): no certificate image; meta line **Date Issued:** left blank for later.
+- **CompTIA A+** full-cert row was tried during editing then **removed** from the cert page so only earned/competency rows plus Security+ in-progress show there; homepage qualifications toggle still lists **CompTIA A+ & Security+ (in progress)**.
+- Corrected invalid **`<motion>`** tags (editor typo) to **`<div>`** where they appeared.
+- **Back to Profile** link uses `{{ '/' | relative_url }}`.
+
+---
+
 ## REM-8
 
-## REM-9
+**Labs and socials** — same remediation era as homepage/cert work.
 
-## REM-7
+- **Labs:** projects rewritten as interview-ready blocks (problem, stack tags, outcomes); security work kept but described in professional, support-relevant language.
+- **Socials:** contact grid structure unchanged; accessibility labels from REM-3. Heading still **`> Get In Touch`** (terminal style); noted for optional later polish to match IT-support tone on homepage.
 
-## REM-8
-
-## REM-9
-
-## REM-10
-
-## REM-8
+---
 
 ## REM-9
 
-## REM-10
+**Planning review (May 2026)** — recommendations recorded only; no code shipped in that pass.
 
-## REM-11
+- Reviewed live site and backlog: replace template **`SECURITY.md`**, add meta description and Open Graph tags in layout, pin or add SRI to Font Awesome CDN, align socials intro copy with IT-support positioning, optional resume PDF on site, labs proof links (GitHub repos or screenshots).
 
-## REM-9
-
-## REM-10
-
-## REM-11
-
-## REM-12
+---
 
 ## REM-10
 
+**Dev log scaffold** — `Docs/Remediations.md` added to the repo.
+
+- Created **`Docs/Remediations.md`** with cascading empty `## REM-*` headers (REM-2 through REM-128) and no body text yet.
+- Git commit on **main** used message **REM-1** for that scaffold file only.
+
+---
+
 ## REM-11
 
-## REM-12
-
-## REM-13
-
-## REM-11
-
-## REM-12
-
-## REM-13
-
-## REM-14
-
-## REM-12
-
-## REM-13
-
-## REM-14
-
-## REM-15
-
-## REM-13
-
-## REM-14
-
-## REM-15
-
-## REM-16
-
-## REM-14
-
-## REM-15
-
-## REM-16
-
-## REM-17
-
-## REM-15
-
-## REM-16
-
-## REM-17
-
-## REM-18
-
-## REM-16
-
-## REM-17
-
-## REM-18
-
-## REM-19
-
-## REM-17
-
-## REM-18
-
-## REM-19
-
-## REM-20
-
-## REM-18
-
-## REM-19
-
-## REM-20
-
-## REM-21
-
-## REM-19
-
-## REM-20
-
-## REM-21
-
-## REM-22
-
-## REM-20
-
-## REM-21
-
-## REM-22
-
-## REM-23
-
-## REM-21
-
-## REM-22
-
-## REM-23
-
-## REM-24
-
-## REM-22
-
-## REM-23
-
-## REM-24
-
-## REM-25
-
-## REM-23
-
-## REM-24
-
-## REM-25
-
-## REM-26
-
-## REM-24
-
-## REM-25
-
-## REM-26
-
-## REM-27
-
-## REM-25
-
-## REM-26
-
-## REM-27
-
-## REM-28
-
-## REM-26
-
-## REM-27
-
-## REM-28
-
-## REM-29
-
-## REM-27
-
-## REM-28
-
-## REM-29
-
-## REM-30
-
-## REM-28
-
-## REM-29
-
-## REM-30
-
-## REM-31
-
-## REM-29
-
-## REM-30
-
-## REM-31
-
-## REM-32
-
-## REM-30
-
-## REM-31
-
-## REM-32
-
-## REM-33
-
-## REM-31
-
-## REM-32
-
-## REM-33
-
-## REM-34
-
-## REM-32
-
-## REM-33
-
-## REM-34
-
-## REM-35
-
-## REM-33
-
-## REM-34
-
-## REM-35
-
-## REM-36
-
-## REM-34
-
-## REM-35
-
-## REM-36
-
-## REM-37
-
-## REM-35
-
-## REM-36
-
-## REM-37
-
-## REM-38
-
-## REM-36
-
-## REM-37
-
-## REM-38
-
-## REM-39
-
-## REM-37
-
-## REM-38
-
-## REM-39
-
-## REM-40
-
-## REM-38
-
-## REM-39
-
-## REM-40
-
-## REM-41
-
-## REM-39
-
-## REM-40
-
-## REM-41
-
-## REM-42
-
-## REM-40
-
-## REM-41
-
-## REM-42
-
-## REM-43
-
-## REM-41
-
-## REM-42
-
-## REM-43
-
-## REM-44
-
-## REM-42
-
-## REM-43
-
-## REM-44
-
-## REM-45
-
-## REM-43
-
-## REM-44
-
-## REM-45
-
-## REM-46
-
-## REM-44
-
-## REM-45
-
-## REM-46
-
-## REM-47
-
-## REM-45
-
-## REM-46
-
-## REM-47
-
-## REM-48
-
-## REM-46
-
-## REM-47
-
-## REM-48
-
-## REM-49
-
-## REM-47
-
-## REM-48
-
-## REM-49
-
-## REM-50
-
-## REM-48
-
-## REM-49
-
-## REM-50
-
-## REM-51
-
-## REM-49
-
-## REM-50
-
-## REM-51
-
-## REM-52
-
-## REM-50
-
-## REM-51
-
-## REM-52
-
-## REM-53
-
-## REM-51
-
-## REM-52
-
-## REM-53
-
-## REM-54
-
-## REM-52
-
-## REM-53
-
-## REM-54
-
-## REM-55
-
-## REM-53
-
-## REM-54
-
-## REM-55
-
-## REM-56
-
-## REM-54
-
-## REM-55
-
-## REM-56
-
-## REM-57
-
-## REM-55
-
-## REM-56
-
-## REM-57
-
-## REM-58
-
-## REM-56
-
-## REM-57
-
-## REM-58
-
-## REM-59
-
-## REM-57
-
-## REM-58
-
-## REM-59
-
-## REM-60
-
-## REM-58
-
-## REM-59
-
-## REM-60
-
-## REM-61
-
-## REM-59
-
-## REM-60
-
-## REM-61
-
-## REM-62
-
-## REM-60
-
-## REM-61
-
-## REM-62
-
-## REM-63
-
-## REM-61
-
-## REM-62
-
-## REM-63
-
-## REM-64
-
-## REM-62
-
-## REM-63
-
-## REM-64
-
-## REM-65
-
-## REM-63
-
-## REM-64
-
-## REM-65
-
-## REM-66
-
-## REM-64
-
-## REM-65
-
-## REM-66
-
-## REM-67
-
-## REM-65
-
-## REM-66
-
-## REM-67
-
-## REM-68
-
-## REM-66
-
-## REM-67
-
-## REM-68
-
-## REM-69
-
-## REM-67
-
-## REM-68
-
-## REM-69
-
-## REM-70
-
-## REM-68
-
-## REM-69
-
-## REM-70
-
-## REM-71
-
-## REM-69
-
-## REM-70
-
-## REM-71
-
-## REM-72
-
-## REM-70
-
-## REM-71
-
-## REM-72
-
-## REM-73
-
-## REM-71
-
-## REM-72
-
-## REM-73
-
-## REM-74
-
-## REM-72
-
-## REM-73
-
-## REM-74
-
-## REM-75
-
-## REM-73
-
-## REM-74
-
-## REM-75
-
-## REM-76
-
-## REM-74
-
-## REM-75
-
-## REM-76
-
-## REM-77
-
-## REM-75
-
-## REM-76
-
-## REM-77
-
-## REM-78
-
-## REM-76
-
-## REM-77
-
-## REM-78
-
-## REM-79
-
-## REM-77
-
-## REM-78
-
-## REM-79
-
-## REM-80
-
-## REM-78
-
-## REM-79
-
-## REM-80
-
-## REM-81
-
-## REM-79
-
-## REM-80
-
-## REM-81
-
-## REM-82
-
-## REM-80
-
-## REM-81
-
-## REM-82
-
-## REM-83
-
-## REM-81
-
-## REM-82
-
-## REM-83
-
-## REM-84
-
-## REM-82
-
-## REM-83
-
-## REM-84
-
-## REM-85
-
-## REM-83
-
-## REM-84
-
-## REM-85
-
-## REM-86
-
-## REM-84
-
-## REM-85
-
-## REM-86
-
-## REM-87
-
-## REM-85
-
-## REM-86
-
-## REM-87
-
-## REM-88
-
-## REM-86
-
-## REM-87
-
-## REM-88
-
-## REM-89
-
-## REM-87
-
-## REM-88
-
-## REM-89
-
-## REM-90
-
-## REM-88
-
-## REM-89
-
-## REM-90
-
-## REM-91
-
-## REM-89
-
-## REM-90
-
-## REM-91
-
-## REM-92
-
-## REM-90
-
-## REM-91
-
-## REM-92
-
-## REM-93
-
-## REM-91
-
-## REM-92
-
-## REM-93
-
-## REM-94
-
-## REM-92
-
-## REM-93
-
-## REM-94
-
-## REM-95
-
-## REM-93
-
-## REM-94
-
-## REM-95
-
-## REM-96
-
-## REM-94
-
-## REM-95
-
-## REM-96
-
-## REM-97
-
-## REM-95
-
-## REM-96
-
-## REM-97
-
-## REM-98
-
-## REM-96
-
-## REM-97
-
-## REM-98
-
-## REM-99
-
-## REM-97
-
-## REM-98
-
-## REM-99
-
-## REM-100
-
-## REM-98
-
-## REM-99
-
-## REM-100
-
-## REM-101
-
-## REM-99
-
-## REM-100
-
-## REM-101
-
-## REM-102
-
-## REM-100
-
-## REM-101
-
-## REM-102
-
-## REM-103
-
-## REM-101
-
-## REM-102
-
-## REM-103
-
-## REM-104
-
-## REM-102
-
-## REM-103
-
-## REM-104
-
-## REM-105
-
-## REM-103
-
-## REM-104
-
-## REM-105
-
-## REM-106
-
-## REM-104
-
-## REM-105
-
-## REM-106
-
-## REM-107
-
-## REM-105
-
-## REM-106
-
-## REM-107
-
-## REM-108
-
-## REM-106
-
-## REM-107
-
-## REM-108
-
-## REM-109
-
-## REM-107
-
-## REM-108
-
-## REM-109
-
-## REM-110
-
-## REM-108
-
-## REM-109
-
-## REM-110
-
-## REM-111
-
-## REM-109
-
-## REM-110
-
-## REM-111
-
-## REM-112
-
-## REM-110
-
-## REM-111
-
-## REM-112
-
-## REM-113
-
-## REM-111
-
-## REM-112
-
-## REM-113
-
-## REM-114
-
-## REM-112
-
-## REM-113
-
-## REM-114
-
-## REM-115
-
-## REM-113
-
-## REM-114
-
-## REM-115
-
-## REM-116
-
-## REM-114
-
-## REM-115
-
-## REM-116
-
-## REM-117
-
-## REM-115
-
-## REM-116
-
-## REM-117
-
-## REM-118
-
-## REM-116
-
-## REM-117
-
-## REM-118
-
-## REM-119
-
-## REM-117
-
-## REM-118
-
-## REM-119
-
-## REM-120
-
-## REM-118
-
-## REM-119
-
-## REM-120
-
-## REM-121
-
-## REM-119
-
-## REM-120
-
-## REM-121
-
-## REM-122
-
-## REM-120
-
-## REM-121
-
-## REM-122
-
-## REM-123
-
-## REM-121
-
-## REM-122
-
-## REM-123
-
-## REM-124
-
-## REM-122
-
-## REM-123
-
-## REM-124
-
-## REM-125
-
-## REM-123
-
-## REM-124
-
-## REM-125
-
-## REM-126
-
-## REM-124
-
-## REM-125
-
-## REM-126
-
-## REM-127
-
-## REM-125
-
-## REM-126
-
-## REM-127
-
-## REM-128
-
-## REM-126
-
+**Remediation log populated** — this file; end-to-end history from REM-1 through REM-11.
+
+- Replaced corrupted empty header scaffold with sequential **REM-1 … REM-11** entries (no REM-x.y subsections).
+- Documented navigation fixes, homepage repositioning, accessibility, media renames, layout, Jekyll migration, cert page final state, labs/socials pass, planning backlog, and log maintenance.
+- **Live cert page after REM-7:** three **Earned** rows with images (Microsoft + two CompTIA competencies), one **In Progress** Security+ row without image; CompTIA A+ not listed on cert page.
+- **Repo note:** `Docs/` holds internal dev history; add `Docs` to `_config.yml` `exclude` if this markdown should not publish as a public page on GitHub Pages.
