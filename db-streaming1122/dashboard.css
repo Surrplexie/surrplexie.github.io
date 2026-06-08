@@ -1,0 +1,388 @@
+/* ===== Dashboard-specific styles =====
+   Layers on top of /style.css — inherits all site tokens and base styles. */
+
+main {
+    padding: 0;
+}
+
+.db-container {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 36px clamp(16px, 4vw, 40px) 64px;
+    box-sizing: border-box;
+}
+
+/* ---- Page header ---- */
+
+.db-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.db-title {
+    color: var(--color-primary);
+    margin: 0 0 4px;
+    font-size: clamp(1.15em, 2.5vw, 1.75em);
+    border: none;
+    padding: 0;
+}
+
+.db-subtitle {
+    color: var(--color-muted);
+    margin: 0;
+    font-size: 0.82em;
+}
+
+.db-controls {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.db-updated {
+    font-size: 0.76em;
+    color: var(--color-muted);
+}
+
+/* ---- Time range toggle ---- */
+
+.db-range-btns {
+    display: flex;
+    gap: 2px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    padding: 3px;
+}
+
+.range-btn {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 0.78em;
+    font-weight: 700;
+    background: transparent;
+    color: var(--color-muted);
+    border: none;
+    border-radius: 4px;
+    padding: 5px 14px;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s;
+}
+
+.range-btn.active {
+    background: var(--color-primary);
+    color: #000;
+}
+
+.range-btn:hover:not(.active) {
+    color: var(--color-text);
+}
+
+.range-btn:focus-visible {
+    outline: var(--focus-outline);
+    outline-offset: var(--focus-offset);
+}
+
+/* ---- KPI strip ---- */
+
+.db-kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-bottom: 28px;
+}
+
+.kpi-card {
+    background: rgba(30, 30, 30, 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 8px;
+    padding: 16px 14px;
+    border-left: 4px solid var(--color-primary);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.kpi-card.kpi-success {
+    border-left-color: var(--color-success);
+}
+
+.kpi-value {
+    font-size: clamp(1.2em, 2vw, 1.65em);
+    font-weight: 700;
+    color: var(--color-text);
+    line-height: 1.2;
+}
+
+.kpi-card.kpi-success .kpi-value {
+    color: var(--color-success);
+}
+
+.kpi-label {
+    font-size: 0.7em;
+    color: var(--color-muted);
+    margin-top: 5px;
+}
+
+/* ---- Section titles ---- */
+
+.section-title {
+    font-size: 0.78em;
+    color: var(--color-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin: 32px 0 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* ---- Chart grid ---- */
+
+.db-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+/* ---- Chart cards ---- */
+
+.chart-card {
+    margin-bottom: 14px;
+}
+
+.chart-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+    font-weight: 700;
+    font-size: 0.88em;
+    color: var(--color-text);
+}
+
+.chart-wrap {
+    position: relative;
+    width: 100%;
+}
+
+.chart-caption {
+    font-size: 0.68em;
+    color: var(--color-muted);
+    margin: 8px 0 0;
+}
+
+/* ---- Platform toggle pills ---- */
+
+.platform-toggles {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.toggle-pill {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 0.7em;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 20px;
+    border: 1.5px solid var(--pill-color, #888);
+    background: transparent;
+    color: var(--pill-color, #888);
+    cursor: pointer;
+    transition: background 0.16s, color 0.16s;
+    line-height: 1.6;
+}
+
+.toggle-pill.active {
+    background: var(--pill-color, #888);
+    color: #000;
+}
+
+.toggle-pill:focus-visible {
+    outline: 2px solid var(--pill-color, #888);
+    outline-offset: 2px;
+}
+
+/* ---- Goals ---- */
+
+.goal-card {
+    margin-bottom: 0;
+}
+
+.goal-badge {
+    font-size: 0.82em;
+    font-weight: 700;
+    color: var(--color-success);
+    background: rgba(76, 175, 80, 0.12);
+    padding: 3px 10px;
+    border-radius: 20px;
+}
+
+.goal-badge-info {
+    color: var(--color-primary);
+    background: rgba(0, 188, 212, 0.12);
+}
+
+.progress-wrap {
+    height: 9px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 5px;
+    overflow: hidden;
+    margin: 12px 0 6px;
+}
+
+.progress-fill {
+    height: 100%;
+    width: 0;
+    border-radius: 5px;
+    background: var(--fill-color, var(--color-primary));
+    transition: width 1.3s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.progress-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.73em;
+    color: var(--color-muted);
+    margin-bottom: 16px;
+}
+
+.goal-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding-top: 14px;
+}
+
+.goal-stat {
+    text-align: center;
+}
+
+.gs-val {
+    font-size: 1em;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.gs-lbl {
+    font-size: 0.67em;
+    color: var(--color-muted);
+    margin-top: 3px;
+}
+
+/* ---- VOD table ---- */
+
+.table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.vod-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82em;
+    min-width: 500px;
+}
+
+.vod-table th {
+    color: var(--color-muted);
+    font-weight: 700;
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    text-transform: uppercase;
+    font-size: 0.8em;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+}
+
+.vod-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: var(--color-text);
+    vertical-align: middle;
+}
+
+.vod-table tr:last-child td {
+    border-bottom: none;
+}
+
+.vod-table tbody tr:hover td {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* Platform tags */
+.plat-tag {
+    display: inline-block;
+    font-size: 0.78em;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 3px;
+    white-space: nowrap;
+}
+
+.plat-yt     { background: rgba(255, 68,  68,  0.15); color: #ff6b6b; }
+.plat-twitch { background: rgba(145, 71,  255, 0.15); color: #b088ff; }
+.plat-tt     { background: rgba(105, 201, 208, 0.15); color: #69c9d0; }
+.plat-ig     { background: rgba(255, 152, 0,   0.15); color: #ff9800; }
+.plat-snap   { background: rgba(255, 214, 10,  0.15); color: #ffd60a; }
+
+/* Status pills */
+.status-pill {
+    display: inline-block;
+    font-size: 0.76em;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 3px;
+    white-space: nowrap;
+}
+
+.status-editing   { background: rgba(255, 152, 0,   0.15); color: #ff9800; }
+.status-scheduled { background: rgba(0,   188, 212, 0.15); color: #00bcd4; }
+.status-planned   { background: rgba(136, 136, 136, 0.12); color: #aaa;    }
+.status-done      { background: rgba(76,  175, 80,  0.15); color: #4caf50; }
+
+/* ---- Responsive breakpoints ---- */
+
+@media (max-width: 860px) {
+    .db-kpi-strip {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .db-grid-2 {
+        grid-template-columns: 1fr;
+    }
+
+    .db-kpi-strip {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .db-kpi-strip .kpi-card:last-child {
+        grid-column: span 2;
+    }
+
+    .chart-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 380px) {
+    .db-kpi-strip {
+        grid-template-columns: 1fr;
+    }
+
+    .db-kpi-strip .kpi-card:last-child {
+        grid-column: span 1;
+    }
+}

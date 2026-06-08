@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stream Dashboard | surrplexie</title>
+    <meta name="description" content="Creator analytics dashboard — audience growth, finance tracking, and content planning across YouTube, Twitch, TikTok, Instagram, and Snapchat.">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="dashboard.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
+    <script src="dashboard.js" defer></script>
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+
+    <header class="site-banner" role="banner">
+        <div class="banner-inner">
+            <h1 class="logo">surrplexie // Stream Dashboard</h1>
+            <nav aria-label="Primary navigation">
+                <a href="/">Home</a>
+                <a href="/certs/">Certifications</a>
+                <a href="/labs/">Labs &amp; Projects</a>
+                <a href="/socials/">Socials</a>
+                <a href="/db-streaming1122/" aria-current="page">Dashboard</a>
+            </nav>
+        </div>
+    </header>
+
+    <main id="main-content" tabindex="-1">
+        <div class="db-container">
+
+            <!-- Page header -->
+            <div class="db-header">
+                <div>
+                    <h2 class="db-title">Creator Analytics</h2>
+                    <p class="db-subtitle">YouTube &middot; Twitch &middot; TikTok &middot; Instagram &middot; Snapchat</p>
+                </div>
+                <div class="db-controls">
+                    <div class="db-range-btns" role="group" aria-label="Time range">
+                        <button class="range-btn active" data-range="30D">30D</button>
+                        <button class="range-btn" data-range="7D">7D</button>
+                    </div>
+                    <span class="db-updated">Updated Jun 2, 2026</span>
+                </div>
+            </div>
+
+            <!-- KPI strip -->
+            <div class="db-kpi-strip" role="list" aria-label="Key metrics">
+                <div class="kpi-card" role="listitem">
+                    <div class="kpi-value">5,430</div>
+                    <div class="kpi-label">Total followers</div>
+                </div>
+                <div class="kpi-card kpi-success" role="listitem">
+                    <div class="kpi-value">+610</div>
+                    <div class="kpi-label">Growth (30d)</div>
+                </div>
+                <div class="kpi-card kpi-success" role="listitem">
+                    <div class="kpi-value">$980</div>
+                    <div class="kpi-label">Revenue (June)</div>
+                </div>
+                <div class="kpi-card" role="listitem">
+                    <div class="kpi-value">$2,700</div>
+                    <div class="kpi-label">Savings balance</div>
+                </div>
+                <div class="kpi-card" role="listitem">
+                    <div class="kpi-value">42h</div>
+                    <div class="kpi-label">Streamed (30d)</div>
+                </div>
+            </div>
+
+            <!-- Audience -->
+            <h3 class="section-title">Audience Growth</h3>
+
+            <div class="db-grid-2">
+                <div class="chart-card card">
+                    <div class="chart-card-header">
+                        <span>Total Followers</span>
+                    </div>
+                    <div class="chart-wrap" style="height:220px">
+                        <canvas id="chartFollowersTotal" aria-label="Total followers over time" role="img"></canvas>
+                    </div>
+                    <p class="chart-caption">All platforms combined &middot; units: followers</p>
+                </div>
+                <div class="chart-card card">
+                    <div class="chart-card-header">
+                        <span>Daily New Followers</span>
+                    </div>
+                    <div class="chart-wrap" style="height:220px">
+                        <canvas id="chartDailyNew" aria-label="Daily new followers" role="img"></canvas>
+                    </div>
+                    <p class="chart-caption">All platforms &middot; units: new followers/day</p>
+                </div>
+            </div>
+
+            <div class="chart-card card">
+                <div class="chart-card-header">
+                    <span>Followers by Platform</span>
+                    <div class="platform-toggles" id="platformToggles" role="group" aria-label="Toggle platforms">
+                        <button class="toggle-pill active" data-platform="0" style="--pill-color:#ff4444" aria-pressed="true">YouTube</button>
+                        <button class="toggle-pill active" data-platform="1" style="--pill-color:#9147ff" aria-pressed="true">Twitch</button>
+                        <button class="toggle-pill active" data-platform="2" style="--pill-color:#69c9d0" aria-pressed="true">TikTok</button>
+                        <button class="toggle-pill active" data-platform="3" style="--pill-color:#ff9800" aria-pressed="true">Instagram</button>
+                        <button class="toggle-pill active" data-platform="4" style="--pill-color:#ffd60a" aria-pressed="true">Snapchat</button>
+                    </div>
+                </div>
+                <div class="chart-wrap" style="height:260px">
+                    <canvas id="chartByPlatform" aria-label="Followers by platform over time" role="img"></canvas>
+                </div>
+                <p class="chart-caption">Daily snapshot &middot; units: followers per platform</p>
+            </div>
+
+            <!-- Finance -->
+            <h3 class="section-title">Finance</h3>
+
+            <div class="db-grid-2">
+                <div class="chart-card card">
+                    <div class="chart-card-header"><span>Monthly Income vs Expenses</span></div>
+                    <div class="chart-wrap" style="height:220px">
+                        <canvas id="chartIncomeVsExp" aria-label="Monthly income versus expenses" role="img"></canvas>
+                    </div>
+                    <p class="chart-caption">Jan &ndash; Jun 2026 &middot; units: USD</p>
+                </div>
+                <div class="chart-card card">
+                    <div class="chart-card-header"><span>Revenue by Source (June)</span></div>
+                    <div class="chart-wrap" style="height:220px">
+                        <canvas id="chartIncomeSource" aria-label="Revenue breakdown by source" role="img"></canvas>
+                    </div>
+                    <p class="chart-caption">June 2026 &middot; units: USD</p>
+                </div>
+            </div>
+
+            <div class="db-grid-2">
+                <div class="chart-card card">
+                    <div class="chart-card-header"><span>Savings Balance</span></div>
+                    <div class="chart-wrap" style="height:200px">
+                        <canvas id="chartSavings" aria-label="Savings balance over time" role="img"></canvas>
+                    </div>
+                    <p class="chart-caption">Running balance &middot; Jan &ndash; Jun 2026 &middot; dashed line: $3,000 goal</p>
+                </div>
+                <div class="chart-card card">
+                    <div class="chart-card-header"><span>Net Profit (Monthly)</span></div>
+                    <div class="chart-wrap" style="height:200px">
+                        <canvas id="chartNetProfit" aria-label="Monthly net profit" role="img"></canvas>
+                    </div>
+                    <p class="chart-caption">Income &minus; Expenses &middot; Jan &ndash; Jun 2026 &middot; units: USD</p>
+                </div>
+            </div>
+
+            <!-- Goals -->
+            <h3 class="section-title">Goals</h3>
+
+            <div class="db-grid-2">
+                <div class="card goal-card">
+                    <div class="chart-card-header">
+                        <span>TwitchCon 2026 &mdash; Trip Fund</span>
+                        <span class="goal-badge">68%</span>
+                    </div>
+                    <div class="progress-wrap" role="progressbar" aria-valuenow="68" aria-valuemin="0" aria-valuemax="100" aria-label="Trip fund progress">
+                        <div class="progress-fill" style="width:0%;--target-w:68%;--fill-color:#4caf50" data-animate></div>
+                    </div>
+                    <div class="progress-labels">
+                        <span>$1,700 saved</span>
+                        <span>Target: $2,500</span>
+                    </div>
+                    <div class="goal-stats">
+                        <div class="goal-stat"><div class="gs-val">$800</div><div class="gs-lbl">Remaining</div></div>
+                        <div class="goal-stat"><div class="gs-val">Oct 2026</div><div class="gs-lbl">Target date</div></div>
+                        <div class="goal-stat"><div class="gs-val">4 mo</div><div class="gs-lbl">Time left</div></div>
+                    </div>
+                </div>
+
+                <div class="card goal-card">
+                    <div class="chart-card-header">
+                        <span>VOD Editor Budget (Q2)</span>
+                        <span class="goal-badge goal-badge-info">40%</span>
+                    </div>
+                    <div class="progress-wrap" role="progressbar" aria-valuenow="40" aria-valuemin="0" aria-valuemax="100" aria-label="VOD budget progress">
+                        <div class="progress-fill" style="width:0%;--target-w:40%;--fill-color:#00bcd4" data-animate></div>
+                    </div>
+                    <div class="progress-labels">
+                        <span>$240 spent</span>
+                        <span>Budget: $600</span>
+                    </div>
+                    <div class="goal-stats">
+                        <div class="goal-stat"><div class="gs-val">8</div><div class="gs-lbl">VODs published</div></div>
+                        <div class="goal-stat"><div class="gs-val">4</div><div class="gs-lbl">In edit queue</div></div>
+                        <div class="goal-stat"><div class="gs-val">$360</div><div class="gs-lbl">Budget left</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upcoming content -->
+            <h3 class="section-title">Upcoming Content</h3>
+
+            <div class="card">
+                <div class="table-wrap">
+                    <table class="vod-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Date</th>
+                                <th scope="col">Platform</th>
+                                <th scope="col">Title</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Jun 4</td>
+                                <td><span class="plat-tag plat-yt">YouTube</span></td>
+                                <td>Best of May highlights</td>
+                                <td><span class="status-pill status-editing">Editing</span></td>
+                                <td>8 min compilation</td>
+                            </tr>
+                            <tr>
+                                <td>Jun 5</td>
+                                <td><span class="plat-tag plat-tt">TikTok</span></td>
+                                <td>Clip pack &times;3</td>
+                                <td><span class="status-pill status-scheduled">Scheduled</span></td>
+                                <td>From Jun 3 stream</td>
+                            </tr>
+                            <tr>
+                                <td>Jun 6</td>
+                                <td><span class="plat-tag plat-twitch">Twitch</span></td>
+                                <td>Variety Saturday</td>
+                                <td><span class="status-pill status-planned">Planned</span></td>
+                                <td>4h goal</td>
+                            </tr>
+                            <tr>
+                                <td>Jun 8</td>
+                                <td><span class="plat-tag plat-ig">Instagram</span></td>
+                                <td>Reel &mdash; setup tour</td>
+                                <td><span class="status-pill status-planned">Planned</span></td>
+                                <td>Film after stream</td>
+                            </tr>
+                            <tr>
+                                <td>Jun 10</td>
+                                <td><span class="plat-tag plat-yt">YouTube</span></td>
+                                <td>Full VOD &mdash; Jun 6</td>
+                                <td><span class="status-pill status-planned">Planned</span></td>
+                                <td>Chapters + thumb</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <footer role="contentinfo">
+        <p>&copy; 2026 surrplexie &middot; <a href="/">surrplexie.github.io</a></p>
+    </footer>
+</body>
+</html>
