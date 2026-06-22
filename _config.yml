@@ -5,6 +5,15 @@ url: "https://surrplexie.github.io"
 baseurl: ""
 og_image: "/images/og-card.png"
 
+plugins:
+  - jekyll-sitemap
+
+defaults:
+  - scope:
+      path: "Docs"
+    values:
+      sitemap: false
+
 exclude:
   - README.md
   - SECURITY.md

@@ -98,6 +98,58 @@ nav a {
     transition: color 0.2s, border-color 0.2s;
 }
 
+.site-nav {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.nav-short {
+    display: none;
+}
+
+.nav-toggle {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 2px solid rgba(0, 188, 212, 0.45);
+    border-radius: 6px;
+    background: rgba(0, 188, 212, 0.08);
+    cursor: pointer;
+}
+
+.nav-toggle-bar {
+    display: block;
+    width: 20px;
+    height: 2px;
+    margin: 0 auto;
+    background: var(--color-primary);
+    border-radius: 1px;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.nav-toggle[aria-expanded="true"] .nav-toggle-bar:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+}
+
+.nav-toggle[aria-expanded="true"] .nav-toggle-bar:nth-child(2) {
+    opacity: 0;
+}
+
+.nav-toggle[aria-expanded="true"] .nav-toggle-bar:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+}
+
+.nav-toggle:focus-visible {
+    outline: var(--focus-outline);
+    outline-offset: var(--focus-offset);
+}
+
 nav a:hover {
     color: var(--color-primary);
 }
@@ -406,6 +458,51 @@ h2 {
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* --- 404 Page --- */
+.error-card p {
+    margin-top: 0;
+}
+
+.error-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 20px 0 8px;
+}
+
+.error-actions .cta-button {
+    margin-top: 0;
+}
+
+.error-hint {
+    font-size: 0.9em;
+    color: var(--color-muted);
+    margin-bottom: 0.5rem;
+}
+
+.error-links {
+    margin: 0;
+    padding-left: 1.2rem;
+    line-height: 1.8;
+}
+
+.error-links a {
+    color: var(--color-accent);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.error-links a:hover {
+    color: var(--color-primary);
+    text-decoration: underline;
+}
+
+.error-links a:focus-visible {
+    outline: var(--focus-outline);
+    outline-offset: var(--focus-offset);
+    border-radius: 2px;
+}
+
 /* --- Layout Grid --- */
 .grid-2 {
     display: grid;
@@ -543,7 +640,9 @@ h2 {
     .site-banner,
     nav a,
     .cta-button,
-    .social-box {
+    .social-box,
+    .nav-toggle,
+    .nav-toggle-bar {
         transition: none;
     }
 }
@@ -564,11 +663,11 @@ footer {
         flex-wrap: wrap;
     }
 
-    nav a {
+    .site-nav a {
         margin-left: 12px;
     }
 
-    nav a:first-child {
+    .site-nav a:first-child {
         margin-left: 0;
     }
 
@@ -576,6 +675,75 @@ footer {
     .cert-header {
         flex-direction: column;
         align-items: flex-start;
+    }
+}
+
+@media (max-width: 767px) {
+    .site-banner .banner-inner {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            "logo toggle"
+            "nav nav";
+        align-items: center;
+        gap: 12px;
+        text-align: left;
+    }
+
+    .logo {
+        grid-area: logo;
+        font-size: clamp(0.95em, 4vw, 1.2em);
+    }
+
+    .nav-toggle {
+        display: flex;
+        grid-area: toggle;
+        justify-self: end;
+    }
+
+    .site-nav {
+        grid-area: nav;
+        display: none;
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+        gap: 4px;
+        padding: 8px 0 4px;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .site-nav.is-open {
+        display: flex;
+    }
+
+    .site-nav a {
+        margin: 0;
+        padding: 12px 10px;
+        border-bottom: none;
+        border-left: 3px solid transparent;
+        border-radius: 4px;
+    }
+
+    .site-nav a:hover,
+    .site-nav a[aria-current="page"] {
+        border-left-color: var(--color-primary);
+        background: rgba(0, 188, 212, 0.08);
+    }
+
+    .site-nav a[aria-current="page"] {
+        border-bottom: none;
+    }
+
+    .nav-long {
+        display: none;
+    }
+
+    .nav-short {
+        display: inline;
+    }
+
+    body.nav-open {
+        overflow: hidden;
     }
 }
 
@@ -589,16 +757,13 @@ footer {
         border-radius: 0;
     }
 
-    .site-banner .banner-inner {
+    .cta-row {
         flex-direction: column;
+        align-items: stretch;
+    }
+
+    .cta-row .cta-button {
+        width: 100%;
         text-align: center;
-    }
-
-    nav {
-        margin-top: 15px;
-    }
-
-    nav a {
-        margin: 0 10px;
     }
 }

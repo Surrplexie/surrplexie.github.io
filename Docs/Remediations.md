@@ -141,3 +141,14 @@ Dev logs rules; REM-1, REM-2 any of these terms are the new 'updates' like "Upd
 - **P1:** Socials — title/banner **Kai Morgan // Contact**; intro copy aligned to IT support / help desk hiring; external links use `rel="noopener noreferrer"`; social grid font matches site (`Roboto Mono`).
 - **P1:** Labs — repository links for **binary-analyzer** and **custom2fa**; hash scanner links to contact page (no public repo yet); `.project-links` style.
 - **P1:** Footer text updated to **© Kai Morgan (Surrplexie)** for consistent professional branding.
+
+---
+
+## REM-14
+
+**P3 UX and discoverability** — 404 page, sitemap, lazy images, and mobile navigation.
+
+- **404:** Added `404.html` (Jekyll layout) with home/contact actions and quick links to certs, labs, and resume PDF; `.error-card` styles in `style.css`.
+- **Sitemap:** Enabled `jekyll-sitemap` plugin in `_config.yml`; `Docs/` pages excluded from sitemap via `defaults`.
+- **Lazy images:** Certificate images on `certs/index.html` use `loading="lazy"`, `decoding="async"`, and explicit `width` / `height` to reduce layout shift.
+- **Mobile nav:** Hamburger toggle in `_layouts/default.html` with `site-nav.js` (toggle, Escape to close, auto-close on link click and viewport resize); short labels on small screens (**Certs**, **Labs**, **Contact**); stacked full-width nav panel; homepage CTA buttons stack on narrow viewports.
