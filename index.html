@@ -2,6 +2,7 @@
 layout: default
 title: Kai Morgan | IT Support & Help Desk
 banner_title: "Kai Morgan // IT Support & Help Desk"
+description: "Kai Morgan is an IT student seeking help desk, desktop support, and internship roles. MATC IT Computer Support Specialist, hands-on labs, and earned certifications."
 scripts:
   - /script.js
 ---
@@ -31,12 +32,19 @@ scripts:
                 <a href="{{ '/socials/' | relative_url }}">contact page</a>.
             </p>
 
-            <button
-                id="resumeToggle"
-                class="cta-button"
-                aria-expanded="false"
-                aria-controls="resumeSnippet"
-            >View Key Qualifications</button>
+            <div class="cta-row">
+                <button
+                    id="resumeToggle"
+                    class="cta-button"
+                    aria-expanded="false"
+                    aria-controls="resumeSnippet"
+                >View Key Qualifications</button>
+                <a
+                    href="{{ '/files/Kai_Morgan_Resume.pdf' | relative_url }}"
+                    class="cta-button cta-button-secondary"
+                    download
+                >Download Resume (PDF)</a>
+            </div>
 
             <div id="resumeSnippet" class="snippet-box" role="region" aria-label="Key qualifications summary">
                 <p><strong>Objective:</strong> Internship or entry-level IT support / help desk role.</p>
@@ -67,6 +75,7 @@ scripts:
             </ul>
             <h3 class="aside-subheading">Links</h3>
             <ul class="aside-links">
+                <li><a href="{{ '/files/Kai_Morgan_Resume.pdf' | relative_url }}" download>Download Resume (PDF)</a></li>
                 <li><a href="{{ '/socials/' | relative_url }}">Contact &amp; Socials</a></li>
                 <li><a href="https://www.linkedin.com/in/surrplexie/" rel="noopener noreferrer" target="_blank">LinkedIn</a></li>
                 <li><a href="https://github.com/surrplexie" rel="noopener noreferrer" target="_blank">GitHub</a></li>

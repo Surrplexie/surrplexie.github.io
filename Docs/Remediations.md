@@ -126,3 +126,18 @@ Dev logs rules; REM-1, REM-2 any of these terms are the new 'updates' like "Upd
 - Documented navigation fixes, homepage repositioning, accessibility, media renames, layout, Jekyll migration, cert page final state, labs/socials pass, planning backlog, and log maintenance.
 - **Live cert page after REM-7:** three **Earned** rows with images (Microsoft + two CompTIA competencies), one **In Progress** Security+ row without image; CompTIA A+ not listed on cert page.
 - **Repo note:** `Docs/` holds internal dev history; add `Docs` to `_config.yml` `exclude` if this markdown should not publish as a public page on GitHub Pages.
+
+---
+
+## REM-13
+
+**P0 and P1 job-search polish** — UI fixes, SEO, branding, proof links, and resume download.
+
+- **P0:** Added missing `.github` brand color in `socials.css`; bumped Font Awesome from 6.0.0 to **6.7.2** (with SRI) in `_layouts/default.html` and `db-streaming1122/index.html` so `fa-x-twitter` renders.
+- **P0:** Added **CompTIA A+** as **In Progress** on `certs/index.html` to match homepage qualifications toggle.
+- **P1:** `_layouts/default.html` — `meta description`, canonical URL, favicon (`images/favicon.svg`), Open Graph and Twitter Card tags; per-page `description` in front matter; `_config.yml` site `description` and `og_image`.
+- **P1:** Generated `images/og-card.png` and `files/Kai_Morgan_Resume.pdf`; `scripts/generate_resume.py` and `scripts/generate_og_card.py` (excluded from Jekyll build).
+- **P1:** Homepage — **Download Resume (PDF)** button and aside link; `.cta-row` / `.cta-button-secondary` styles.
+- **P1:** Socials — title/banner **Kai Morgan // Contact**; intro copy aligned to IT support / help desk hiring; external links use `rel="noopener noreferrer"`; social grid font matches site (`Roboto Mono`).
+- **P1:** Labs — repository links for **binary-analyzer** and **custom2fa**; hash scanner links to contact page (no public repo yet); `.project-links` style.
+- **P1:** Footer text updated to **© Kai Morgan (Surrplexie)** for consistent professional branding.

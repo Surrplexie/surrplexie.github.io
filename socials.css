@@ -17,7 +17,7 @@
     text-decoration: none;
     border-radius: 15px;
     color: white !important; /* Forces text to stay white */
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Roboto Mono', monospace;
     font-weight: 600;
     transition: all 0.3s ease;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
@@ -38,7 +38,7 @@
 .proton { background-color: #6d4aff; }
 .gmail { background-color: #DB4437; }
 .discord { background-color: #5865F2; }
-.linkedin { background-color: #0077B5; }
+.github { background-color: #24292e; }
 .instagram { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
 .pinterest { background-color: #BD081C; }
 .reddit { background-color: #FF4500; }

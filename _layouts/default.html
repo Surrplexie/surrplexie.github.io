@@ -4,7 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% if page.title %}{{ page.title | xml_escape }}{% else %}{{ site.title | xml_escape }}{% endif %}</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    {% assign page_description = page.description | default: site.description %}
+    {% assign page_image = page.image | default: site.og_image %}
+    {% assign canonical_url = page.url | absolute_url %}
+
+    <meta name="description" content="{{ page_description | xml_escape }}">
+    <link rel="canonical" href="{{ canonical_url }}">
+
+    <link rel="icon" href="{{ '/images/favicon.svg' | relative_url }}" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="{{ '/images/favicon.svg' | relative_url }}">
+
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="{{ site.title | xml_escape }}">
+    <meta property="og:title" content="{% if page.title %}{{ page.title | xml_escape }}{% else %}{{ site.title | xml_escape }}{% endif %}">
+    <meta property="og:description" content="{{ page_description | xml_escape }}">
+    <meta property="og:url" content="{{ canonical_url }}">
+    <meta property="og:image" content="{{ page_image | absolute_url }}">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{% if page.title %}{{ page.title | xml_escape }}{% else %}{{ site.title | xml_escape }}{% endif %}">
+    <meta name="twitter:description" content="{{ page_description | xml_escape }}">
+    <meta name="twitter:image" content="{{ page_image | absolute_url }}">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer">
     <link rel="stylesheet" href="{{ '/style.css' | relative_url }}">
     {% if page.extra_stylesheets %}
     {% for sheet in page.extra_stylesheets %}

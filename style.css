@@ -178,6 +178,31 @@ h2 {
     cursor: pointer;
     font-weight: bold;
     margin-top: 8px;
+    text-decoration: none;
+    display: inline-block;
+    box-sizing: border-box;
+}
+
+.cta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    margin-top: 8px;
+}
+
+.cta-row .cta-button {
+    margin-top: 0;
+}
+
+.cta-button-secondary {
+    background-color: transparent;
+    color: var(--color-primary);
+    border: 2px solid var(--color-primary);
+}
+
+.cta-button-secondary:hover {
+    background-color: rgba(0, 188, 212, 0.12);
 }
 
 .cta-button:hover {
@@ -295,6 +320,14 @@ h2 {
 
 .project-outcomes li {
     margin-bottom: 0.3rem;
+}
+
+.project-links {
+    margin: 14px 0 0;
+}
+
+.project-links .cta-link {
+    margin-top: 0;
 }
 
 /* --- Status Badges --- */
