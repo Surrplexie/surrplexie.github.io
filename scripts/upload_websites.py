@@ -1,64 +1,67 @@
-"""Import bookmarks from a txt file into s/websites.json and push to GitHub."""
+"""Import website links from a txt file into s/websites.json and push to GitHub."""
 from __future__ import annotations
 
 import argparse
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-from bookmark_utils import load_json, merge_categories, parse_txt_lines, write_json
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-ROOT = Path(__file__).resolve().parents[1]
-JSON_PATH = ROOT / "s" / "websites.json"
-DEFAULT_TEMPLATE = Path.home() / "Downloads" / "websites-import-template.txt"
-
-TEMPLATE = """# Websites import file for surrplexie.github.io/s
-# One link per row. Lines starting with # are comments.
-#
-# Category header (optional):
-▸ Imported
-#
-# Named link:
-My Example Site | https://example.com
-#
-# URL only (auto-named):
-https://github.com/Surrplexie
-https://cursor.com
-"""
+from website_utils import (
+    JSON_PATH,
+    ROOT,
+    SOURCE_TXT_PATH,
+    TEMPLATE_TEXT,
+    categories_to_txt,
+    load_json,
+    merge_categories,
+    parse_txt,
+    write_json,
+)
 
 
-def export_template(destination: Path) -> Path:
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(TEMPLATE, encoding="utf-8")
-    return destination
+def downloads_dir() -> Path:
+    return Path.home() / "Downloads"
 
 
-def choose_txt_file() -> Path | None:
+def pick_txt_file() -> Path | None:
     try:
         import tkinter as tk
         from tkinter import filedialog
     except ImportError:
-        print("Tkinter is not available. Pass --file path\\to\\links.txt instead.")
         return None
 
     root = tk.Tk()
     root.withdraw()
     root.attributes("-topmost", True)
     selected = filedialog.askopenfilename(
-        title="Select websites txt file",
+        title="Select website links txt file",
         filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
+        initialdir=str(downloads_dir()),
     )
     root.destroy()
     return Path(selected) if selected else None
 
 
-def git_push(message: str) -> None:
-    subprocess.run(["git", "add", "s/websites.json"], cwd=ROOT, check=True)
-    status = subprocess.run(
-        ["git", "diff", "--cached", "--quiet"],
-        cwd=ROOT,
-    )
-    if status.returncode == 0:
+def export_template() -> Path:
+    target = downloads_dir() / "website-links-template.txt"
+    target.write_text(TEMPLATE_TEXT, encoding="utf-8")
+    return target
+
+
+def export_current() -> Path:
+    data = load_json()
+    target = downloads_dir() / "website-links-export.txt"
+    target.write_text(categories_to_txt(data.get("categories", [])), encoding="utf-8")
+    return target
+
+
+def run_git_push(message: str) -> None:
+    subprocess.run(["git", "add", str(JSON_PATH.relative_to(ROOT)), str(SOURCE_TXT_PATH.relative_to(ROOT))], cwd=ROOT, check=True)
+    status = subprocess.run(["git", "status", "--porcelain"], cwd=ROOT, capture_output=True, text=True, check=True)
+    if not status.stdout.strip():
         print("No changes to commit.")
         return
 
@@ -67,89 +70,78 @@ def git_push(message: str) -> None:
     print("Pushed to GitHub.")
 
 
-def import_txt(txt_path: Path, default_category: str) -> tuple[int, int]:
-    if not txt_path.exists():
-        raise FileNotFoundError(f"Txt file not found: {txt_path}")
+def import_txt(path: Path, default_category: str, dry_run: bool) -> int:
+    text = path.read_text(encoding="utf-8")
+    incoming = parse_txt(text, default_category=default_category)
+    existing = load_json().get("categories", [])
+    merged, added = merge_categories(existing, incoming)
 
-    lines = txt_path.read_text(encoding="utf-8").splitlines()
-    incoming = parse_txt_lines(lines, default_category=default_category)
-    if not incoming:
-        raise ValueError("No valid links found in the selected txt file.")
+    print(f"Scanned: {path}")
+    print(f"New links added: {added}")
+    print(f"Total links: {sum(len(category['links']) for category in merged)}")
 
-    existing = load_json(JSON_PATH)
-    merged, added = merge_categories(existing.get("categories", []), incoming)
-    write_json(JSON_PATH, merged)
+    if dry_run:
+        print("Dry run only — no files written.")
+        return added
 
-    total = sum(len(category["links"]) for category in merged)
-    return added, total
+    write_json(merged)
+    SOURCE_TXT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(path, SOURCE_TXT_PATH)
+    print(f"Updated {JSON_PATH}")
+    print(f"Saved source copy to {SOURCE_TXT_PATH}")
+    return added
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description="Import website bookmarks from a txt file into s/websites.json.",
-    )
-    parser.add_argument(
-        "--file",
-        type=Path,
-        help="Path to txt file (one link per row). Opens a file picker if omitted.",
-    )
-    parser.add_argument(
-        "--template",
-        type=Path,
-        nargs="?",
-        const=DEFAULT_TEMPLATE,
-        help="Download an import template txt to Downloads (or a custom path).",
-    )
-    parser.add_argument(
-        "--category",
-        default="Imported",
-        help="Default category when txt rows have no section header.",
-    )
-    parser.add_argument(
-        "--push",
-        action="store_true",
-        help="Commit and push s/websites.json to GitHub after import.",
-    )
-    parser.add_argument(
-        "--message",
-        default="Update /s bookmarks from txt import",
-        help="Git commit message when using --push.",
-    )
+    parser = argparse.ArgumentParser(description="Import website links from txt into s/websites.json")
+    parser.add_argument("--template", action="store_true", help="Download a blank template txt to Downloads")
+    parser.add_argument("--export", action="store_true", help="Export current site links to Downloads as txt")
+    parser.add_argument("--file", type=Path, help="Path to txt file with one link per row")
+    parser.add_argument("--pick", action="store_true", help="Open a file picker for the txt file")
+    parser.add_argument("--category", default="Imported", help="Default category when txt has no section header")
+    parser.add_argument("--push", action="store_true", help="Commit and push updated files to GitHub")
+    parser.add_argument("--dry-run", action="store_true", help="Preview import without writing files")
     return parser
 
 
 def main() -> int:
-    parser = build_parser()
-    args = parser.parse_args()
+    args = build_parser().parse_args()
 
-    if args.template is not None:
-        path = export_template(args.template)
-        print(f"Template saved to {path}")
-        if args.file is None and not args.push:
-            return 0
+    if args.template:
+        target = export_template()
+        print(f"Template saved to {target}")
+        return 0
+
+    if args.export:
+        target = export_current()
+        print(f"Current links exported to {target}")
+        return 0
 
     txt_path = args.file
-    if txt_path is None:
-        txt_path = choose_txt_file()
-        if txt_path is None:
-            print("No file selected.")
-            return 1
+    if txt_path is None and args.pick:
+        txt_path = pick_txt_file()
+    if txt_path is None and args.file is None and not args.template and not args.export:
+        txt_path = pick_txt_file()
 
-    try:
-        added, total = import_txt(txt_path, args.category)
-    except (FileNotFoundError, ValueError) as error:
-        print(error)
+    if txt_path is None:
+        print("No txt file selected.")
+        print("Use --template to download a starter file, or --file PATH / --pick.")
         return 1
 
-    print(f"Updated {JSON_PATH}")
-    print(f"Added {added} new link(s). Site now has {total} bookmark(s).")
+    if not txt_path.exists():
+        print(f"File not found: {txt_path}")
+        return 1
+
+    added = import_txt(txt_path, args.category, args.dry_run)
+    if args.dry_run or added == 0:
+        if added == 0 and not args.dry_run:
+            print("Nothing new to upload.")
+        return 0
 
     if args.push:
-        try:
-            git_push(args.message)
-        except subprocess.CalledProcessError as error:
-            print(f"Git push failed: {error}")
-            return 1
+        run_git_push("Update website bookmarks from links txt")
+    else:
+        print("Local files updated. Re-run with --push to upload to GitHub.")
 
     return 0
 

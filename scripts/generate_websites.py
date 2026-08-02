@@ -1,14 +1,14 @@
 """Generate s/websites.json from the bookmarks CSV export."""
-from __future__ import annotations
-
 import csv
+import sys
 from pathlib import Path
 
-from bookmark_utils import display_name, url_key, write_json
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from website_utils import display_name, write_json
 
 ROOT = Path(__file__).resolve().parents[1]
 CSV_PATH = Path(r"C:\Users\surrp\Downloads\s - Sheet1.csv")
-OUT_PATH = ROOT / "s" / "websites.json"
 
 
 def parse_csv() -> list[dict]:
@@ -34,7 +34,7 @@ def parse_csv() -> list[dict]:
                 continue
 
             if cell.startswith("http"):
-                key = url_key(cell)
+                key = cell.lower().rstrip("/")
                 if key in seen:
                     continue
                 seen.add(key)
@@ -48,9 +48,9 @@ def parse_csv() -> list[dict]:
 
 def main() -> None:
     categories = parse_csv()
-    write_json(OUT_PATH, categories)
+    write_json(categories)
     total = sum(len(category["links"]) for category in categories)
-    print(f"Wrote {OUT_PATH} ({total} links in {len(categories)} categories)")
+    print(f"Wrote {ROOT / 's' / 'websites.json'} ({total} links in {len(categories)} categories)")
 
 
 if __name__ == "__main__":
