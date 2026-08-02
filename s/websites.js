@@ -105,7 +105,10 @@
                     item.dataset.categoryName,
                 ].join(' '));
 
-                const visible = (!query || haystack.includes(query)) && categoryMatches;
+                const matchesQuery = !query || haystack.includes(query);
+                const matchesCategory = categoryMatches;
+                const visible = matchesQuery && matchesCategory;
+
                 item.hidden = !visible;
 
                 if (visible) {

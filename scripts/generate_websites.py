@@ -1,33 +1,56 @@
-"""Generate s/websites.json from a local bookmarks txt/csv export."""
+"""Generate s/websites.json from the bookmarks CSV export."""
 from __future__ import annotations
 
-import argparse
-import sys
+import csv
 from pathlib import Path
 
+from bookmark_utils import display_name, url_key, write_json
+
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_SOURCE = Path(r"C:\Users\surrp\Downloads\s - Sheet1.csv")
+CSV_PATH = Path(r"C:\Users\surrp\Downloads\s - Sheet1.csv")
 OUT_PATH = ROOT / "s" / "websites.json"
-SCRIPT_DIR = Path(__file__).resolve().parent
 
-if str(SCRIPT_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPT_DIR))
 
-from bookmarks_parser import write_websites_json  # noqa: E402
+def parse_csv() -> list[dict]:
+    categories: list[dict] = []
+    current: dict | None = None
+    seen: set[str] = set()
+
+    with CSV_PATH.open(newline="", encoding="utf-8-sig") as handle:
+        for row in csv.reader(handle):
+            cell = ""
+            for column in row:
+                column = column.strip()
+                if column:
+                    cell = column
+                    break
+
+            if not cell:
+                continue
+
+            if cell.startswith("▸"):
+                current = {"name": cell.lstrip("▸").strip(), "links": []}
+                categories.append(current)
+                continue
+
+            if cell.startswith("http"):
+                key = url_key(cell)
+                if key in seen:
+                    continue
+                seen.add(key)
+                if current is None:
+                    current = {"name": "Uncategorized", "links": []}
+                    categories.append(current)
+                current["links"].append({"name": display_name(cell), "url": cell})
+
+    return [category for category in categories if category["links"]]
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate s/websites.json locally.")
-    parser.add_argument(
-        "--file",
-        type=Path,
-        default=DEFAULT_SOURCE,
-        help=f"Bookmarks txt/csv path (default: {DEFAULT_SOURCE})",
-    )
-    args = parser.parse_args()
-
-    payload = write_websites_json(args.file, OUT_PATH)
-    print(f"Wrote {OUT_PATH} ({payload['total']} links in {len(payload['categories'])} categories)")
+    categories = parse_csv()
+    write_json(OUT_PATH, categories)
+    total = sum(len(category["links"]) for category in categories)
+    print(f"Wrote {OUT_PATH} ({total} links in {len(categories)} categories)")
 
 
 if __name__ == "__main__":
