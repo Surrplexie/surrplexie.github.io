@@ -1,4 +1,4 @@
-"""Generate websites/websites.json from the bookmarks CSV export."""
+"""Generate s/websites.json from the bookmarks CSV export."""
 import csv
 import json
 import re
@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
 CSV_PATH = Path(r"C:\Users\surrp\Downloads\s - Sheet1.csv")
-OUT_PATH = ROOT / "websites" / "websites.json"
+OUT_PATH = ROOT / "s" / "websites.json"
 
 DOMAIN_NAMES = {
     "chatgpt.com": "ChatGPT",
