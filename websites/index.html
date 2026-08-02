@@ -1,0 +1,90 @@
+---
+layout: default
+title: Websites | Kai Morgan
+banner_title: "Kai Morgan // Websites"
+description: "Personal bookmark bar — saved websites organized by category with search and quick links."
+extra_stylesheets:
+  - websites/websites.css
+scripts:
+  - /websites/websites.js
+---
+        <section class="card websites-page">
+            <header class="websites-header">
+                <h2>&gt; Websites</h2>
+                <p>
+                    A personal bookmark bar — grouped by category, searchable, and one click to open in a new tab.
+                    Use <strong>Add a bookmark</strong> to save new links on this device with an auto-generated name.
+                </p>
+            </header>
+
+            <div class="websites-toolbar" role="search">
+                <label class="search-field" for="website-search">
+                    <i class="fas fa-search" aria-hidden="true"></i>
+                    <input
+                        type="search"
+                        id="website-search"
+                        placeholder="Search name, URL, or category…"
+                        autocomplete="off"
+                        spellcheck="false"
+                    >
+                </label>
+
+                <label class="filter-field" for="category-filter">
+                    <span class="filter-label">Category</span>
+                    <select id="category-filter">
+                        <option value="">All categories</option>
+                    </select>
+                </label>
+
+                <p class="results-count" id="results-count" aria-live="polite"></p>
+            </div>
+
+            <details class="add-bookmark-panel" id="add-bookmark-panel">
+                <summary>Add a bookmark</summary>
+                <form id="add-bookmark-form" class="add-bookmark-form">
+                    <label class="form-field" for="add-url">
+                        <span class="filter-label">URL</span>
+                        <input
+                            type="url"
+                            id="add-url"
+                            name="url"
+                            placeholder="https://example.com"
+                            required
+                            inputmode="url"
+                            spellcheck="false"
+                        >
+                    </label>
+
+                    <label class="form-field" for="add-category">
+                        <span class="filter-label">Category</span>
+                        <input
+                            type="text"
+                            id="add-category"
+                            name="category"
+                            list="category-suggestions"
+                            placeholder="Pick or type a category"
+                            required
+                        >
+                        <datalist id="category-suggestions"></datalist>
+                    </label>
+
+                    <label class="form-field" for="add-name">
+                        <span class="filter-label">Display name</span>
+                        <input
+                            type="text"
+                            id="add-name"
+                            name="name"
+                            placeholder="Auto-generated from URL"
+                        >
+                    </label>
+
+                    <div class="add-bookmark-actions">
+                        <button type="submit" class="cta-button">Save bookmark</button>
+                        <p id="add-bookmark-status" class="add-bookmark-status" aria-live="polite"></p>
+                    </div>
+                </form>
+            </details>
+
+            <div id="websites-list" class="websites-list" aria-label="Saved websites"></div>
+            <p id="websites-empty" class="websites-empty" hidden>No bookmarks match your search.</p>
+        </section>

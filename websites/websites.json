@@ -1,0 +1,1664 @@
+{
+  "categories": [
+    {
+      "name": "Personal GIthub",
+      "links": [
+        {
+          "name": "Surrplexie · GitHub",
+          "url": "https://github.com/Surrplexie?tab=repositories"
+        },
+        {
+          "name": "Surrplexie",
+          "url": "https://surrplexie.github.io/"
+        }
+      ]
+    },
+    {
+      "name": "AI & Machine Learning",
+      "links": [
+        {
+          "name": "Bolt",
+          "url": "https://bolt.new"
+        },
+        {
+          "name": "ChatGPT",
+          "url": "https://chatgpt.com/"
+        },
+        {
+          "name": "Claude",
+          "url": "https://claude.ai/"
+        },
+        {
+          "name": "Cursor",
+          "url": "https://cursor.com"
+        },
+        {
+          "name": "Google Gemini",
+          "url": "https://gemini.google.com/u/1/app"
+        },
+        {
+          "name": "En · Aixploria",
+          "url": "https://www.aixploria.com/en/"
+        },
+        {
+          "name": "Humanizeai",
+          "url": "https://www.humanizeai.io/"
+        },
+        {
+          "name": "Perplexity",
+          "url": "https://www.perplexity.ai/"
+        },
+        {
+          "name": "Zerogpt",
+          "url": "https://www.zerogpt.com/"
+        }
+      ]
+    },
+    {
+      "name": "Coding & Development",
+      "links": [
+        {
+          "name": "Dev",
+          "url": "https://dev.to/"
+        },
+        {
+          "name": "En Us · Developer",
+          "url": "https://developer.mozilla.org/en-us/"
+        },
+        {
+          "name": "Exercism",
+          "url": "https://exercism.org/"
+        },
+        {
+          "name": "Git Scm",
+          "url": "https://git-scm.com"
+        },
+        {
+          "name": "Godbolt",
+          "url": "https://godbolt.org/"
+        },
+        {
+          "name": "Home",
+          "url": "https://home.unicode.org/"
+        },
+        {
+          "name": "Replit",
+          "url": "https://replit.com/"
+        },
+        {
+          "name": "Bash · Ss64",
+          "url": "https://ss64.com/bash/"
+        },
+        {
+          "name": "Stack Overflow",
+          "url": "https://stackoverflow.com/questions"
+        },
+        {
+          "name": "Arduino",
+          "url": "https://www.arduino.cc/"
+        },
+        {
+          "name": "Ascii Code",
+          "url": "https://www.ascii-code.com/"
+        },
+        {
+          "name": "Freecodecamp",
+          "url": "https://www.freecodecamp.org/"
+        },
+        {
+          "name": "Online Python",
+          "url": "https://www.online-python.com/"
+        },
+        {
+          "name": "Programiz",
+          "url": "https://www.programiz.com"
+        }
+      ]
+    },
+    {
+      "name": "Programming Languages",
+      "links": [
+        {
+          "name": "Cplusplus",
+          "url": "https://cplusplus.com/"
+        },
+        {
+          "name": "Go",
+          "url": "https://go.dev/"
+        },
+        {
+          "name": "Learnjavascript",
+          "url": "https://learnjavascript.online/"
+        },
+        {
+          "name": "En · Nodejs",
+          "url": "https://nodejs.org/en"
+        },
+        {
+          "name": "Py",
+          "url": "https://py.checkio.org/"
+        },
+        {
+          "name": "Rust Lang",
+          "url": "https://rust-lang.org/"
+        },
+        {
+          "name": "Rustup",
+          "url": "https://rustup.rs"
+        },
+        {
+          "name": "En · Java",
+          "url": "https://www.java.com/en/"
+        },
+        {
+          "name": "Manual Jsp · Java",
+          "url": "https://www.java.com/en/download/manual.jsp"
+        },
+        {
+          "name": "Learn C",
+          "url": "https://www.learn-c.org/"
+        },
+        {
+          "name": "Php",
+          "url": "https://www.php.net/"
+        },
+        {
+          "name": "Python",
+          "url": "https://www.python.org/"
+        },
+        {
+          "name": "Typescriptlang",
+          "url": "https://www.typescriptlang.org/"
+        },
+        {
+          "name": "Cpp Intro Asp · W3Schools",
+          "url": "https://www.w3schools.com/cpp/cpp_intro.asp"
+        }
+      ]
+    },
+    {
+      "name": "Development Environments & Tools",
+      "links": [
+        {
+          "name": "Code",
+          "url": "https://code.visualstudio.com/"
+        },
+        {
+          "name": "Webview2 · Developer",
+          "url": "https://developer.microsoft.com/en-us/microsoft-edge/webview2/?form=MA13LH"
+        },
+        {
+          "name": "Download · Dotnet",
+          "url": "https://dotnet.microsoft.com/en-us/download"
+        },
+        {
+          "name": "Latest Supported Vc Redist · Learn",
+          "url": "https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170"
+        },
+        {
+          "name": "Package Manager · Learn",
+          "url": "https://learn.microsoft.com/en-us/windows/package-manager/"
+        },
+        {
+          "name": "Powertoys · Learn",
+          "url": "https://learn.microsoft.com/en-us/windows/powertoys/"
+        },
+        {
+          "name": "V2 · Autohotkey",
+          "url": "https://www.autohotkey.com/v2/"
+        },
+        {
+          "name": "Details Aspx · Microsoft",
+          "url": "https://www.microsoft.com/en-us/download/details.aspx?id=8109"
+        },
+        {
+          "name": "Downloads · Voidtools",
+          "url": "https://www.voidtools.com/downloads/"
+        }
+      ]
+    },
+    {
+      "name": "GitHub Repositories",
+      "links": [
+        {
+          "name": "Cyberchef · Gchq",
+          "url": "https://gchq.github.io/CyberChef/"
+        },
+        {
+          "name": "antonio-morales · GitHub",
+          "url": "https://github.com/antonio-morales/Fuzzing101"
+        },
+        {
+          "name": "david942j · GitHub",
+          "url": "https://github.com/david942j/one_gadget"
+        },
+        {
+          "name": "digininja · GitHub",
+          "url": "https://github.com/digininja/DVWA/"
+        },
+        {
+          "name": "dnSpy · GitHub",
+          "url": "https://github.com/dnSpy/dnSpy"
+        },
+        {
+          "name": "exiftool · GitHub",
+          "url": "https://github.com/exiftool/exiftool"
+        },
+        {
+          "name": "File-New-Project · GitHub",
+          "url": "https://github.com/File-New-Project/EarTrumpet"
+        },
+        {
+          "name": "Gallopsled · GitHub",
+          "url": "https://github.com/Gallopsled/pwntools"
+        },
+        {
+          "name": "hugsy · GitHub",
+          "url": "https://github.com/hugsy/gef"
+        },
+        {
+          "name": "jjyg · GitHub",
+          "url": "https://github.com/jjyg/metasm"
+        },
+        {
+          "name": "marticliment · GitHub",
+          "url": "https://github.com/marticliment/UniGetUI"
+        },
+        {
+          "name": "mcmilk · GitHub",
+          "url": "https://github.com/mcmilk/7-Zip-zstd"
+        },
+        {
+          "name": "NationalSecurityAgency · GitHub",
+          "url": "https://github.com/NationalSecurityAgency/ghidra"
+        },
+        {
+          "name": "Neo23x0 · GitHub",
+          "url": "https://github.com/Neo23x0/yarGen"
+        },
+        {
+          "name": "hatching · GitHub",
+          "url": "https://github.com/orgs/hatching/repositories"
+        },
+        {
+          "name": "rizinorg · GitHub",
+          "url": "https://github.com/rizinorg/cutter"
+        },
+        {
+          "name": "rocksdanister · GitHub",
+          "url": "https://github.com/rocksdanister/lively"
+        },
+        {
+          "name": "sashs · GitHub",
+          "url": "https://github.com/sashs/Ropper"
+        },
+        {
+          "name": "sherlock-project · GitHub",
+          "url": "https://github.com/sherlock-project/sherlock"
+        },
+        {
+          "name": "volatilityfoundation · GitHub",
+          "url": "https://github.com/volatilityfoundation/volatility3"
+        },
+        {
+          "name": "x64dbg · GitHub",
+          "url": "https://github.com/x64dbg/x64dbg"
+        },
+        {
+          "name": "ytisf · GitHub",
+          "url": "https://github.com/ytisf/theZoo"
+        }
+      ]
+    },
+    {
+      "name": "IT News & Tech Media",
+      "links": [
+        {
+          "name": "Arstechnica",
+          "url": "https://arstechnica.com/"
+        },
+        {
+          "name": "Cyberscoop",
+          "url": "https://cyberscoop.com/"
+        },
+        {
+          "name": "Krebsonsecurity",
+          "url": "https://krebsonsecurity.com/"
+        },
+        {
+          "name": "Newsletter",
+          "url": "https://newsletter.danielmiessler.com/"
+        },
+        {
+          "name": "Thehackernews",
+          "url": "https://thehackernews.com/"
+        },
+        {
+          "name": "Bleepingcomputer",
+          "url": "https://www.bleepingcomputer.com/"
+        },
+        {
+          "name": "Csoonline",
+          "url": "https://www.csoonline.com/"
+        },
+        {
+          "name": "Darkreading",
+          "url": "https://www.darkreading.com/"
+        },
+        {
+          "name": "Engadget",
+          "url": "https://www.engadget.com/"
+        },
+        {
+          "name": "Infosecurity Magazine",
+          "url": "https://www.infosecurity-magazine.com/"
+        },
+        {
+          "name": "r/cybersecurity · Reddit",
+          "url": "https://www.reddit.com/r/cybersecurity/"
+        },
+        {
+          "name": "r/hacking · Reddit",
+          "url": "https://www.reddit.com/r/hacking/"
+        },
+        {
+          "name": "r/netsec · Reddit",
+          "url": "https://www.reddit.com/r/netsec/"
+        },
+        {
+          "name": "Schneier",
+          "url": "https://www.schneier.com/"
+        },
+        {
+          "name": "Securityweek",
+          "url": "https://www.securityweek.com/"
+        },
+        {
+          "name": "Techradar",
+          "url": "https://www.techradar.com/"
+        },
+        {
+          "name": "Theverge",
+          "url": "https://www.theverge.com/"
+        },
+        {
+          "name": "En · Welivesecurity",
+          "url": "https://www.welivesecurity.com/en/"
+        },
+        {
+          "name": "Zdnet",
+          "url": "https://www.zdnet.com/"
+        }
+      ]
+    },
+    {
+      "name": "Cybersecurity – Professional Development",
+      "links": [
+        {
+          "name": "Crucialexams",
+          "url": "https://crucialexams.com/"
+        },
+        {
+          "name": "Individuals · Shop",
+          "url": "https://shop.acilearning.com/individuals"
+        },
+        {
+          "name": "Platform",
+          "url": "https://platform.comptia.org"
+        },
+        {
+          "name": "Cyversity",
+          "url": "https://www.cyversity.org/"
+        },
+        {
+          "name": "Examcompass",
+          "url": "https://www.examcompass.com"
+        },
+        {
+          "name": "Getcertifiedgetahead",
+          "url": "https://www.getcertifiedgetahead.com/"
+        },
+        {
+          "name": "Isaca",
+          "url": "https://www.isaca.org/"
+        },
+        {
+          "name": "En · Netacad",
+          "url": "https://www.netacad.com/en"
+        },
+        {
+          "name": "Professormesser",
+          "url": "https://www.professormesser.com/"
+        },
+        {
+          "name": "Udemy",
+          "url": "https://www.udemy.com/"
+        }
+      ]
+    },
+    {
+      "name": "Cybersecurity – Training Platforms",
+      "links": [
+        {
+          "name": "Azeria Labs",
+          "url": "https://azeria-labs.com/"
+        },
+        {
+          "name": "Capturetheflag",
+          "url": "https://capturetheflag.withgoogle.com/"
+        },
+        {
+          "name": "Challenges",
+          "url": "https://challenges.re/"
+        },
+        {
+          "name": "Crackmes",
+          "url": "https://crackmes.one/"
+        },
+        {
+          "name": "Ctftime",
+          "url": "https://ctftime.org/"
+        },
+        {
+          "name": "Cyberskyline",
+          "url": "https://cyberskyline.com/"
+        },
+        {
+          "name": "Cyberstart",
+          "url": "https://cyberstart.com/"
+        },
+        {
+          "name": "Defcon",
+          "url": "https://defcon.org/"
+        },
+        {
+          "name": "Guyinatuxedo",
+          "url": "https://guyinatuxedo.github.io/"
+        },
+        {
+          "name": "Map · Microcorruption",
+          "url": "https://microcorruption.com/map"
+        },
+        {
+          "name": "Mitrecyberacademy",
+          "url": "https://mitrecyberacademy.org/"
+        },
+        {
+          "name": "Nationalcyberleague",
+          "url": "https://nationalcyberleague.org/"
+        },
+        {
+          "name": "Bandit0 Html · Overthewire",
+          "url": "https://overthewire.org/wargames/bandit/bandit0.html"
+        },
+        {
+          "name": "P",
+          "url": "https://p.ost2.fyi/"
+        },
+        {
+          "name": "Pentesterlab",
+          "url": "https://pentesterlab.com/"
+        },
+        {
+          "name": "Picoctf",
+          "url": "https://picoctf.org/"
+        },
+        {
+          "name": "Pwn",
+          "url": "https://pwn.college/"
+        },
+        {
+          "name": "Pwnable",
+          "url": "https://pwnable.kr/"
+        },
+        {
+          "name": "Pwnable",
+          "url": "https://pwnable.tw/"
+        },
+        {
+          "name": "Reversing",
+          "url": "https://reversing.kr/"
+        },
+        {
+          "name": "Ropemporium",
+          "url": "https://ropemporium.com/"
+        },
+        {
+          "name": "Tryhackme",
+          "url": "https://tryhackme.com/"
+        },
+        {
+          "name": "Hacker101",
+          "url": "https://www.hacker101.com/"
+        },
+        {
+          "name": "Hackthebox",
+          "url": "https://www.hackthebox.com/"
+        },
+        {
+          "name": "Majorleaguecyber",
+          "url": "https://www.majorleaguecyber.org/"
+        },
+        {
+          "name": "Rangeforce",
+          "url": "https://www.rangeforce.com/"
+        },
+        {
+          "name": "Root Me",
+          "url": "https://www.root-me.org/"
+        },
+        {
+          "name": "Uscyberrange",
+          "url": "https://www.uscyberrange.org/"
+        },
+        {
+          "name": "Vulnhub",
+          "url": "https://www.vulnhub.com/"
+        }
+      ]
+    },
+    {
+      "name": "Cybersecurity – Tools & Resources",
+      "links": [
+        {
+          "name": "App",
+          "url": "https://app.any.run/"
+        },
+        {
+          "name": "Bazaar",
+          "url": "https://bazaar.abuse.ch/"
+        },
+        {
+          "name": "Exiftool",
+          "url": "https://exiftool.org/"
+        },
+        {
+          "name": "Firmwaresecurity",
+          "url": "https://firmwaresecurity.com/"
+        },
+        {
+          "name": "Exploitdb · Gitlab",
+          "url": "https://gitlab.com/exploit-database/exploitdb"
+        },
+        {
+          "name": "Hash · Hashes",
+          "url": "https://hashes.com/en/decrypt/hash/"
+        },
+        {
+          "name": "Haveibeenpwned",
+          "url": "https://haveibeenpwned.com/"
+        },
+        {
+          "name": "Hybrid Analysis",
+          "url": "https://hybrid-analysis.com/"
+        },
+        {
+          "name": "Intelx",
+          "url": "https://intelx.io"
+        },
+        {
+          "name": "Malshare",
+          "url": "https://malshare.com/"
+        },
+        {
+          "name": "Malwareunicorn",
+          "url": "https://malwareunicorn.org/#/workshops"
+        },
+        {
+          "name": "Owasp",
+          "url": "https://owasp.org/"
+        },
+        {
+          "name": "Portswigger",
+          "url": "https://portswigger.net/"
+        },
+        {
+          "name": "Communitydownload · Portswigger",
+          "url": "https://portswigger.net/burp/communitydownload"
+        },
+        {
+          "name": "Sec Wiki",
+          "url": "https://sec-wiki.com/"
+        },
+        {
+          "name": "Vx Underground",
+          "url": "https://vx-underground.org/"
+        },
+        {
+          "name": "Whoer",
+          "url": "https://whoer.com/"
+        },
+        {
+          "name": "Base64Decode",
+          "url": "https://www.base64decode.org/"
+        },
+        {
+          "name": "Browserling",
+          "url": "https://www.browserling.com/"
+        },
+        {
+          "name": "Cybrary",
+          "url": "https://www.cybrary.it/"
+        },
+        {
+          "name": "Exploit Db",
+          "url": "https://www.exploit-db.com/"
+        },
+        {
+          "name": "Glasswire",
+          "url": "https://www.glasswire.com/"
+        },
+        {
+          "name": "Gns3",
+          "url": "https://www.gns3.com/"
+        },
+        {
+          "name": "Kali",
+          "url": "https://www.kali.org/"
+        },
+        {
+          "name": "All Tools · Kali",
+          "url": "https://www.kali.org/tools/all-tools/"
+        },
+        {
+          "name": "Osint",
+          "url": "https://www.osint.industries/"
+        },
+        {
+          "name": "Reversinglabs",
+          "url": "https://www.reversinglabs.com/"
+        },
+        {
+          "name": "Splunk",
+          "url": "https://www.splunk.com/"
+        },
+        {
+          "name": "Virtualbox",
+          "url": "https://www.virtualbox.org/"
+        },
+        {
+          "name": "Upload · Virustotal",
+          "url": "https://www.virustotal.com/gui/home/upload"
+        },
+        {
+          "name": "Vmware",
+          "url": "https://www.vmware.com/"
+        },
+        {
+          "name": "Whois",
+          "url": "https://www.whois.com/"
+        },
+        {
+          "name": "Winitor",
+          "url": "https://www.winitor.com/"
+        },
+        {
+          "name": "Wireshark",
+          "url": "https://www.wireshark.org/"
+        }
+      ]
+    },
+    {
+      "name": "Reverse Engineering & Analysis",
+      "links": [
+        {
+          "name": "0X00Sec",
+          "url": "https://0x00sec.org/"
+        },
+        {
+          "name": "Angr",
+          "url": "https://angr.io/"
+        },
+        {
+          "name": "Book",
+          "url": "https://book.rada.re/"
+        },
+        {
+          "name": "Cutter",
+          "url": "https://cutter.re/"
+        },
+        {
+          "name": "Getting Started Html · Docs",
+          "url": "https://docs.binary.ninja/getting-started.html"
+        },
+        {
+          "name": "Latest · Docs",
+          "url": "https://docs.pwntools.com/en/latest/"
+        },
+        {
+          "name": "Dogbolt",
+          "url": "https://dogbolt.org/"
+        },
+        {
+          "name": "Exploit",
+          "url": "https://exploit.education/"
+        },
+        {
+          "name": "Frida",
+          "url": "https://frida.re/"
+        },
+        {
+          "name": "Hex Rays",
+          "url": "https://hex-rays.com/"
+        },
+        {
+          "name": "Notes · Ir0Nstone",
+          "url": "https://ir0nstone.gitbook.io/notes/"
+        },
+        {
+          "name": "Debugger · Learn",
+          "url": "https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/"
+        },
+        {
+          "name": "Lief",
+          "url": "https://lief.re/"
+        },
+        {
+          "name": "Ntcore",
+          "url": "https://ntcore.com/"
+        },
+        {
+          "name": "N · Rada",
+          "url": "https://rada.re/n/"
+        },
+        {
+          "name": "Home · Sourceforge",
+          "url": "https://sourceforge.net/p/elftoolchain/wiki/Home/"
+        },
+        {
+          "name": "Syscall",
+          "url": "https://syscall.sh/"
+        },
+        {
+          "name": "Systeminformer",
+          "url": "https://systeminformer.sourceforge.io/"
+        },
+        {
+          "name": "Triton Library",
+          "url": "https://triton-library.github.io/"
+        },
+        {
+          "name": "Unprotect",
+          "url": "https://unprotect.it/"
+        },
+        {
+          "name": "Capstone Engine",
+          "url": "https://www.capstone-engine.org/"
+        },
+        {
+          "name": "Keystone Engine",
+          "url": "https://www.keystone-engine.org/"
+        },
+        {
+          "name": "Ollydbg",
+          "url": "https://www.ollydbg.de/"
+        },
+        {
+          "name": "Theiphonewiki",
+          "url": "https://www.theiphonewiki.com/"
+        }
+      ]
+    },
+    {
+      "name": "Cloud & Infrastructure",
+      "links": [
+        {
+          "name": "Amazon",
+          "url": "https://aws.amazon.com/?nc2=h_home"
+        },
+        {
+          "name": "En Us · Azure",
+          "url": "https://azure.microsoft.com/en-us"
+        }
+      ]
+    },
+    {
+      "name": "Maps & Geospatial",
+      "links": [
+        {
+          "name": "App",
+          "url": "https://app.geospy.ai/"
+        },
+        {
+          "name": "Maps",
+          "url": "https://maps.apple.com/"
+        },
+        {
+          "name": "Streets",
+          "url": "https://streets.gl/"
+        },
+        {
+          "name": "Google",
+          "url": "https://www.google.com/maps/"
+        },
+        {
+          "name": "Openstreetmap",
+          "url": "https://www.openstreetmap.org/"
+        },
+        {
+          "name": "Randymajors",
+          "url": "https://www.randymajors.org/"
+        }
+      ]
+    },
+    {
+      "name": "Search Engines",
+      "links": [
+        {
+          "name": "Html · Html",
+          "url": "https://html.duckduckgo.com/html"
+        }
+      ]
+    },
+    {
+      "name": "Dark Web / Tor",
+      "links": [
+        {
+          "name": "Darkfailenbsdla5Mal2Mxn2Uz66Od5Vtzd5Qozslagrfzachha3F3Id",
+          "url": "http://darkfailenbsdla5mal2mxn2uz66od5vtzd5qozslagrfzachha3f3id.onion/"
+        },
+        {
+          "name": "Juhanurmihxlp77Nkq76Byazcldy2Hlmovfu2Epvl5Ankdibsot4Csyd",
+          "url": "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/"
+        },
+        {
+          "name": "Tortaxi2Dev6Xjwbaydqzla77Rrnth7Yn2Oqzjfmiuwn5H6Vsk2A4Syd",
+          "url": "http://tortaxi2dev6xjwbaydqzla77rrnth7yn2oqzjfmiuwn5h6vsk2a4syd.onion/"
+        }
+      ]
+    },
+    {
+      "name": "Reference & Shortcuts",
+      "links": [
+        {
+          "name": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/List_of_file_formats"
+        },
+        {
+          "name": "Sudistark · GitHub",
+          "url": "https://gist.github.com/Sudistark/89e69c2c7ec56b2d772bfd86bbcc9640"
+        },
+        {
+          "name": "Keyboard Shortcuts In Excel 1798D9D5 842A 42B8 9 · Support",
+          "url": "https://support.microsoft.com/en-us/office/keyboard-shortcuts-in-excel-1798d9d5-842a-42b8-9c99-9b7213f0040f"
+        },
+        {
+          "name": "Keyboard Shortcuts In Word 95Ef89Dd 7142 4B50 Af · Support",
+          "url": "https://support.microsoft.com/en-us/office/keyboard-shortcuts-in-word-95ef89dd-7142-4b50-afb2-f762f663ceb2"
+        },
+        {
+          "name": "Use Keyboard Shortcuts To Create Powerpoint Pres · Support",
+          "url": "https://support.microsoft.com/en-us/office/use-keyboard-shortcuts-to-create-powerpoint-presentations-ebb3d20e-dcd4-444f-a38e-bb5c5ed180f4"
+        },
+        {
+          "name": "Keyboard Shortcuts In Windows Dcc61A57 8Ff0 Cffe · Support",
+          "url": "https://support.microsoft.com/en-us/windows/keyboard-shortcuts-in-windows-dcc61a57-8ff0-cffe-9796-cb9706c75eec"
+        },
+        {
+          "name": "Kali Linux Shortcut Keys · Geeksforgeeks",
+          "url": "https://www.geeksforgeeks.org/linux-unix/kali-linux-shortcut-keys/"
+        },
+        {
+          "name": "Manualslib",
+          "url": "https://www.manualslib.com/"
+        }
+      ]
+    },
+    {
+      "name": "Utilities & Web Tools",
+      "links": [
+        {
+          "name": "Google",
+          "url": "https://chromewebstore.google.com/"
+        },
+        {
+          "name": "Cpulator",
+          "url": "https://cpulator.01xz.net/"
+        },
+        {
+          "name": "Downdetector",
+          "url": "https://downdetector.com/"
+        },
+        {
+          "name": "Hexed",
+          "url": "https://hexed.it/"
+        },
+        {
+          "name": "Onecompiler",
+          "url": "https://onecompiler.com/"
+        },
+        {
+          "name": "Temp Mail",
+          "url": "https://temp-mail.org/"
+        },
+        {
+          "name": "Webcrack",
+          "url": "https://webcrack.netlify.app/"
+        },
+        {
+          "name": "Example",
+          "url": "https://www.example.com/"
+        },
+        {
+          "name": "Online Compiler · Programiz",
+          "url": "https://www.programiz.com/c-programming/online-compiler/"
+        },
+        {
+          "name": "Binary To Ascii Html · Rapidtables",
+          "url": "https://www.rapidtables.com/convert/number/binary-to-ascii.html"
+        },
+        {
+          "name": "Remove",
+          "url": "https://www.remove.bg/"
+        }
+      ]
+    },
+    {
+      "name": "Productivity & Cloud Storage",
+      "links": [
+        {
+          "name": "Google",
+          "url": "https://calendar.google.com/calendar/u/0/r/week?pli=1"
+        },
+        {
+          "name": "Google",
+          "url": "https://docs.google.com/document/d/1la_DfxVVYZqRxoptkOlWzQPM-l9hPJUIxgjRh8pYQoc/edit?tab=t.0"
+        },
+        {
+          "name": "Google",
+          "url": "https://drive.google.com/drive/my-drive"
+        },
+        {
+          "name": "Apps · M365",
+          "url": "https://m365.cloud.microsoft/apps/"
+        },
+        {
+          "name": "Onedrive",
+          "url": "https://onedrive.live.com/?view=1"
+        },
+        {
+          "name": "Icloud",
+          "url": "https://www.icloud.com/"
+        }
+      ]
+    },
+    {
+      "name": "Communication & Social",
+      "links": [
+        {
+          "name": "Discord",
+          "url": "https://discord.com/"
+        },
+        {
+          "name": "Google",
+          "url": "https://mail.google.com/mail/u/0/#inbox"
+        },
+        {
+          "name": "Inbox · Mail",
+          "url": "https://mail.proton.me/u/0/inbox"
+        },
+        {
+          "name": "Instagram",
+          "url": "https://www.instagram.com/surrplexie/"
+        },
+        {
+          "name": "LinkedIn",
+          "url": "https://www.linkedin.com/in/surrplexie/"
+        },
+        {
+          "name": "Surrplexie · Pinterest",
+          "url": "https://www.pinterest.com/surrplexie/"
+        },
+        {
+          "name": "u/Surrplexie · Reddit",
+          "url": "https://www.reddit.com/user/Surrplexie/"
+        },
+        {
+          "name": "@Surrplexie · Snapchat",
+          "url": "https://www.snapchat.com/@surrplexie"
+        },
+        {
+          "name": "TikTok",
+          "url": "https://www.tiktok.com/@surrplexie"
+        },
+        {
+          "name": "Twitch",
+          "url": "https://www.twitch.tv/surrplexie/"
+        },
+        {
+          "name": "YouTube",
+          "url": "https://www.youtube.com/@Surrplexie"
+        },
+        {
+          "name": "X",
+          "url": "https://x.com/Surrplexie/"
+        }
+      ]
+    },
+    {
+      "name": "Livestreaming stuff",
+      "links": [
+        {
+          "name": "Aitum",
+          "url": "https://aitum.tv/"
+        },
+        {
+          "name": "Video Library · App",
+          "url": "https://app.eklipse.gg/video-library#clip"
+        },
+        {
+          "name": "Loukious · GitHub",
+          "url": "https://github.com/Loukious/StreamLabsTikTokStreamKeyGenerator"
+        },
+        {
+          "name": "Nexusclips",
+          "url": "https://nexusclips.com/"
+        },
+        {
+          "name": "Obsproject",
+          "url": "https://obsproject.com/"
+        },
+        {
+          "name": "Multiple Rtmp Outputs Plugin 964 · Obsproject",
+          "url": "https://obsproject.com/forum/resources/multiple-rtmp-outputs-plugin.964/"
+        },
+        {
+          "name": "En Us · Prismlive",
+          "url": "https://prismlive.com/en_us/"
+        },
+        {
+          "name": "Download Html · Socialstream",
+          "url": "https://socialstream.ninja/docs/download.html"
+        },
+        {
+          "name": "Streamelements",
+          "url": "https://streamelements.com"
+        },
+        {
+          "name": "Streamer",
+          "url": "https://streamer.bot"
+        },
+        {
+          "name": "Streamlabs",
+          "url": "https://streamlabs.com/"
+        }
+      ]
+    },
+    {
+      "name": "Finance & Investing",
+      "links": [
+        {
+          "name": "Finance",
+          "url": "https://finance.yahoo.com/"
+        },
+        {
+          "name": "Landmarkcu",
+          "url": "https://landmarkcu.com/"
+        },
+        {
+          "name": "Stockanalysis",
+          "url": "https://stockanalysis.com/"
+        },
+        {
+          "name": "Americanexpress",
+          "url": "https://www.americanexpress.com/?inav=NavLogo"
+        },
+        {
+          "name": "Google",
+          "url": "https://www.google.com/finance/"
+        },
+        {
+          "name": "Crypto · Investopedia",
+          "url": "https://www.investopedia.com/simulator/crypto/"
+        },
+        {
+          "name": "Portfolio · Investopedia",
+          "url": "https://www.investopedia.com/simulator/portfolio/"
+        },
+        {
+          "name": "Am86Eha1 · Tradingview",
+          "url": "https://www.tradingview.com/chart/am86EHA1/"
+        },
+        {
+          "name": "0Td7Grmj · Tradingview",
+          "url": "https://www.tradingview.com/screener/0Td7GRMj/"
+        },
+        {
+          "name": "Xe",
+          "url": "https://www.xe.com/"
+        }
+      ]
+    },
+    {
+      "name": "Crypto",
+      "links": [
+        {
+          "name": "Coinmarketcap",
+          "url": "https://coinmarketcap.com/"
+        },
+        {
+          "name": "Photon Sol",
+          "url": "https://photon-sol.tinyastro.io/"
+        },
+        {
+          "name": "Polymarket",
+          "url": "https://polymarket.com/"
+        },
+        {
+          "name": "Pump",
+          "url": "https://pump.fun/"
+        },
+        {
+          "name": "Kraken",
+          "url": "https://www.kraken.com/"
+        },
+        {
+          "name": "1Kxv14Wz · Tradingview",
+          "url": "https://www.tradingview.com/crypto-coins-screener/1KxV14Wz/"
+        }
+      ]
+    },
+    {
+      "name": "Real Estate",
+      "links": [
+        {
+          "name": "Homes",
+          "url": "https://www.homes.com/"
+        },
+        {
+          "name": "Realtor",
+          "url": "https://www.realtor.com/"
+        },
+        {
+          "name": "Redfin",
+          "url": "https://www.redfin.com/"
+        },
+        {
+          "name": "Zillow",
+          "url": "https://www.zillow.com/"
+        }
+      ]
+    },
+    {
+      "name": "Shopping & Marketplaces",
+      "links": [
+        {
+          "name": "Pcpartpicker",
+          "url": "https://pcpartpicker.com/"
+        },
+        {
+          "name": "2Yf29K · Pcpartpicker",
+          "url": "https://pcpartpicker.com/list/2Yf29K"
+        },
+        {
+          "name": "Alibaba",
+          "url": "https://www.alibaba.com/"
+        },
+        {
+          "name": "Amazon",
+          "url": "https://www.amazon.com/"
+        },
+        {
+          "name": "Bhphotovideo",
+          "url": "https://www.bhphotovideo.com/"
+        },
+        {
+          "name": "Ebay",
+          "url": "https://www.ebay.com/"
+        },
+        {
+          "name": "Microcenter",
+          "url": "https://www.microcenter.com/"
+        },
+        {
+          "name": "Camelcamelcamel",
+          "url": "https://camelcamelcamel.com/"
+        },
+        {
+          "name": "Newegg",
+          "url": "https://www.newegg.com/"
+        },
+        {
+          "name": "Streetcarmarket",
+          "url": "https://www.streetcarmarket.com/"
+        },
+        {
+          "name": "Temu",
+          "url": "https://www.temu.com/"
+        }
+      ]
+    },
+    {
+      "name": "Creative & Media Software",
+      "links": [
+        {
+          "name": "Pixlr",
+          "url": "https://pixlr.com/"
+        },
+        {
+          "name": "Thenounproject",
+          "url": "https://thenounproject.com/"
+        },
+        {
+          "name": "Unsplash",
+          "url": "https://unsplash.com/"
+        },
+        {
+          "name": "Adobe",
+          "url": "https://www.adobe.com/"
+        },
+        {
+          "name": "Davinciresolve · Blackmagicdesign",
+          "url": "https://www.blackmagicdesign.com/products/davinciresolve"
+        },
+        {
+          "name": "Capcut",
+          "url": "https://www.capcut.com/"
+        },
+        {
+          "name": "Speedtest",
+          "url": "https://www.speedtest.net/"
+        }
+      ]
+    },
+    {
+      "name": "Entertainment – Streaming",
+      "links": [
+        {
+          "name": "Disneyplus",
+          "url": "https://www.disneyplus.com/"
+        },
+        {
+          "name": "Hbomax",
+          "url": "https://www.hbomax.com/"
+        },
+        {
+          "name": "Home · Hulu",
+          "url": "https://www.hulu.com/hub/home"
+        },
+        {
+          "name": "Imdb",
+          "url": "https://www.imdb.com/"
+        },
+        {
+          "name": "Netflix",
+          "url": "https://www.netflix.com/"
+        },
+        {
+          "name": "Rottentomatoes",
+          "url": "https://www.rottentomatoes.com/"
+        }
+      ]
+    },
+    {
+      "name": "Entertainment – Music",
+      "links": [
+        {
+          "name": "Spotify",
+          "url": "https://open.spotify.com/"
+        },
+        {
+          "name": "Soundcloud",
+          "url": "https://soundcloud.com/"
+        },
+        {
+          "name": "Shazam",
+          "url": "https://www.shazam.com/"
+        }
+      ]
+    },
+    {
+      "name": "Gaming – Platforms",
+      "links": [
+        {
+          "name": "Itch",
+          "url": "https://itch.io/"
+        },
+        {
+          "name": "En Us · Store",
+          "url": "https://store.epicgames.com/en-US/"
+        },
+        {
+          "name": "Store",
+          "url": "https://store.steampowered.com/"
+        },
+        {
+          "name": "Ea",
+          "url": "https://www.ea.com/"
+        },
+        {
+          "name": "En Us · Minecraft",
+          "url": "https://www.minecraft.net/en-us"
+        },
+        {
+          "name": "Roblox",
+          "url": "https://www.roblox.com/"
+        },
+        {
+          "name": "Rockstargames",
+          "url": "https://www.rockstargames.com/"
+        },
+        {
+          "name": "En Us · Ubisoft",
+          "url": "https://www.ubisoft.com/en-us"
+        }
+      ]
+    },
+    {
+      "name": "Gaming – Browser Games",
+      "links": [
+        {
+          "name": "Io · Slither",
+          "url": "http://slither.com/io"
+        },
+        {
+          "name": "Agar",
+          "url": "https://agar.io/#ffa"
+        },
+        {
+          "name": "Agma",
+          "url": "https://agma.io/"
+        },
+        {
+          "name": "Arras",
+          "url": "https://arras.io/"
+        },
+        {
+          "name": "Diep",
+          "url": "https://diep.io/"
+        },
+        {
+          "name": "Krunker",
+          "url": "https://krunker.io/"
+        },
+        {
+          "name": "Lichess",
+          "url": "https://lichess.org/"
+        },
+        {
+          "name": "Poki",
+          "url": "https://poki.com/"
+        },
+        {
+          "name": "Retrobowl",
+          "url": "https://retrobowl.me/"
+        },
+        {
+          "name": "Shellshock",
+          "url": "https://shellshock.io/"
+        },
+        {
+          "name": "Territorial",
+          "url": "https://territorial.io/"
+        },
+        {
+          "name": "Conflictnations",
+          "url": "https://www.conflictnations.com/"
+        },
+        {
+          "name": "Crazygames",
+          "url": "https://www.crazygames.com/"
+        },
+        {
+          "name": "Onlinegames",
+          "url": "https://www.onlinegames.io/"
+        },
+        {
+          "name": "Zombsroyale",
+          "url": "https://zombsroyale.io/"
+        }
+      ]
+    },
+    {
+      "name": "Gaming – Tools",
+      "links": [
+        {
+          "name": "Chunkbase",
+          "url": "https://www.chunkbase.com/"
+        },
+        {
+          "name": "Settlements · Fantasytowngenerator",
+          "url": "https://www.fantasytowngenerator.com/user/settlements"
+        },
+        {
+          "name": "Modland",
+          "url": "https://www.modland.net"
+        },
+        {
+          "name": "Nexusmods",
+          "url": "https://www.nexusmods.com"
+        }
+      ]
+    },
+    {
+      "name": "PC Software & System Utilities",
+      "links": [
+        {
+          "name": "Epomaker Driver 3 0 · Epomaker",
+          "url": "https://epomaker.com/blogs/software/epomaker-driver-3-0"
+        },
+        {
+          "name": "Getfancontrol",
+          "url": "https://getfancontrol.com/"
+        },
+        {
+          "name": "Openrgb",
+          "url": "https://openrgb.org/"
+        },
+        {
+          "name": "En · Rufus",
+          "url": "https://rufus.ie/en/#download"
+        },
+        {
+          "name": "7 Zip",
+          "url": "https://www.7-zip.org/"
+        },
+        {
+          "name": "Radeon Rx 580 Html · Amd",
+          "url": "https://www.amd.com/en/support/downloads/drivers.html/graphics/radeon-600-500-400/radeon-rx-500-series/radeon-rx-580.html"
+        },
+        {
+          "name": "Amd Ryzen 5 4600G Html · Amd",
+          "url": "https://www.amd.com/en/support/downloads/drivers.html/processors/ryzen/ryzen-4000-series/amd-ryzen-5-4600g.html"
+        },
+        {
+          "name": "Drivers · Dell",
+          "url": "https://www.dell.com/support/product-details/en-us/product/inspiron-15-3530-laptop/drivers"
+        },
+        {
+          "name": "Support · Gigabyte",
+          "url": "https://www.gigabyte.com/Motherboard/B450M-DS3H-WIFI-rev-14/support"
+        },
+        {
+          "name": "Rtss Rivatuner Statistics Server Download · Guru3D",
+          "url": "https://www.guru3d.com/download/rtss-rivatuner-statistics-server-download/"
+        },
+        {
+          "name": "Ghub · Logitechg",
+          "url": "https://www.logitechg.com/en-us/software/ghub"
+        },
+        {
+          "name": "Graphics Cards · Msi",
+          "url": "https://www.msi.com/Landing/afterburner/graphics-cards"
+        },
+        {
+          "name": "Openal",
+          "url": "https://www.openal.org/"
+        },
+        {
+          "name": "Visual C Redistributable Runtime Package All In · Techpowerup",
+          "url": "https://www.techpowerup.com/download/visual-c-redistributable-runtime-package-all-in-one/"
+        },
+        {
+          "name": "Vulkan",
+          "url": "https://www.vulkan.org/"
+        }
+      ]
+    },
+    {
+      "name": "Academic – MATC",
+      "links": [
+        {
+          "name": "Login · Account",
+          "url": "https://account.cengage.com/login"
+        },
+        {
+          "name": "Authorization Do · Adselfservice",
+          "url": "https://adselfservice.matc.edu:9251/authorization.do"
+        },
+        {
+          "name": "Blackboard",
+          "url": "https://blackboard.matc.edu/"
+        },
+        {
+          "name": "Home · Bookstore",
+          "url": "https://bookstore.matc.edu/home"
+        },
+        {
+          "name": "Student · Colss Prod",
+          "url": "https://colss-prod.ec.matc.edu/student"
+        },
+        {
+          "name": "Engage · Matc",
+          "url": "https://matc.campuslabs.com/engage/"
+        },
+        {
+          "name": "App · Matc",
+          "url": "https://matc.navigate.eab.com/app/#/authentication/remote/"
+        },
+        {
+          "name": "Home Cgi · Netlab",
+          "url": "https://netlab.matc.edu/home.cgi"
+        },
+        {
+          "name": "Webclient · Vdi",
+          "url": "https://vdi.matc.edu/portal/webclient/#/home"
+        },
+        {
+          "name": "Sign In · Go2Orientation",
+          "url": "https://www.go2orientation.com/learn/sign_in?return_to=%2Flearn%2Fdashboard"
+        }
+      ]
+    },
+    {
+      "name": "Academic – Programs & Resources",
+      "links": [
+        {
+          "name": "Login · App",
+          "url": "https://app.joinhandshake.com/login"
+        },
+        {
+          "name": "Dev Do · Developer",
+          "url": "https://developer.servicenow.com/dev.do#!/"
+        },
+        {
+          "name": "Studentaid",
+          "url": "https://studentaid.gov/"
+        },
+        {
+          "name": "Academic Support Center Html · Matc",
+          "url": "https://www.matc.edu/academics/academic-resources/academic-support-center.html"
+        },
+        {
+          "name": "Tutoring Services Html · Matc",
+          "url": "https://www.matc.edu/academics/academic-resources/tutoring-services.html"
+        },
+        {
+          "name": "It Computer Support Specialist Html · Matc",
+          "url": "https://www.matc.edu/course-catalog/stem/it-computer-support-specialist.html"
+        },
+        {
+          "name": "It Information Systems Security Specialist Html · Matc",
+          "url": "https://www.matc.edu/course-catalog/stem/it-information-systems-security-specialist.html"
+        },
+        {
+          "name": "Algebra · Mathway",
+          "url": "https://www.mathway.com/Algebra"
+        },
+        {
+          "name": "Symbolab",
+          "url": "https://www.symbolab.com/"
+        },
+        {
+          "name": "Login · Theforage",
+          "url": "https://www.theforage.com/login"
+        },
+        {
+          "name": "Wolframalpha",
+          "url": "https://www.wolframalpha.com/"
+        }
+      ]
+    },
+    {
+      "name": "Personal & Residential",
+      "links": [
+        {
+          "name": "Login · Westowngreen",
+          "url": "https://westowngreen.securecaferesident.com/residentservices/content3/access/westown-green/login"
+        }
+      ]
+    },
+    {
+      "name": "Miscellaneous",
+      "links": [
+        {
+          "name": "Alternativeto",
+          "url": "https://alternativeto.net/"
+        },
+        {
+          "name": "Archive",
+          "url": "https://archive.org/"
+        },
+        {
+          "name": "Coveryourtracks",
+          "url": "https://coveryourtracks.eff.org/"
+        },
+        {
+          "name": "Dedupelist",
+          "url": "https://dedupelist.com"
+        },
+        {
+          "name": "Send",
+          "url": "https://send.vis.ee/"
+        },
+        {
+          "name": "Sortmylist",
+          "url": "https://sortmylist.com"
+        },
+        {
+          "name": "Tinywow",
+          "url": "https://tinywow.com/"
+        },
+        {
+          "name": "Wheelofnames",
+          "url": "https://wheelofnames.com"
+        },
+        {
+          "name": "Wormhole",
+          "url": "https://wormhole.app/"
+        },
+        {
+          "name": "Flightradar24",
+          "url": "https://www.flightradar24.com/"
+        },
+        {
+          "name": "Khanacademy",
+          "url": "https://www.khanacademy.org/"
+        },
+        {
+          "name": "En · Marinetraffic",
+          "url": "https://www.marinetraffic.com/en/"
+        },
+        {
+          "name": "Openculture",
+          "url": "https://www.openculture.com/"
+        },
+        {
+          "name": "En · Privacyguides",
+          "url": "https://www.privacyguides.org/en/"
+        }
+      ]
+    }
+  ],
+  "total": 371
+}
