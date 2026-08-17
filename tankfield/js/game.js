@@ -847,6 +847,8 @@
     let br = (7.2 * st.bulletSize * sizeMul) * (0.85 + tank.r / 40);
     if (tank.mothership && kind !== "drone" && kind !== "swarm") br = 8.2 * st.bulletSize * sizeMul;
     if (tank.closer) br = 26;
+    let orbit = rand(0, TAU);
+    if (kind === "drone" || kind === "swarm") orbit = countOwned(kind, tank) * 2.39996;
     state.bullets.push({
       x: tank.x + ox,
       y: tank.y + oy,
@@ -860,7 +862,7 @@
       owner: tank,
       kind,
       angle: ang,
-      orbit: rand(0, TAU),
+      orbit,
       age: 0,
       alive: true,
     });
@@ -1291,19 +1293,56 @@
   function droneTarget(b) {
     const owner = b.owner;
     if (!owner || !owner.alive) return null;
+    const spread = b.kind === "swarm" ? 24 : 34;
+    const ox = Math.cos(b.orbit) * spread;
+    const oy = Math.sin(b.orbit) * spread;
     if (!owner.ai) {
-      if (mouse.down || mouse.right || state.autoFire) return screenToWorld(mouse.x, mouse.y);
+      if (mouse.down || mouse.right || state.autoFire) {
+        const aim = screenToWorld(mouse.x, mouse.y);
+        return { x: aim.x + ox, y: aim.y + oy };
+      }
       return {
         x: owner.x + Math.cos(state.time * 1.7 + b.orbit) * 80,
         y: owner.y + Math.sin(state.time * 1.7 + b.orbit) * 80,
       };
     }
     const prey = nearest(owner, state.tanks.concat(state.shapes), 700, (o) => o !== owner && (o.type !== "tank" || isEnemyTank(owner, o)));
-    if (prey) return prey;
+    if (prey) return { x: prey.x + ox, y: prey.y + oy };
     return {
       x: owner.x + Math.cos(state.time * 1.7 + b.orbit) * 80,
       y: owner.y + Math.sin(state.time * 1.7 + b.orbit) * 80,
     };
+  }
+
+  function separateFlocks() {
+    const flock = [];
+    for (const b of state.bullets) {
+      if (b.alive && (b.kind === "drone" || b.kind === "swarm")) flock.push(b);
+    }
+    for (let i = 0; i < flock.length; i++) {
+      const a = flock[i];
+      for (let j = i + 1; j < flock.length; j++) {
+        const b = flock[j];
+        if (a.owner !== b.owner && !sameTeam(a.owner, b.owner)) continue;
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const min = a.r + b.r + 8;
+        const d2 = dx * dx + dy * dy;
+        if (d2 >= min * min) continue;
+        const d = Math.sqrt(d2) || 0.0001;
+        const push = (min - d) * 0.58;
+        const nx = dx / d;
+        const ny = dy / d;
+        a.x -= nx * push;
+        a.y -= ny * push;
+        b.x += nx * push;
+        b.y += ny * push;
+        a.vx -= nx * 70;
+        a.vy -= ny * 70;
+        b.vx += nx * 70;
+        b.vy += ny * 70;
+      }
+    }
   }
 
   function update(dt) {
@@ -1426,6 +1465,7 @@
         if (z && z !== b.owner.team) b.alive = false;
       }
     }
+    separateFlocks();
 
     for (let i = 0; i < state.tanks.length; i++) {
       const a = state.tanks[i];
