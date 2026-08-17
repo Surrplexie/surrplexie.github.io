@@ -1147,6 +1147,24 @@
     return tank.angle + (gun.pos[5] * Math.PI) / 180;
   }
 
+  function applyRecoil(tank, gun, kind, st, width, ang) {
+    if (!tank || tank.closer || tank.mothership) return;
+    if (gun.type === "deco") return;
+    let rec = gun.recoil;
+    if (rec == null) {
+      if (gun.type === "auto") rec = 0.2;
+      else if (kind === "drone" || kind === "swarm") rec = 0.12;
+      else if (kind === "trap") rec = 0.45;
+      else rec = 1;
+    }
+    const widthMul = Math.max(0.4, (width || 8) / 8);
+    const sizeMul = st.bulletSize || 1;
+    const mass = Math.max(0.5, (tank.r / 22) ** 2);
+    const kick = rec * widthMul * sizeMul * 64 / mass;
+    tank.vx -= Math.cos(ang) * kick;
+    tank.vy -= Math.sin(ang) * kick;
+  }
+
   function countOwned(kind, owner) {
     let n = 0;
     for (const b of state.bullets) if (b.alive && b.owner === owner && b.kind === kind) n++;
@@ -1169,9 +1187,7 @@
     const gs = gun.stats || {};
     const speedMul = gs.speed || (kind === "trap" ? 0.45 : kind === "drone" || kind === "swarm" ? 0.7 : kind === "missile" ? 0.55 : 1);
     const speed = st.bulletSpeed * 58 * speedMul;
-    const recoil = tank.closer ? 0.4 : (gun.recoil != null ? gun.recoil : kind === "trap" ? 0.2 : 0.55);
-    tank.vx -= Math.cos(ang) * recoil * (tank.closer ? 8 : st.bulletDamage / 10);
-    tank.vy -= Math.sin(ang) * recoil * (tank.closer ? 8 : st.bulletDamage / 10);
+    applyRecoil(tank, gun, kind, st, W, ang);
     const sizeMul = gun.size || gs.size || (kind === "swarm" ? 0.55 : kind === "trap" ? 1.15 : 1);
     const lifeBase = kind === "trap" ? 9 : kind === "drone" || kind === "swarm" ? 999 : kind === "missile" ? 2.4 : 1.55 + st.fov * 0.15;
     let br = (7.2 * st.bulletSize * sizeMul) * (0.85 + tank.r / 40);
