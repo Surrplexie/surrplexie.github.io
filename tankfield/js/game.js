@@ -431,7 +431,10 @@
     while (!seen.has(bot.classId)) {
       seen.add(bot.classId);
       const def = TankCatalog.get(bot.classId);
-      const opts = (def.upgrades || []).filter((id) => bot.level >= (TankCatalog.get(id).needLevel || 15));
+      const opts = (def.upgrades || []).filter((id) => {
+        const child = TankCatalog.tanks[id];
+        return child && bot.level >= (child.needLevel || 15);
+      });
       if (!opts.length) break;
       bot.classId = opts[irand(0, opts.length - 1)];
     }
@@ -439,6 +442,7 @@
   }
 
   function startGame(name, opts = {}) {
+    try {
     state.spawnName = name || "Unnamed Tank";
     state.playOpts = opts;
     state.mode = opts.sandbox ? "sandbox" : (opts.mode || "ffa");
@@ -479,19 +483,28 @@
     spawnBots();
     state.camera.x = player.x;
     state.camera.y = player.y;
+    running = true;
+    state.paused = false;
+    last = performance.now();
     els.start.classList.add("hidden");
     els.death.classList.add("hidden");
     els.hud.classList.remove("hidden");
-    document.getElementById("workshop").classList.add("hidden");
+    const ws = document.getElementById("workshop");
+    if (ws) ws.classList.add("hidden");
     const colorBox = document.getElementById("sandbox-colors");
     if (colorBox) colorBox.classList.toggle("hidden", state.mode !== "sandbox");
     if (els.arenaMode) {
       els.arenaMode.textContent = state.mode === "tdm" ? "2 Teams" : state.mode === "sandbox" ? "Sandbox" : "FFA";
     }
-    renderStats();
-    renderClassPanel();
-    running = true;
-    last = performance.now();
+      try { renderStats(); } catch (err) { console.error(err); }
+      try { renderClassPanel(); } catch (err) { console.error(err); }
+      render();
+    } catch (err) {
+      console.error(err);
+      running = false;
+      if (els.hud) els.hud.classList.add("hidden");
+      if (els.start) els.start.classList.remove("hidden");
+    }
   }
 
   function killTank(tank, killer, cause) {
@@ -1154,8 +1167,8 @@
     if (!p) return;
     const def = getDef(p);
     const options = (def.upgrades || []).filter((id) => {
-      const child = TankCatalog.get(id);
-      return p.level >= (child.needLevel || 15);
+      const child = TankCatalog.tanks[id];
+      return child && p.level >= (child.needLevel || 15);
     });
     state.classOptions = options;
     const show = document.getElementById("show-classes");
@@ -1450,7 +1463,7 @@
       ctx.globalAlpha = 1;
     }
     ctx.restore();
-    if (running) drawMinimap();
+    drawMinimap();
   }
 
   function drawMinimap() {
@@ -1495,8 +1508,12 @@
   function frame(now) {
     const dt = Math.min(0.033, (now - last) / 1000);
     last = now;
-    if (running && !state.paused) update(dt);
-    render();
+    try {
+      if (running && !state.paused) update(dt);
+      render();
+    } catch (err) {
+      console.error(err);
+    }
     state.frames += 1;
     state.fpsT += Math.max(dt, 0.001);
     if (state.fpsT >= 0.4 && els.fps) {
@@ -1516,7 +1533,7 @@
     keys.add(k);
     if (k === "e" && running) state.autoFire = !state.autoFire;
     if (k === "c" && running) state.autoSpin = !state.autoSpin;
-    if (k === "t" && running) window.TankWorkshop.open();
+    if (k === "t" && running && window.TankWorkshop) window.TankWorkshop.open();
     const classIdx = CLASS_KEYS.indexOf(k);
     if (running && !state.paused && classIdx >= 0 && state.classOptions[classIdx] && !state.classDismissed) {
       pickClass(state.classOptions[classIdx]);
@@ -1546,48 +1563,54 @@
   };
 
   function playSelected() {
-    const name = els.name.value.trim() || "Unnamed Tank";
+    const name = (els.name && els.name.value.trim()) || "Unnamed Tank";
     if (menuMode === "sandbox") startGame(name, { sandbox: true, classId: "basic" });
     else if (menuMode === "tdm") startGame(name, { mode: "tdm", team: menuTeam });
     else startGame(name, { mode: "ffa" });
   }
 
-  document.querySelectorAll(".mode-tab").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      menuMode = btn.dataset.mode;
-      document.querySelectorAll(".mode-tab").forEach((b) => b.classList.toggle("active", b === btn));
-      const row = document.getElementById("team-row");
-      if (row) row.classList.toggle("hidden", menuMode !== "tdm");
-      const hint = document.getElementById("mode-hint");
-      if (hint) hint.textContent = MODE_HINT[menuMode] || "";
-    });
-  });
-  document.querySelectorAll(".team-chip").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      menuTeam = btn.dataset.team;
-      document.querySelectorAll(".team-chip").forEach((b) => b.classList.toggle("selected", b === btn));
-    });
-  });
-  const optionsBtn = document.getElementById("options-btn");
-  const optionsPanel = document.getElementById("options-panel");
-  if (optionsBtn && optionsPanel) {
-    optionsBtn.addEventListener("click", () => {
-      optionsPanel.classList.toggle("hidden");
-      optionsBtn.classList.toggle("open", !optionsPanel.classList.contains("hidden"));
+  function openWorkshop() {
+    if (window.TankWorkshop && typeof window.TankWorkshop.open === "function") window.TankWorkshop.open();
+  }
+
+  function setMenuMode(mode) {
+    menuMode = mode;
+    document.querySelectorAll(".mode-tab").forEach((b) => b.classList.toggle("active", b.dataset.mode === mode));
+    const row = document.getElementById("team-row");
+    if (row) row.classList.toggle("hidden", menuMode !== "tdm");
+    const hint = document.getElementById("mode-hint");
+    if (hint) hint.textContent = MODE_HINT[menuMode] || "";
+  }
+
+  if (els.start) {
+    els.start.addEventListener("click", (e) => {
+      const btn = e.target.closest("button");
+      if (!btn) return;
+      if (btn.id === "play-btn") playSelected();
+      else if (btn.id === "workshop-btn") openWorkshop();
+      else if (btn.id === "options-btn") {
+        const panel = document.getElementById("options-panel");
+        if (panel) panel.classList.toggle("hidden");
+      } else if (btn.classList.contains("mode-tab")) {
+        setMenuMode(btn.dataset.mode);
+      } else if (btn.classList.contains("team-chip")) {
+        menuTeam = btn.dataset.team;
+        document.querySelectorAll(".team-chip").forEach((b) => b.classList.toggle("selected", b === btn));
+      }
     });
   }
 
-  els.play.addEventListener("click", playSelected);
-  els.workshopBtn.addEventListener("click", () => window.TankWorkshop.open());
-  els.name.addEventListener("keydown", (e) => { if (e.key === "Enter") playSelected(); });
-  els.again.addEventListener("click", () => startGame(state.spawnName, state.playOpts || {}));
-  els.menu.addEventListener("click", () => {
-    running = false;
-    els.death.classList.add("hidden");
-    els.hud.classList.add("hidden");
-    els.start.classList.remove("hidden");
-  });
-  if (els.editInGame) els.editInGame.addEventListener("click", () => window.TankWorkshop.open());
+  if (els.name) els.name.addEventListener("keydown", (e) => { if (e.key === "Enter") playSelected(); });
+  if (els.again) els.again.addEventListener("click", () => startGame(state.spawnName, state.playOpts || {}));
+  if (els.menu) {
+    els.menu.addEventListener("click", () => {
+      running = false;
+      els.death.classList.add("hidden");
+      els.hud.classList.add("hidden");
+      els.start.classList.remove("hidden");
+    });
+  }
+  if (els.editInGame) els.editInGame.addEventListener("click", openWorkshop);
   if (els.skipUpgrade) {
     els.skipUpgrade.addEventListener("click", () => {
       state.classDismissed = true;

@@ -47,16 +47,17 @@ html, body {
 }
 
 .start-card h1,
+.menu-stack h1,
 #death h1 {
   font-size: 34px;
   font-weight: 700;
   letter-spacing: -0.4px;
-  color: #3a3a3a;
+  color: #111;
 }
 
 .tagline {
-  color: #888;
-  margin: 2px 0 18px;
+  color: #c8c8c8;
+  margin: 4px 0 16px;
   font-size: 14px;
 }
 
@@ -64,76 +65,74 @@ html, body {
   font-family: Ubuntu, "Segoe UI", sans-serif;
 }
 
-.start-card {
-  width: min(420px, 92vw);
-  background: #e6e6e6;
-  border-radius: 16px;
-  padding: 28px 28px 22px;
-  text-align: center;
-  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.28);
+.menu-overlay {
+  background: #777b7e;
+  pointer-events: auto;
 }
 
-.brand {
+.menu-stack {
+  width: min(420px, 92vw);
+  text-align: center;
+  pointer-events: auto;
+}
+
+.logo-tank {
+  width: 48px;
+  height: 32px;
+  display: block;
+  margin: 0 auto 10px;
+}
+
+.title-row {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
 }
 
-.logo-tank {
-  width: 42px;
-  height: 28px;
-  flex: 0 0 auto;
+.title-row h1 {
+  margin: 0;
 }
 
-.mode-tabs {
+.mode-tabs,
+.team-row,
+.action-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 6px;
+  gap: 8px;
   margin: 0 0 10px;
 }
 
-.mode-tab {
+.mode-tabs { grid-template-columns: 1fr 1fr 1fr; }
+.team-row { grid-template-columns: 1fr 1fr; }
+.action-row { grid-template-columns: 1fr 1fr; margin-top: 4px; }
+
+#start button {
   margin: 0;
-  padding: 8px 6px;
+  padding: 10px 12px;
   border: 0;
   border-radius: 8px;
   background: #fff;
-  color: #555;
-  font-size: 14px;
+  color: #111;
+  font-size: 15px;
   font-weight: 700;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+  font-family: inherit;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.12);
+  pointer-events: auto;
+  cursor: pointer;
 }
 
-.mode-tab.active {
-  background: #8abc3f;
-  color: #fff;
+#start .mode-tab.active {
+  outline: 3px solid #8abc3f;
+  outline-offset: 0;
 }
 
-.team-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  margin: 0 0 10px;
-}
-
-.team-chip {
-  margin: 0;
-  padding: 8px;
-  border: 0;
-  border-radius: 8px;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 700;
-  opacity: 0.55;
-}
-
-.team-chip[data-team="blue"] { background: #00b2e1; }
-.team-chip[data-team="red"] { background: #f14e54; }
+.team-chip[data-team="blue"] { background: #00b2e1; color: #fff; }
+.team-chip[data-team="red"] { background: #f14e54; color: #fff; }
+.team-chip { opacity: 0.5; }
 .team-chip.selected { opacity: 1; }
 
 .mode-hint {
-  color: #888;
+  color: #d0d0d0;
   font-size: 13px;
   margin: 0 0 12px;
   min-height: 18px;
@@ -144,7 +143,7 @@ html, body {
   width: 100%;
   margin: 0 0 12px;
   padding: 12px 14px;
-  font-size: 18px;
+  font-size: 16px;
   font-family: inherit;
   font-weight: 500;
   text-align: center;
@@ -152,85 +151,34 @@ html, body {
   border-radius: 8px;
   outline: none;
   background: #fff;
-  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.08);
+  color: #111;
 }
 
 #start #name-input:focus {
-  box-shadow: 0 0 0 3px rgba(138, 188, 63, 0.35);
-}
-
-.play-btn {
-  width: 100%;
-  margin: 0 0 8px;
-  padding: 14px;
-  border: 0;
-  border-radius: 8px;
-  background: #8abc3f;
-  color: #fff;
-  font-size: 22px;
-  font-weight: 700;
-  box-shadow: 0 2px 0 #6a9a2e;
-}
-
-.play-btn:hover {
-  filter: brightness(1.06);
-}
-
-.ghost-btn {
-  width: 100%;
-  margin: 0;
-  padding: 10px;
-  border: 0;
-  border-radius: 8px;
-  background: #d8d8d8;
-  color: #555;
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.corner-btn {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  margin: 0;
-  padding: 8px 14px;
-  border: 0;
-  border-radius: 8px;
-  background: #8abc3f;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 700;
-  box-shadow: 0 2px 0 #6a9a2e;
-}
-
-.corner-btn.open {
-  background: #6a9a2e;
+  box-shadow: 0 0 0 3px rgba(138, 188, 63, 0.45);
 }
 
 .options-panel {
-  position: absolute;
-  top: 56px;
-  left: 16px;
-  width: 240px;
-  padding: 14px 16px;
-  background: #e6e6e6;
-  border-radius: 12px;
+  width: 100%;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  background: #ececec;
+  border-radius: 10px;
   text-align: left;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
 .options-title {
   font-size: 13px;
   font-weight: 700;
   color: #666;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .opt-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 6px 0;
+  margin: 5px 0;
   font-size: 13px;
   color: #444;
 }
@@ -240,7 +188,7 @@ html, body {
 }
 
 .opt-note {
-  margin-top: 10px;
+  margin-top: 8px;
   font-size: 12px;
   color: #777;
   line-height: 1.4;

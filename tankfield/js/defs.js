@@ -83,10 +83,10 @@
   };
 
   def("basic", {
-    name: "Tank",
+    name: "Basic Tank",
     desc: "A reliable all-rounder",
     guns: G.basic(),
-    upgrades: ["twin", "sniper", "machinegun", "flank", "director", "pounder", "trapper", "auto3", "smasher", "pelleter"],
+    upgrades: ["twin", "sniper", "machinegun", "flank"],
     needLevel: 1,
   });
 
@@ -95,7 +95,7 @@
     desc: "Two barrels, staggered fire",
     guns: G.twin(),
     reload: 0.92,
-    upgrades: ["triplet", "twinflank", "tripleshot", "dual"],
+    upgrades: ["tripleshot", "quad", "twinflank"],
     needLevel: 15,
   });
 
@@ -107,7 +107,7 @@
     reload: 1.5,
     bulletDamage: 1.25,
     fov: 1.22,
-    upgrades: ["assassin", "hunter", "minigun"],
+    upgrades: ["assassin", "overseer", "hunter", "trapper"],
     needLevel: 15,
   });
 
@@ -118,7 +118,7 @@
     reload: 0.48,
     bulletDamage: 0.7,
     bulletSpeed: 0.92,
-    upgrades: ["destroyer", "gunner", "sprayer"],
+    upgrades: ["destroyer", "gunner"],
     needLevel: 15,
   });
 
@@ -126,8 +126,21 @@
     name: "Flank Guard",
     desc: "Front and back coverage",
     guns: G.flank(),
-    upgrades: ["quad", "tripleshot", "auto3", "booster"],
+    upgrades: ["triangle", "quad"],
     needLevel: 15,
+  });
+
+  def("triangle", {
+    name: "Tri-Angle",
+    desc: "Rear guns that shove you forward",
+    guns: [
+      gun(18, 8, 1, 0, 0, 0, 0),
+      gun(16, 8, 1, 0, 0, 150, 0.33),
+      gun(16, 8, 1, 0, 0, 210, 0.66),
+    ],
+    speed: 1.12,
+    upgrades: ["booster", "fighter"],
+    needLevel: 30,
   });
 
   def("director", {
@@ -160,7 +173,7 @@
     reload: 1.45,
     bulletDamage: 1.15,
     upgrades: ["tritrapper", "megatrapper", "gunnertrapper", "overtrapper"],
-    needLevel: 15,
+    needLevel: 30,
   });
 
   def("auto3", {
@@ -235,7 +248,7 @@
       gun(19, 8, 1, 0, 0, 0, 0),
       gun(19, 8, 1, 0, 0, 27, 0),
     ],
-    upgrades: ["penta", "spread"],
+    upgrades: ["penta", "spread", "triplet"],
     needLevel: 30,
   });
 
@@ -303,7 +316,7 @@
     reload: 2.5,
     bulletSpeed: 0.82,
     bulletSize: 1.55,
-    upgrades: ["annihilator", "hybrid", "skimmer"],
+    upgrades: ["hybrid", "annihilator", "skimmer"],
     needLevel: 30,
   });
 
@@ -319,7 +332,7 @@
     reload: 0.5,
     bulletDamage: 0.42,
     bulletSize: 0.7,
-    upgrades: ["autogunner", "gunnertrapper", "nailgun"],
+    upgrades: ["streamliner", "gunnertrapper"],
     needLevel: 30,
   });
 
@@ -355,8 +368,8 @@
       gun(16, 8, 1, 0, 0, 210, 0.5),
     ],
     speed: 1.18,
-    upgrades: ["fighter", "surfer"],
-    needLevel: 30,
+    upgrades: ["fighter"],
+    needLevel: 45,
   });
 
   def("overseer", {
@@ -366,7 +379,7 @@
     guns: [...G.director(90), ...G.director(270)],
     maxDrones: 8,
     reload: 0.65,
-    upgrades: ["overlord", "manager", "battleship"],
+    upgrades: ["overlord", "necromancer", "manager"],
     needLevel: 30,
   });
 
