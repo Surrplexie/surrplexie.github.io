@@ -8,6 +8,7 @@
   const jsonEl = document.getElementById("tank-json");
   const gunList = document.getElementById("gun-list");
   const countEl = document.getElementById("tank-count");
+  const delBtn = document.getElementById("del-tank");
 
   const fields = {
     name: document.getElementById("ed-name"),
@@ -31,9 +32,14 @@
     health: document.getElementById("mod-health"),
   };
 
+  const GUN_KEYS = ["length", "width", "aspect", "x", "y", "angle", "delay", "spread"];
+  const MOD_MAP = { dmg: "damage", reload: "reload", speed: "speed", size: "size", fov: "fov", health: "health" };
+
   let current = TankCatalog.blank();
   let gunIndex = 0;
   let selectedId = "custom";
+  let selectedCustom = false;
+  let catalogFilter = "all";
 
   function customs() {
     try { return JSON.parse(localStorage.getItem("tankfield-customs") || "[]"); }
@@ -52,14 +58,18 @@
 
   function renderList() {
     const q = (searchEl.value || "").toLowerCase();
-    const entries = allEntries().filter((e) =>
-      e.def.name.toLowerCase().includes(q) || e.id.toLowerCase().includes(q)
-    );
+    const entries = allEntries().filter((e) => {
+      if (catalogFilter === "custom" && !e.custom) return false;
+      if (catalogFilter === "15" && (e.custom || (e.def.needLevel || 1) > 15)) return false;
+      if (catalogFilter === "30" && (e.custom || (e.def.needLevel || 1) !== 30)) return false;
+      if (catalogFilter === "45" && (e.custom || (e.def.needLevel || 1) < 45)) return false;
+      return e.def.name.toLowerCase().includes(q) || e.id.toLowerCase().includes(q);
+    });
     countEl.textContent = `${TankCatalog.count()} stock + ${customs().length} custom`;
     listEl.innerHTML = entries.map((e) => {
       const tier = e.def.needLevel || 1;
       const active = e.id === selectedId ? "active" : "";
-      return `<button class="tank-item ${active}" data-id="${e.id}" data-custom="${e.custom}">
+      return `<button class="tank-item ${active}" type="button" data-id="${e.id}" data-custom="${e.custom}">
         <span>${e.def.name}</span>
         <small>${e.custom ? "custom" : "L" + tier}</small>
       </button>`;
@@ -67,10 +77,12 @@
     listEl.querySelectorAll(".tank-item").forEach((btn) => {
       btn.addEventListener("click", () => loadEntry(btn.dataset.id, btn.dataset.custom === "true"));
     });
+    if (delBtn) delBtn.classList.toggle("hidden", !selectedCustom);
   }
 
   function loadEntry(id, isCustom) {
     selectedId = id;
+    selectedCustom = !!isCustom;
     if (isCustom) {
       const found = customs().find((d) => d.id === id);
       current = TankCatalog.cloneDef(found || TankCatalog.blank());
@@ -85,34 +97,51 @@
     renderList();
   }
 
+  function pair(id, value) {
+    const range = document.getElementById(id);
+    const num = document.getElementById(id + "-n");
+    if (range) range.value = value;
+    if (num) num.value = value;
+  }
+
   function syncFields() {
     fields.name.value = current.name || "";
     fields.body.value = String(current.body || 0);
     fields.maxDrones.value = current.maxDrones || 0;
     fields.smasher.checked = !!current.smasher;
     const m = current.mods;
-    fields.dmg.value = m.damage;
-    fields.reload.value = m.reload;
-    fields.speed.value = m.speed;
-    fields.size.value = m.size;
-    fields.fov.value = m.fov;
-    fields.health.value = m.health;
-    document.getElementById("mod-damage-v").textContent = Number(m.damage).toFixed(1);
-    document.getElementById("mod-reload-v").textContent = Number(m.reload).toFixed(1);
-    document.getElementById("mod-speed-v").textContent = Number(m.speed).toFixed(1);
-    document.getElementById("mod-size-v").textContent = Number(m.size).toFixed(1);
-    document.getElementById("mod-fov-v").textContent = Number(m.fov).toFixed(1);
-    document.getElementById("mod-health-v").textContent = Number(m.health).toFixed(1);
+    pair("mod-damage", Number(m.damage).toFixed(1));
+    pair("mod-reload", Number(m.reload).toFixed(1));
+    pair("mod-speed", Number(m.speed).toFixed(1));
+    pair("mod-size", Number(m.size).toFixed(1));
+    pair("mod-fov", Number(m.fov).toFixed(1));
+    pair("mod-health", Number(m.health).toFixed(1));
     renderGuns();
     syncGunFields();
-    jsonEl.value = JSON.stringify(current, null, 2);
-    window.TankfieldGame.drawPreview(preview, current, window.TankfieldGame.state.selectedColor || window.TankfieldGame.COLORS.player, gunIndex);
+    const nameEl = document.getElementById("preview-name");
+    const descEl = document.getElementById("preview-desc");
+    if (nameEl) nameEl.textContent = current.name || "Tank";
+    if (descEl) descEl.textContent = current.desc || (selectedCustom ? "Custom tank" : "");
+    if (jsonEl && document.activeElement !== jsonEl) jsonEl.value = JSON.stringify(current, null, 2);
+    drawNow();
     liveApply();
   }
 
+  function drawNow() {
+    window.TankfieldGame.drawPreview(
+      preview,
+      current,
+      window.TankfieldGame.state.selectedColor || window.TankfieldGame.COLORS.player,
+      gunIndex
+    );
+  }
+
   function renderGuns() {
-    gunList.innerHTML = (current.guns || []).map((g, i) =>
-      `<button class="gun-chip ${i === gunIndex ? "active" : ""}" data-i="${i}">${i + 1}. ${g.type}</button>`
+    const guns = current.guns || [];
+    const count = document.getElementById("gun-count");
+    if (count) count.textContent = guns.length ? `(${gunIndex + 1}/${guns.length})` : "(none)";
+    gunList.innerHTML = guns.map((g, i) =>
+      `<button class="gun-chip ${i === gunIndex ? "active" : ""}" type="button" data-i="${i}">${i + 1}. ${g.type} ${Math.round(g.pos[5] || 0)}°</button>`
     ).join("");
     gunList.querySelectorAll(".gun-chip").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -125,28 +154,24 @@
   function syncGunFields() {
     const g = current.guns[gunIndex];
     const disabled = !g;
-    ["type", "length", "width", "aspect", "x", "y", "angle", "delay", "spread"].forEach((k) => {
-      fields[k].disabled = disabled;
+    ["type", ...GUN_KEYS].forEach((k) => {
+      if (fields[k]) fields[k].disabled = disabled;
+      if (k !== "type") {
+        const n = document.getElementById("ed-" + k + "-n");
+        if (n) n.disabled = disabled;
+      }
     });
     if (!g) return;
     fields.type.value = g.type || "bullet";
     const p = g.pos;
-    fields.length.value = p[0];
-    fields.width.value = p[1];
-    fields.aspect.value = p[2];
-    fields.x.value = p[3];
-    fields.y.value = p[4];
-    fields.angle.value = p[5];
-    fields.delay.value = p[6];
-    fields.spread.value = g.spread || 0;
-    document.getElementById("ed-length-v").textContent = Number(p[0]).toFixed(1);
-    document.getElementById("ed-width-v").textContent = Number(p[1]).toFixed(1);
-    document.getElementById("ed-aspect-v").textContent = Number(p[2]).toFixed(2);
-    document.getElementById("ed-x-v").textContent = Number(p[3]).toFixed(1);
-    document.getElementById("ed-y-v").textContent = Number(p[4]).toFixed(1);
-    document.getElementById("ed-angle-v").textContent = Math.round(p[5]) + "°";
-    document.getElementById("ed-delay-v").textContent = Number(p[6]).toFixed(2);
-    document.getElementById("ed-spread-v").textContent = Number(g.spread || 0).toFixed(2);
+    pair("ed-length", Number(p[0]).toFixed(1));
+    pair("ed-width", Number(p[1]).toFixed(1));
+    pair("ed-aspect", Number(p[2]).toFixed(2));
+    pair("ed-x", Number(p[3]).toFixed(1));
+    pair("ed-y", Number(p[4]).toFixed(1));
+    pair("ed-angle", Math.round(p[5]));
+    pair("ed-delay", Number(p[6]).toFixed(2));
+    pair("ed-spread", Number(g.spread || 0).toFixed(2));
   }
 
   function readGun() {
@@ -173,18 +198,36 @@
     }
   }
 
+  function bindPair(rangeId, onChange) {
+    const range = document.getElementById(rangeId);
+    const num = document.getElementById(rangeId + "-n");
+    if (!range) return;
+    const apply = (from) => {
+      const v = Number(from.value);
+      if (from === range && num) num.value = range.value;
+      if (from === num && num) range.value = num.value;
+      onChange(v);
+    };
+    range.addEventListener("input", () => apply(range));
+    if (num) {
+      num.addEventListener("input", () => apply(num));
+      num.addEventListener("change", () => apply(num));
+    }
+  }
+
   function bind() {
     fields.name.addEventListener("input", () => { current.name = fields.name.value; syncFields(); });
     fields.body.addEventListener("change", () => { current.body = Number(fields.body.value); syncFields(); });
     fields.maxDrones.addEventListener("input", () => { current.maxDrones = Number(fields.maxDrones.value); syncFields(); });
     fields.smasher.addEventListener("change", () => { current.smasher = fields.smasher.checked; syncFields(); });
-    ["type", "length", "width", "aspect", "x", "y", "angle", "delay", "spread"].forEach((k) => {
-      fields[k].addEventListener("input", () => { readGun(); syncFields(); });
+    fields.type.addEventListener("input", () => { readGun(); syncFields(); });
+    GUN_KEYS.forEach((k) => {
+      bindPair("ed-" + k, () => { readGun(); syncFields(); });
     });
-    ["dmg", "reload", "speed", "size", "fov", "health"].forEach((k) => {
-      const map = { dmg: "damage", reload: "reload", speed: "speed", size: "size", fov: "fov", health: "health" };
-      fields[k].addEventListener("input", () => {
-        current.mods[map[k]] = Number(fields[k].value);
+    Object.keys(MOD_MAP).forEach((k) => {
+      const id = k === "dmg" ? "mod-damage" : "mod-" + MOD_MAP[k];
+      bindPair(id, (v) => {
+        current.mods[MOD_MAP[k]] = v;
         syncFields();
       });
     });
@@ -195,11 +238,24 @@
         if (!current.mods) current.mods = { damage: 1, reload: 1, speed: 1, size: 1, fov: 1, health: 1 };
         gunIndex = 0;
         selectedId = current.id || "custom";
+        selectedCustom = true;
         syncFields();
       } catch {
         jsonEl.classList.add("bad");
         setTimeout(() => jsonEl.classList.remove("bad"), 800);
       }
+    });
+    document.getElementById("tank-filters").addEventListener("click", (e) => {
+      const btn = e.target.closest(".ws-filter");
+      if (!btn) return;
+      catalogFilter = btn.dataset.filter;
+      document.querySelectorAll(".ws-filter").forEach((b) => b.classList.toggle("active", b === btn));
+      renderList();
+    });
+    preview.addEventListener("click", () => {
+      if (!current.guns.length) return;
+      gunIndex = (gunIndex + 1) % current.guns.length;
+      syncFields();
     });
   }
 
@@ -225,18 +281,40 @@
     current = TankCatalog.blank();
     current.id = "custom_" + Date.now().toString(36);
     selectedId = current.id;
+    selectedCustom = true;
     gunIndex = 0;
     syncFields();
     renderList();
   });
   document.getElementById("save-tank").addEventListener("click", () => {
-    current.id = current.id && current.id.startsWith("custom") ? current.id : "custom_" + Date.now().toString(36);
+    current.id = current.id && String(current.id).startsWith("custom") ? current.id : "custom_" + Date.now().toString(36);
     selectedId = current.id;
+    selectedCustom = true;
     const list = customs().filter((d) => d.id !== current.id);
     list.unshift(TankCatalog.cloneDef(current));
     saveCustoms(list);
     renderList();
   });
+  document.getElementById("dup-tank").addEventListener("click", () => {
+    const copy = TankCatalog.cloneDef(current);
+    copy.id = "custom_" + Date.now().toString(36);
+    copy.name = (copy.name || "Tank") + " copy";
+    current = copy;
+    selectedId = copy.id;
+    selectedCustom = true;
+    const list = customs();
+    list.unshift(copy);
+    saveCustoms(list);
+    syncFields();
+    renderList();
+  });
+  if (delBtn) {
+    delBtn.addEventListener("click", () => {
+      if (!selectedCustom) return;
+      saveCustoms(customs().filter((d) => d.id !== selectedId));
+      loadEntry("basic", false);
+    });
+  }
   document.getElementById("play-tank").addEventListener("click", () => {
     const name = document.getElementById("name-input").value.trim() || "Unnamed Tank";
     window.TankfieldGame.startGame(name, { sandbox: true, customDef: current });
@@ -254,12 +332,34 @@
     }
   });
 
+  window.addEventListener("keydown", (e) => {
+    if (workshop.classList.contains("hidden")) return;
+    const tag = (e.target && e.target.tagName) || "";
+    if (e.key === "Escape") {
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") {
+        e.target.blur();
+        return;
+      }
+      close();
+      return;
+    }
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+    if (e.key === "[" || e.key === "]") {
+      if (!current.guns.length) return;
+      gunIndex = e.key === "]"
+        ? (gunIndex + 1) % current.guns.length
+        : (gunIndex - 1 + current.guns.length) % current.guns.length;
+      syncFields();
+    }
+  });
+
   function open() {
     workshop.classList.remove("hidden");
     window.TankfieldGame.state.paused = true;
     if (window.TankfieldGame.state.player && window.TankfieldGame.state.player.customDef) {
       current = TankCatalog.cloneDef(window.TankfieldGame.state.player.customDef);
       selectedId = current.id || "custom";
+      selectedCustom = String(selectedId).startsWith("custom");
     } else if (window.TankfieldGame.state.player) {
       loadEntry(window.TankfieldGame.state.player.classId, false);
     }

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
   <title>Tankfield</title>
-  <link rel="stylesheet" href="css/style.css?v=17" />
+  <link rel="stylesheet" href="css/style.css?v=18" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet" />
@@ -109,17 +109,30 @@
           <span id="tank-count"></span>
         </div>
         <input id="tank-search" type="text" placeholder="Search tanks" />
+        <div class="ws-filters" id="tank-filters">
+          <button type="button" class="ws-filter active" data-filter="all">All</button>
+          <button type="button" class="ws-filter" data-filter="15">L15</button>
+          <button type="button" class="ws-filter" data-filter="30">L30</button>
+          <button type="button" class="ws-filter" data-filter="45">L45</button>
+          <button type="button" class="ws-filter" data-filter="custom">Custom</button>
+        </div>
         <div id="tank-list"></div>
-        <button id="new-tank">New custom tank</button>
+        <button id="new-tank" type="button">New custom tank</button>
+        <button id="del-tank" type="button" class="ws-danger hidden">Delete custom</button>
       </aside>
 
       <section class="ws-preview">
-        <canvas id="preview" width="360" height="280"></canvas>
+        <div class="ws-preview-meta">
+          <div id="preview-name">Basic Tank</div>
+          <div id="preview-desc"></div>
+        </div>
+        <canvas id="preview" width="440" height="440"></canvas>
         <div class="ws-actions">
-          <button id="play-tank" class="primary">Play this tank</button>
-          <button id="play-maxed">Play maxed</button>
-          <button id="save-tank">Save custom</button>
-          <button id="close-workshop">Close</button>
+          <button id="play-tank" class="primary" type="button">Play this tank</button>
+          <button id="play-maxed" type="button">Play maxed</button>
+          <button id="save-tank" type="button">Save custom</button>
+          <button id="dup-tank" type="button">Duplicate</button>
+          <button id="close-workshop" type="button">Close</button>
         </div>
       </section>
 
@@ -138,12 +151,12 @@
         <label class="check"><input id="ed-smasher" type="checkbox" /> Smasher ring</label>
         <label>Max drones <input id="ed-drones" type="number" min="0" max="24" /></label>
 
-        <h3>Guns</h3>
+        <h3>Guns <span id="gun-count" class="ws-sub"></span></h3>
         <div id="gun-list"></div>
         <div class="row">
-          <button id="add-gun">Add gun</button>
-          <button id="dup-gun">Duplicate</button>
-          <button id="del-gun">Remove</button>
+          <button id="add-gun" type="button">Add</button>
+          <button id="dup-gun" type="button">Duplicate</button>
+          <button id="del-gun" type="button">Remove</button>
         </div>
         <label>Type
           <select id="ed-type">
@@ -156,32 +169,34 @@
             <option value="deco">Decoration</option>
           </select>
         </label>
-        <label>Length <span id="ed-length-v"></span><input id="ed-length" type="range" min="2" max="36" step="0.5" /></label>
-        <label>Width <span id="ed-width-v"></span><input id="ed-width" type="range" min="2" max="24" step="0.5" /></label>
-        <label>Aspect <span id="ed-aspect-v"></span><input id="ed-aspect" type="range" min="-1.6" max="2.2" step="0.05" /></label>
-        <label>X offset <span id="ed-x-v"></span><input id="ed-x" type="range" min="-12" max="24" step="0.5" /></label>
-        <label>Y offset <span id="ed-y-v"></span><input id="ed-y" type="range" min="-16" max="16" step="0.5" /></label>
-        <label>Angle <span id="ed-angle-v"></span><input id="ed-angle" type="range" min="-180" max="180" step="1" /></label>
-        <label>Delay <span id="ed-delay-v"></span><input id="ed-delay" type="range" min="0" max="1" step="0.05" /></label>
-        <label>Spread <span id="ed-spread-v"></span><input id="ed-spread" type="range" min="0" max="0.5" step="0.01" /></label>
+        <div class="prop"><span>Length</span><input id="ed-length" type="range" min="2" max="36" step="0.5" /><input id="ed-length-n" type="number" min="2" max="36" step="0.5" /></div>
+        <div class="prop"><span>Width</span><input id="ed-width" type="range" min="2" max="24" step="0.5" /><input id="ed-width-n" type="number" min="2" max="24" step="0.5" /></div>
+        <div class="prop"><span>Aspect</span><input id="ed-aspect" type="range" min="-1.6" max="2.2" step="0.05" /><input id="ed-aspect-n" type="number" min="-1.6" max="2.2" step="0.05" /></div>
+        <div class="prop"><span>X offset</span><input id="ed-x" type="range" min="-12" max="24" step="0.5" /><input id="ed-x-n" type="number" min="-12" max="24" step="0.5" /></div>
+        <div class="prop"><span>Y offset</span><input id="ed-y" type="range" min="-16" max="16" step="0.5" /><input id="ed-y-n" type="number" min="-16" max="16" step="0.5" /></div>
+        <div class="prop"><span>Angle</span><input id="ed-angle" type="range" min="-180" max="180" step="1" /><input id="ed-angle-n" type="number" min="-180" max="180" step="1" /></div>
+        <div class="prop"><span>Delay</span><input id="ed-delay" type="range" min="0" max="1" step="0.05" /><input id="ed-delay-n" type="number" min="0" max="1" step="0.05" /></div>
+        <div class="prop"><span>Spread</span><input id="ed-spread" type="range" min="0" max="0.5" step="0.01" /><input id="ed-spread-n" type="number" min="0" max="0.5" step="0.01" /></div>
 
         <h3>Modifiers</h3>
-        <label>Damage <span id="mod-damage-v"></span><input id="mod-damage" type="range" min="0.3" max="4" step="0.1" /></label>
-        <label>Reload <span id="mod-reload-v"></span><input id="mod-reload" type="range" min="0.3" max="4" step="0.1" /></label>
-        <label>Speed <span id="mod-speed-v"></span><input id="mod-speed" type="range" min="0.4" max="2.5" step="0.1" /></label>
-        <label>Size <span id="mod-size-v"></span><input id="mod-size" type="range" min="0.6" max="2.2" step="0.1" /></label>
-        <label>FOV <span id="mod-fov-v"></span><input id="mod-fov" type="range" min="0.7" max="2.2" step="0.1" /></label>
-        <label>Health <span id="mod-health-v"></span><input id="mod-health" type="range" min="0.4" max="4" step="0.1" /></label>
+        <div class="prop"><span>Damage</span><input id="mod-damage" type="range" min="0.3" max="4" step="0.1" /><input id="mod-damage-n" type="number" min="0.3" max="4" step="0.1" /></div>
+        <div class="prop"><span>Reload</span><input id="mod-reload" type="range" min="0.3" max="4" step="0.1" /><input id="mod-reload-n" type="number" min="0.3" max="4" step="0.1" /></div>
+        <div class="prop"><span>Speed</span><input id="mod-speed" type="range" min="0.4" max="2.5" step="0.1" /><input id="mod-speed-n" type="number" min="0.4" max="2.5" step="0.1" /></div>
+        <div class="prop"><span>Size</span><input id="mod-size" type="range" min="0.6" max="2.2" step="0.1" /><input id="mod-size-n" type="number" min="0.6" max="2.2" step="0.1" /></div>
+        <div class="prop"><span>FOV</span><input id="mod-fov" type="range" min="0.7" max="2.2" step="0.1" /><input id="mod-fov-n" type="number" min="0.7" max="2.2" step="0.1" /></div>
+        <div class="prop"><span>Health</span><input id="mod-health" type="range" min="0.4" max="4" step="0.1" /><input id="mod-health-n" type="number" min="0.4" max="4" step="0.1" /></div>
 
-        <h3>JSON</h3>
-        <textarea id="tank-json" spellcheck="false"></textarea>
-        <button id="copy-json">Copy JSON</button>
+        <details class="ws-json">
+          <summary>JSON</summary>
+          <textarea id="tank-json" spellcheck="false"></textarea>
+          <button id="copy-json" type="button">Copy JSON</button>
+        </details>
       </aside>
     </div>
   </div>
 
-  <script src="js/defs.js?v=17"></script>
-  <script src="js/game.js?v=17"></script>
-  <script src="js/editor.js?v=17"></script>
+  <script src="js/defs.js?v=18"></script>
+  <script src="js/game.js?v=18"></script>
+  <script src="js/editor.js?v=18"></script>
 </body>
 </html>

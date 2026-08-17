@@ -709,21 +709,23 @@ kbd {
 #workshop {
   z-index: 30;
   align-items: stretch;
-  padding: 16px;
-  background: rgba(20, 22, 28, 0.72);
+  padding: 12px;
+  background: rgba(20, 22, 28, 0.78);
+  font-family: Ubuntu, "Segoe UI", sans-serif;
 }
 
 .workshop {
   display: grid;
-  grid-template-columns: 220px minmax(280px, 1fr) 340px;
-  gap: 12px;
-  width: min(1180px, 100%);
-  height: min(860px, 100%);
+  grid-template-columns: 240px minmax(280px, 1fr) 360px;
+  gap: 0;
+  width: min(1240px, 100%);
+  height: min(880px, 100%);
   margin: auto;
   background: #e8e8e8;
-  border: 4px solid #555;
-  border-radius: 12px;
+  border: 0;
+  border-radius: 14px;
   overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
 }
 
 .ws-col,
@@ -734,6 +736,9 @@ kbd {
 
 .ws-col {
   background: #dedede;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .ws-head {
@@ -757,6 +762,11 @@ kbd {
   color: #555;
 }
 
+.ws-sub {
+  font-weight: 500;
+  color: #888;
+}
+
 #tank-count {
   font-size: 11px;
   color: #666;
@@ -767,13 +777,35 @@ kbd {
   margin-bottom: 8px;
 }
 
+.ws-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.ws-filter {
+  margin: 0;
+  padding: 4px 8px;
+  font-size: 11px;
+  border: 0;
+  border-radius: 6px;
+  background: #f4f4f4;
+}
+
+.ws-filter.active {
+  background: #8abc3f;
+  color: #fff;
+}
+
 #tank-list {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  max-height: calc(100% - 120px);
+  flex: 1;
   overflow: auto;
   margin-bottom: 8px;
+  min-height: 0;
 }
 
 .tank-item {
@@ -785,6 +817,7 @@ kbd {
   font-size: 13px;
   padding: 6px 8px;
   background: #f4f4f4;
+  border: 0;
 }
 
 .tank-item.active {
@@ -796,34 +829,67 @@ kbd {
   opacity: 0.7;
 }
 
+.ws-danger {
+  background: #f14e54;
+  color: #fff;
+  border: 0;
+  margin: 6px 0 0;
+}
+
 .ws-preview {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 10px;
   background: #cdcdcd;
+}
+
+.ws-preview-meta {
+  text-align: center;
+}
+
+#preview-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #333;
+}
+
+#preview-desc {
+  font-size: 12px;
+  color: #666;
+  min-height: 16px;
 }
 
 #preview {
   background: #cdcdcd;
-  border: 3px solid #555;
-  border-radius: 8px;
-  width: 100%;
-  max-width: 420px;
+  border: 2px solid #bbb;
+  border-radius: 10px;
+  width: min(100%, 440px);
+  aspect-ratio: 1;
   height: auto;
+  max-height: 52vh;
 }
 
 .ws-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 6px;
-  justify-content: center;
-  width: 100%;
+  width: min(100%, 440px);
+}
+
+.ws-actions #play-tank {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 10px;
+  font-size: 16px;
 }
 
 .ws-actions button {
   margin: 0;
+  border: 0;
+  padding: 8px 10px;
+  font-size: 13px;
 }
 
 .ws-edit label {
@@ -832,30 +898,72 @@ kbd {
 
 .ws-edit input[type="range"] {
   width: 100%;
-  margin-top: 4px;
+  margin: 0;
+  accent-color: #00b2e1;
 }
 
 .ws-edit select,
 .ws-edit input[type="number"],
+.ws-edit input[type="text"],
 .ws-edit textarea {
   display: block;
   width: 100%;
   margin-top: 4px;
   padding: 6px 8px;
-  border: 3px solid #888;
-  border-radius: 8px;
+  border: 2px solid #ccc;
+  border-radius: 6px;
   font: inherit;
   background: #fff;
 }
 
+.prop {
+  display: grid;
+  grid-template-columns: 72px 1fr 58px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #555;
+}
+
+.prop input[type="number"] {
+  margin: 0;
+  padding: 4px 6px;
+  font-size: 12px;
+  text-align: right;
+}
+
+.body-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.body-grid label {
+  margin: 0;
+}
+
 .ws-edit textarea {
-  min-height: 120px;
+  min-height: 100px;
   font-family: Consolas, "Courier New", monospace;
   font-size: 11px;
 }
 
 .ws-edit textarea.bad {
   border-color: #e85d5d;
+}
+
+.ws-json {
+  margin-top: 14px;
+}
+
+.ws-json summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  color: #555;
+  margin-bottom: 8px;
 }
 
 .ws-edit .check {
@@ -878,8 +986,10 @@ kbd {
 
 .gun-chip {
   margin: 0;
-  font-size: 12px;
-  padding: 4px 8px;
+  font-size: 11px;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 6px;
 }
 
 .gun-chip.active {
@@ -898,6 +1008,7 @@ kbd {
   margin: 0;
   font-size: 12px;
   padding: 6px;
+  border: 0;
 }
 
 @media (max-width: 980px) {

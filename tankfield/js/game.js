@@ -1363,8 +1363,24 @@
         c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke();
       }
     }
+    const guns = (def && def.guns) || [];
+    const sizeMul = (def && def.mods && def.mods.size) || 1;
+    let r = Math.min(w, h) * 0.155 * sizeMul;
+    const reachOf = (radius) => {
+      const u = radius / 12;
+      let max = radius * ((def && def.smasher) ? 1.35 : 1.08);
+      for (const gun of guns) {
+        const [L, W, A, X, Y] = gun.pos || [18, 8, 1, 0, 0, 0, 0];
+        const tip = Math.hypot((X + L) * u, Y * u) + Math.max(W, Math.abs(W * A)) * u * 0.55 + 6;
+        if (tip > max) max = tip;
+      }
+      return max;
+    };
+    const room = Math.min(w, h) * (Math.min(w, h) < 120 ? 0.42 : 0.34);
+    const reach = reachOf(r);
+    if (reach > room && reach > 1) r *= room / reach;
     const mock = {
-      x: w / 2, y: h / 2 + 2, r: Math.min(w, h) * 0.28, angle: -Math.PI / 2, color, bodyHitT: 0, fade: 1,
+      x: w / 2, y: h / 2 + 2, r, angle: -Math.PI / 2, color, bodyHitT: 0, fade: 1,
       classId: def.id || "custom", customDef: def, name: def.name, turretAim: [],
       health: 1, maxHealth: 1,
     };
