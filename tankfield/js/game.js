@@ -5,6 +5,8 @@
   const TAU = Math.PI * 2;
   const STAT_MAX = 7;
   const LEVEL_CAP = 45;
+  const BASE_MOVE = 19.5;
+  const SPEED_CAP = 100;
   const FADE_TANKS = new Set(["landmine", "stalker", "manager", "maleficitor"]);
 
   const COLORS = {
@@ -143,7 +145,7 @@
       bulletPen: (1 + s.bulletPen * 0.55) * (def.bulletPen || 1),
       bulletDamage: (7 + s.bulletDamage * 3.1) * (def.bulletDamage || 1) * (m.damage || 1),
       reload: Math.max(0.08, (0.42 - s.reload * 0.038) * (def.reload || 1) / (m.reload || 1)),
-      moveSpeed: (11.2 + s.moveSpeed * 0.32 - Math.min(lvl, 30) * 0.008) * (def.speed || 1) * (m.speed || 1),
+      moveSpeed: (BASE_MOVE + s.moveSpeed * 0.4 - Math.min(lvl, 30) * 0.008) * (def.speed || 1) * (m.speed || 1),
       fov: (def.fov || 1) * (m.fov || 1),
       bulletSize: (def.bulletSize || 1) * (m.size || 1),
       maxDrones: def.maxDrones || 0,
@@ -578,8 +580,8 @@
     const st = tankStats(tank);
     const pace = (state.player && state.player.alive ? tankStats(state.player).moveSpeed : st.moveSpeed);
     const ang = Math.atan2(ty - tank.y, tx - tank.x);
-    tank.vx += Math.cos(ang) * pace * 40 * dt;
-    tank.vy += Math.sin(ang) * pace * 40 * dt;
+    tank.vx += Math.cos(ang) * pace * 55 * dt;
+    tank.vy += Math.sin(ang) * pace * 55 * dt;
     updateTurrets(tank, dt);
     shoot(tank, dt);
   }
@@ -596,8 +598,8 @@
     if (keys.has("d") || keys.has("arrowright")) mx += 1;
     if (mx || my) {
       const m = Math.hypot(mx, my) || 1;
-      p.vx += (mx / m) * st.moveSpeed * 40 * dt;
-      p.vy += (my / m) * st.moveSpeed * 40 * dt;
+      p.vx += (mx / m) * st.moveSpeed * 55 * dt;
+      p.vy += (my / m) * st.moveSpeed * 55 * dt;
     }
     const world = screenToWorld(mouse.x, mouse.y);
     if (state.autoSpin) p.angle += 1.8 * dt;
@@ -697,9 +699,9 @@
       tank.vy *= Math.pow(0.0008, dt);
       const spd = Math.hypot(tank.vx, tank.vy);
       const st = tankStats(tank);
-      let cap = st.moveSpeed * 86;
+      let cap = st.moveSpeed * SPEED_CAP;
       if (tank.ai && state.player && state.player.alive) {
-        cap = tankStats(state.player).moveSpeed * 86 * 0.9;
+        cap = tankStats(state.player).moveSpeed * SPEED_CAP * 0.95;
       }
       if (spd > cap) { tank.vx *= cap / spd; tank.vy *= cap / spd; }
       tank.x += tank.vx * dt;
@@ -716,7 +718,7 @@
     for (const s of state.shapes) {
       if (!s.alive) continue;
       s.rot += s.spin * dt;
-      const cruise = 11.2 * 86;
+      const cruise = BASE_MOVE * SPEED_CAP;
       if (s.kind === "alpha") {
         const cx = WORLD.w / 2;
         const cy = WORLD.h / 2;
