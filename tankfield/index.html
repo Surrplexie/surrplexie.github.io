@@ -6,6 +6,9 @@
   <meta name="robots" content="noindex, nofollow" />
   <title>Tankfield</title>
   <link rel="stylesheet" href="css/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet" />
 </head>
 <body>
   <canvas id="game"></canvas>
@@ -32,26 +35,34 @@
 
   <div id="hud" class="hidden">
     <div id="scoreboard">
-      <h2>Leaderboard</h2>
       <ol id="leader-list"></ol>
     </div>
 
-    <div id="minimap-wrap">
-      <canvas id="minimap" width="168" height="168"></canvas>
-    </div>
-
-    <div id="stats-panel"></div>
-
     <div id="class-panel" class="hidden">
-      <h2>Upgrade your tank</h2>
       <div id="class-choices"></div>
+      <button id="skip-upgrade" type="button">Don't Upgrade</button>
+    </div>
+    <button id="show-classes" class="hidden" type="button">Upgrades</button>
+
+    <div id="stats-wrap">
+      <div id="skill-points"></div>
+      <div id="stats-panel"></div>
     </div>
 
-    <button id="edit-ingame" class="ingame-edit">Workshop (T)</button>
+    <div id="status-wrap">
+      <div id="player-name">Tank</div>
+      <div class="hud-bar score-bar"><div id="score-fill"></div><span id="score-text">Score: 0</span></div>
+      <div class="hud-bar kills-bar"><div id="kills-fill"></div><span id="kills-text">Kills: 0</span></div>
+      <div class="hud-bar xp-bar"><div id="xp-fill"></div><span id="xp-label">Level 1 Tank</span></div>
+    </div>
 
-    <div id="xp-wrap">
-      <div id="xp-label">Lvl 1</div>
-      <div id="xp-bar"><div id="xp-fill"></div></div>
+    <div id="minimap-wrap">
+      <div id="meta-info">
+        <div>tankfield</div>
+        <div id="fps-label">60 FPS</div>
+      </div>
+      <canvas id="minimap" width="168" height="168"></canvas>
+      <button id="edit-ingame" class="ingame-edit" type="button">Workshop [T]</button>
     </div>
   </div>
 

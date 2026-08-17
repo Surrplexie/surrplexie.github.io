@@ -60,6 +60,15 @@
     leaders: document.getElementById("leader-list"),
     xpFill: document.getElementById("xp-fill"),
     xpLabel: document.getElementById("xp-label"),
+    playerName: document.getElementById("player-name"),
+    scoreFill: document.getElementById("score-fill"),
+    scoreText: document.getElementById("score-text"),
+    killsFill: document.getElementById("kills-fill"),
+    killsText: document.getElementById("kills-text"),
+    skillPoints: document.getElementById("skill-points"),
+    fps: document.getElementById("fps-label"),
+    skipUpgrade: document.getElementById("skip-upgrade"),
+    showClasses: document.getElementById("show-classes"),
     deathMsg: document.getElementById("death-msg"),
     deathStats: document.getElementById("death-stats"),
     bestScore: document.getElementById("best-score"),
@@ -91,6 +100,10 @@
     paused: false,
     playOpts: null,
     alphaRespawnAt: 0,
+    classDismissed: false,
+    classOptions: [],
+    fpsT: 0,
+    frames: 0,
   };
 
   function rand(a, b) { return a + Math.random() * (b - a); }
@@ -209,6 +222,7 @@
       aiT: rand(0, 3),
       wanderA: 0,
       killedBy: null,
+      kills: 0,
     };
     applyLevel(tank);
     tank.health = tank.maxHealth;
@@ -337,6 +351,8 @@
     state.time = 0;
     state.paused = false;
     state.alphaRespawnAt = 0;
+    state.classDismissed = false;
+    state.classOptions = [];
     populateWorld();
     const player = createTank({
       name: state.spawnName,
@@ -373,6 +389,7 @@
     tank.killedBy = killer ? killer.name : "a polygon";
     burst(tank.x, tank.y, tank.color, 18, 220);
     if (killer && killer.alive) {
+      killer.kills = (killer.kills || 0) + 1;
       const gain = Math.max(20, Math.floor(tank.score * 0.45) + 20);
       giveScore(killer, gain, tank.x, tank.y);
     }
@@ -403,7 +420,10 @@
     if (tank === state.player) {
       floater(x, y - 10, `+${amount}`);
       renderStats();
-      if (leveled) renderClassPanel();
+      if (leveled) {
+        state.classDismissed = false;
+        renderClassPanel();
+      }
     } else if (leveled) {
       autoUpgradeBot(tank);
     }
@@ -876,6 +896,13 @@
     }
   }
 
+  function formatScore(n) {
+    n = Math.floor(n);
+    if (n >= 1000000) return (n / 1000000).toFixed(2) + "m";
+    if (n >= 1000) return (n / 1000).toFixed(2) + "k";
+    return String(n);
+  }
+
   function updateHud() {
     const p = state.player;
     if (!p) return;
@@ -883,14 +910,20 @@
     const cur = xpForLevel(p.level);
     const nxt = xpForLevel(next);
     const pct = p.level >= LEVEL_CAP ? 100 : ((p.score - cur) / Math.max(1, nxt - cur)) * 100;
-    els.xpFill.style.width = `${clamp(pct, 0, 100)}%`;
     const def = getDef(p);
-    els.xpLabel.textContent = p.level >= LEVEL_CAP
-      ? `${def.name}  ·  Lvl ${p.level}  ·  ${Math.floor(p.score)}`
-      : `${def.name}  ·  Lvl ${p.level}  ·  ${Math.floor(p.score)} / ${nxt}`;
-    const ranked = state.tanks.filter((t) => t.alive).sort((a, b) => b.score - a.score).slice(0, 8);
+    const ranked = state.tanks.filter((t) => t.alive).sort((a, b) => b.score - a.score).slice(0, 10);
+    const top = Math.max(1, ranked[0] ? ranked[0].score : 1);
+    const free = skillPointsFor(p.level) - spentPoints(p);
+    if (els.xpFill) els.xpFill.style.width = `${clamp(pct, 0, 100)}%`;
+    if (els.xpLabel) els.xpLabel.textContent = `Level ${p.level} ${def.name}`;
+    if (els.playerName) els.playerName.textContent = p.name;
+    if (els.scoreText) els.scoreText.textContent = `Score: ${Math.floor(p.score).toLocaleString()}`;
+    if (els.scoreFill) els.scoreFill.style.width = `${clamp((p.score / top) * 100, 8, 100)}%`;
+    if (els.killsText) els.killsText.textContent = `Kills: ${p.kills || 0}`;
+    if (els.killsFill) els.killsFill.style.width = `${clamp((p.kills || 0) * 10, 8, 100)}%`;
+    if (els.skillPoints) els.skillPoints.textContent = free > 0 ? `x${free}` : "";
     els.leaders.innerHTML = ranked.map((t) =>
-      `<li class="${t === p ? "you" : ""}"><span>${escapeHtml(t.name)}</span><span>${Math.floor(t.score)}</span></li>`
+      `<li class="${t === p ? "you" : ""}"><div class="lb-fill" style="width:${clamp((t.score / top) * 100, 8, 100)}%"></div><span>${escapeHtml(t.name)} — ${escapeHtml(getDef(t).name)} — ${formatScore(t.score)}</span></li>`
     ).join("");
   }
 
@@ -904,22 +937,26 @@
     const p = state.player;
     if (!p) return;
     const free = skillPointsFor(p.level) - spentPoints(p);
+    if (els.skillPoints) els.skillPoints.textContent = free > 0 ? `x${free}` : "";
     els.stats.innerHTML = STATS.map((st, i) => {
       const v = p.stats[st.key];
       const maxed = v >= STAT_MAX;
-      const pips = Array.from({ length: STAT_MAX }, (_, n) =>
-        `<span class="${n < v ? "on" : ""}"></span>`
-      ).join("");
       return `<div class="stat-row ${maxed || free <= 0 ? "maxed" : ""}" data-stat="${st.key}" style="--pip:${st.color}">
-        <div class="stat-key">${i + 1}</div>
-        <div class="stat-pips">${pips}</div>
-        <div class="stat-name">${st.name}</div>
+        <div class="stat-dot"></div>
+        <div class="stat-track">
+          <div class="stat-fill" style="width:${(v / STAT_MAX) * 100}%"></div>
+          <div class="stat-name">${st.name}</div>
+        </div>
+        <div class="stat-key">[${i + 1}]</div>
       </div>`;
     }).join("");
     els.stats.querySelectorAll(".stat-row").forEach((row) => {
       row.addEventListener("click", () => tryUpgrade(row.dataset.stat));
     });
   }
+
+  const CLASS_KEYS = ["y", "u", "i", "h", "j", "k", "n", "m"];
+  const CLASS_TILES = ["#a8d8ea", "#c5e1a5", "#f8bbd0", "#ffe082", "#d1c4e9", "#ffccbc", "#b2dfdb", "#f0f4c3"];
 
   function renderClassPanel() {
     const p = state.player;
@@ -929,28 +966,50 @@
       const child = TankCatalog.get(id);
       return p.level >= (child.needLevel || 15);
     });
+    state.classOptions = options;
+    const show = document.getElementById("show-classes");
     if (!options.length && state.mode !== "sandbox") {
       els.classes.classList.add("hidden");
+      if (show) show.classList.add("hidden");
       return;
     }
+    if (state.classDismissed) {
+      els.classes.classList.add("hidden");
+      if (show) show.classList.remove("hidden");
+      return;
+    }
+    if (show) show.classList.add("hidden");
     els.classes.classList.remove("hidden");
     const extra = state.mode === "sandbox"
-      ? `<button class="class-btn" id="open-catalog">All tanks / editor<small>Sandbox picker</small></button>`
+      ? `<button class="class-btn sandbox-btn" id="open-catalog" type="button">All tanks / editor</button>`
       : "";
-    els.classChoices.innerHTML = extra + options.map((id) => {
+    els.classChoices.innerHTML = extra + options.map((id, i) => {
       const c = TankCatalog.get(id);
-      return `<button class="class-btn" data-class="${id}">${c.name}<small>${c.desc}</small></button>`;
+      const key = CLASS_KEYS[i] ? `[${CLASS_KEYS[i].toUpperCase()}]` : "";
+      return `<button class="class-btn" data-class="${id}" style="--tile:${CLASS_TILES[i % CLASS_TILES.length]}">
+        <canvas class="class-icon" data-id="${id}" width="72" height="52"></canvas>
+        <span class="class-name">${c.name}</span>
+        <span class="class-key">${key}</span>
+      </button>`;
     }).join("");
     els.classChoices.querySelectorAll("[data-class]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        p.classId = btn.dataset.class;
-        p.customDef = null;
-        applyLevel(p);
-        renderClassPanel();
-      });
+      btn.addEventListener("click", () => pickClass(btn.dataset.class));
+    });
+    els.classChoices.querySelectorAll("canvas.class-icon").forEach((cv) => {
+      drawPreview(cv, TankCatalog.get(cv.dataset.id), COLORS.player, -1, cv.parentElement.style.getPropertyValue("--tile") || "#cde");
     });
     const cat = document.getElementById("open-catalog");
     if (cat) cat.addEventListener("click", () => window.TankWorkshop.open());
+  }
+
+  function pickClass(id) {
+    const p = state.player;
+    if (!p || !p.alive) return;
+    p.classId = id;
+    p.customDef = null;
+    applyLevel(p);
+    state.classDismissed = false;
+    renderClassPanel();
   }
 
   function tryUpgrade(key) {
@@ -1077,22 +1136,24 @@
     if (!opts.hideHealth) drawHealth(c, tank);
   }
 
-  function drawPreview(target, def, color = COLORS.player, highlightGun = -1) {
+  function drawPreview(target, def, color = COLORS.player, highlightGun = -1, bg = COLORS.bg) {
     const c = target.getContext("2d");
     const w = target.width;
     const h = target.height;
     c.setTransform(1, 0, 0, 1, 0, 0);
-    c.fillStyle = COLORS.bg;
+    c.fillStyle = bg || COLORS.bg;
     c.fillRect(0, 0, w, h);
-    c.strokeStyle = COLORS.grid;
-    for (let x = 0; x < w; x += 18) {
-      c.beginPath(); c.moveTo(x, 0); c.lineTo(x, h); c.stroke();
-    }
-    for (let y = 0; y < h; y += 18) {
-      c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke();
+    if (!bg || bg === COLORS.bg) {
+      c.strokeStyle = COLORS.grid;
+      for (let x = 0; x < w; x += 18) {
+        c.beginPath(); c.moveTo(x, 0); c.lineTo(x, h); c.stroke();
+      }
+      for (let y = 0; y < h; y += 18) {
+        c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke();
+      }
     }
     const mock = {
-      x: w / 2, y: h / 2, r: 28, angle: -Math.PI / 2, color, bodyHitT: 0, fade: 1,
+      x: w / 2, y: h / 2 + 2, r: Math.min(w, h) * 0.28, angle: -Math.PI / 2, color, bodyHitT: 0, fade: 1,
       classId: def.id || "custom", customDef: def, name: def.name, turretAim: [],
       health: 1, maxHealth: 1,
     };
@@ -1220,6 +1281,13 @@
     last = now;
     if (running && !state.paused) update(dt);
     render();
+    state.frames += 1;
+    state.fpsT += Math.max(dt, 0.001);
+    if (state.fpsT >= 0.4 && els.fps) {
+      els.fps.textContent = `${(state.frames / state.fpsT).toFixed(0)} FPS`;
+      state.frames = 0;
+      state.fpsT = 0;
+    }
     requestAnimationFrame(frame);
   }
 
@@ -1233,6 +1301,10 @@
     if (k === "e" && running) state.autoFire = !state.autoFire;
     if (k === "c" && running) state.autoSpin = !state.autoSpin;
     if (k === "t" && running) window.TankWorkshop.open();
+    const classIdx = CLASS_KEYS.indexOf(k);
+    if (running && !state.paused && classIdx >= 0 && state.classOptions[classIdx] && !state.classDismissed) {
+      pickClass(state.classOptions[classIdx]);
+    }
     const n = parseInt(e.key, 10);
     if (running && !state.paused && n >= 1 && n <= 8) tryUpgrade(STATS[n - 1].key);
   });
@@ -1263,6 +1335,18 @@
     els.start.classList.remove("hidden");
   });
   if (els.editInGame) els.editInGame.addEventListener("click", () => window.TankWorkshop.open());
+  if (els.skipUpgrade) {
+    els.skipUpgrade.addEventListener("click", () => {
+      state.classDismissed = true;
+      renderClassPanel();
+    });
+  }
+  if (els.showClasses) {
+    els.showClasses.addEventListener("click", () => {
+      state.classDismissed = false;
+      renderClassPanel();
+    });
+  }
 
   window.TankfieldGame = {
     startGame,
