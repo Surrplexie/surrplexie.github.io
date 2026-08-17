@@ -14,27 +14,39 @@
   <canvas id="game"></canvas>
 
   <div id="start" class="overlay">
-    <div class="panel start-panel">
-      <h1>Tankfield</h1>
-      <p class="tagline">Local arena · 100+ tanks · built-in workshop</p>
-      <label>
-        Nickname
-        <input id="name-input" type="text" maxlength="16" placeholder="Unnamed Tank" autocomplete="off" />
-      </label>
-      <button id="play-btn" class="primary">FFA</button>
-      <div class="mode-label">2 Teams</div>
-      <div class="tdm-picks">
-        <button id="tdm-blue" type="button">Blue</button>
-        <button id="tdm-red" type="button">Red</button>
+    <button id="options-btn" class="corner-btn" type="button">Options</button>
+    <div id="options-panel" class="options-panel hidden">
+      <div class="options-title">Controls</div>
+      <div class="opt-row"><kbd>WASD</kbd><span>Move</span></div>
+      <div class="opt-row"><kbd>Mouse</kbd><span>Aim / shoot</span></div>
+      <div class="opt-row"><kbd>E</kbd><span>Auto fire</span></div>
+      <div class="opt-row"><kbd>C</kbd><span>Auto spin</span></div>
+      <div class="opt-row"><kbd>T</kbd><span>Workshop</span></div>
+      <div class="opt-row"><kbd>1</kbd>–<kbd>8</kbd><span>Upgrade stats</span></div>
+      <div class="opt-note">Hold fire to send drones to the cursor.</div>
+    </div>
+    <div class="start-card">
+      <div class="brand">
+        <svg class="logo-tank" viewBox="0 0 42 28" aria-hidden="true">
+          <rect x="20" y="10" width="18" height="8" rx="1.5" fill="#8abc3f" stroke="#6a9a2e" stroke-width="1.5"/>
+          <circle cx="14" cy="14" r="10" fill="#8abc3f" stroke="#6a9a2e" stroke-width="1.5"/>
+        </svg>
+        <h1>Tankfield</h1>
       </div>
-      <button id="sandbox-btn">Sandbox (level 45)</button>
-      <button id="workshop-btn">Tank workshop</button>
-      <div class="controls-help">
-        <div><kbd>WASD</kbd> move · <kbd>Mouse</kbd> aim/shoot</div>
-        <div><kbd>E</kbd> auto fire · <kbd>C</kbd> auto spin · <kbd>T</kbd> editor</div>
-        <div><kbd>1</kbd>–<kbd>8</kbd> upgrade stats</div>
-        <div>Hold fire to send drones to the cursor</div>
+      <p class="tagline">Local arena</p>
+      <div class="mode-tabs" role="tablist">
+        <button type="button" class="mode-tab active" data-mode="ffa">FFA</button>
+        <button type="button" class="mode-tab" data-mode="tdm">2 Teams</button>
+        <button type="button" class="mode-tab" data-mode="sandbox">Sandbox</button>
       </div>
+      <div id="team-row" class="team-row hidden">
+        <button type="button" class="team-chip selected" data-team="blue">Blue</button>
+        <button type="button" class="team-chip" data-team="red">Red</button>
+      </div>
+      <p id="mode-hint" class="mode-hint">Everyone for themselves</p>
+      <input id="name-input" type="text" maxlength="16" placeholder="Nickname" autocomplete="off" />
+      <button id="play-btn" class="play-btn" type="button">Play</button>
+      <button id="workshop-btn" class="ghost-btn" type="button">Tank workshop</button>
     </div>
   </div>
 

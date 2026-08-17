@@ -83,9 +83,6 @@
     death: document.getElementById("death"),
     name: document.getElementById("name-input"),
     play: document.getElementById("play-btn"),
-    sandbox: document.getElementById("sandbox-btn"),
-    tdmBlue: document.getElementById("tdm-blue"),
-    tdmRed: document.getElementById("tdm-red"),
     workshopBtn: document.getElementById("workshop-btn"),
     again: document.getElementById("again-btn"),
     menu: document.getElementById("menu-btn"),
@@ -1540,18 +1537,49 @@
   });
   canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
-  els.play.addEventListener("click", () => startGame(els.name.value.trim() || "Unnamed Tank", { mode: "ffa" }));
-  if (els.tdmBlue) {
-    els.tdmBlue.addEventListener("click", () => startGame(els.name.value.trim() || "Unnamed Tank", { mode: "tdm", team: "blue" }));
+  let menuMode = "ffa";
+  let menuTeam = "blue";
+  const MODE_HINT = {
+    ffa: "Everyone for themselves",
+    tdm: "Red vs blue · bases protect your team",
+    sandbox: "Level 45 · pick any tank",
+  };
+
+  function playSelected() {
+    const name = els.name.value.trim() || "Unnamed Tank";
+    if (menuMode === "sandbox") startGame(name, { sandbox: true, classId: "basic" });
+    else if (menuMode === "tdm") startGame(name, { mode: "tdm", team: menuTeam });
+    else startGame(name, { mode: "ffa" });
   }
-  if (els.tdmRed) {
-    els.tdmRed.addEventListener("click", () => startGame(els.name.value.trim() || "Unnamed Tank", { mode: "tdm", team: "red" }));
-  }
-  els.sandbox.addEventListener("click", () => {
-    startGame(els.name.value.trim() || "Unnamed Tank", { sandbox: true, classId: "basic" });
+
+  document.querySelectorAll(".mode-tab").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      menuMode = btn.dataset.mode;
+      document.querySelectorAll(".mode-tab").forEach((b) => b.classList.toggle("active", b === btn));
+      const row = document.getElementById("team-row");
+      if (row) row.classList.toggle("hidden", menuMode !== "tdm");
+      const hint = document.getElementById("mode-hint");
+      if (hint) hint.textContent = MODE_HINT[menuMode] || "";
+    });
   });
+  document.querySelectorAll(".team-chip").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      menuTeam = btn.dataset.team;
+      document.querySelectorAll(".team-chip").forEach((b) => b.classList.toggle("selected", b === btn));
+    });
+  });
+  const optionsBtn = document.getElementById("options-btn");
+  const optionsPanel = document.getElementById("options-panel");
+  if (optionsBtn && optionsPanel) {
+    optionsBtn.addEventListener("click", () => {
+      optionsPanel.classList.toggle("hidden");
+      optionsBtn.classList.toggle("open", !optionsPanel.classList.contains("hidden"));
+    });
+  }
+
+  els.play.addEventListener("click", playSelected);
   els.workshopBtn.addEventListener("click", () => window.TankWorkshop.open());
-  els.name.addEventListener("keydown", (e) => { if (e.key === "Enter") els.play.click(); });
+  els.name.addEventListener("keydown", (e) => { if (e.key === "Enter") playSelected(); });
   els.again.addEventListener("click", () => startGame(state.spawnName, state.playOpts || {}));
   els.menu.addEventListener("click", () => {
     running = false;
