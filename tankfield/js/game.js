@@ -100,6 +100,8 @@
     paused: false,
     playOpts: null,
     alphaRespawnAt: 0,
+    pentagonAt: 30,
+    triangleAt: 60,
     classDismissed: false,
     classOptions: [],
     fpsT: 0,
@@ -283,8 +285,9 @@
   function populateWorld() {
     state.shapes = [];
     for (let i = 0; i < 90; i++) state.shapes.push(createShape("square"));
-    for (let i = 0; i < 28; i++) state.shapes.push(createShape("triangle"));
-    for (let i = 0; i < 12; i++) state.shapes.push(createShape("pentagon"));
+    const starterTris = irand(1, 3);
+    for (let i = 0; i < starterTris; i++) state.shapes.push(createShape("triangle"));
+    state.shapes.push(createShape("pentagon"));
     state.shapes.push(createShape("alpha"));
     for (let i = 0; i < 10; i++) state.shapes.push(createShape("crasher"));
   }
@@ -351,6 +354,8 @@
     state.time = 0;
     state.paused = false;
     state.alphaRespawnAt = 0;
+    state.pentagonAt = rand(30, 60);
+    state.triangleAt = rand(60, 180);
     state.classDismissed = false;
     state.classOptions = [];
     populateWorld();
@@ -536,12 +541,27 @@
   function maintainShapes() {
     const counts = { square: 0, triangle: 0, pentagon: 0, alpha: 0, crasher: 0 };
     for (const s of state.shapes) if (s.alive) counts[s.kind]++;
-    const want = { square: 90, triangle: 28, pentagon: 12, crasher: 10 };
+    const want = { square: 90, crasher: 10 };
     for (const kind of Object.keys(want)) {
       while (counts[kind] < want[kind]) {
         state.shapes.push(createShape(kind));
         counts[kind]++;
       }
+    }
+    if (state.time >= state.pentagonAt) {
+      if (counts.pentagon < 6) {
+        state.shapes.push(createShape("pentagon"));
+        counts.pentagon++;
+      }
+      state.pentagonAt = state.time + rand(30, 60);
+    }
+    if (state.time >= state.triangleAt) {
+      const n = irand(1, 5);
+      for (let i = 0; i < n && counts.triangle < 12; i++) {
+        state.shapes.push(createShape("triangle"));
+        counts.triangle++;
+      }
+      state.triangleAt = state.time + rand(60, 180);
     }
     if (counts.alpha < 1 && state.alphaRespawnAt > 0 && state.time >= state.alphaRespawnAt) {
       state.shapes.push(createShape("alpha"));
