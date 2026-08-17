@@ -159,6 +159,14 @@
     const list = pool.length ? pool : TEAM_COLORS;
     return list[irand(0, list.length - 1)].hex;
   }
+  function colorFor(opts = {}) {
+    if (opts.team && TEAMS[opts.team]) return TEAMS[opts.team].color;
+    if (state.mode === "sandbox") {
+      if (opts.player) return state.selectedColor || COLORS.player;
+      return pickTeamColor(state.selectedColor);
+    }
+    return opts.player ? COLORS.player : COLORS.enemy;
+  }
   function dist2(a, b) {
     const dx = a.x - b.x;
     const dy = a.y - b.y;
@@ -442,7 +450,7 @@
         score,
         classId: "basic",
         team,
-        color: team ? TEAMS[team].color : pickTeamColor(state.player ? state.player.color : state.selectedColor),
+        color: colorFor({ team }),
         pos: state.mode === "tdm" && team
           ? spawnInBase(team)
           : state.mode === "protect" && mothershipOf(team)
@@ -634,7 +642,7 @@
     const player = createTank({
       name: state.spawnName,
       team,
-      color: team ? TEAMS[team].color : (state.mode === "sandbox" ? (state.selectedColor || COLORS.player) : pickTeamColor()),
+      color: colorFor({ team, player: true }),
       classId: opts.classId || "basic",
       customDef: opts.customDef || null,
       score: opts.sandbox ? xpForLevel(LEVEL_CAP) : 0,
@@ -753,7 +761,7 @@
           score,
           classId: "basic",
           team,
-          color: team ? TEAMS[team].color : pickTeamColor(state.player.color),
+          color: colorFor({ team }),
           pos: state.mode === "tdm" && team
             ? spawnInBase(team)
             : state.mode === "protect" && mothershipOf(team)
