@@ -130,6 +130,7 @@
     alphaRespawnAt: 0,
     pentagonAt: 30,
     triangleAt: 60,
+    crasherAt: 60,
     classDismissed: false,
     classOptions: [],
     fpsT: 0,
@@ -269,6 +270,7 @@
       wanderA: 0,
       killedBy: null,
       kills: 0,
+      spawnProtect: 0,
     };
     applyLevel(tank);
     tank.health = tank.maxHealth;
@@ -333,7 +335,7 @@
     for (let i = 0; i < starterTris; i++) state.shapes.push(createShape("triangle"));
     state.shapes.push(createShape("pentagon"));
     state.shapes.push(createShape("alpha"));
-    for (let i = 0; i < 10; i++) state.shapes.push(createShape("crasher"));
+    for (let i = 0; i < 2; i++) state.shapes.push(createShape("crasher"));
   }
 
   function spawnBots() {
@@ -401,6 +403,7 @@
     state.alphaRespawnAt = 0;
     state.pentagonAt = rand(30, 60);
     state.triangleAt = rand(60, 180);
+    state.crasherAt = rand(60, 120);
     state.classDismissed = false;
     state.classOptions = [];
     populateWorld();
@@ -413,6 +416,7 @@
       pos: awayFrom(WORLD.w / 2, WORLD.h / 2, 700),
     });
     player.ai = false;
+    player.spawnProtect = 30;
     if (opts.maxStats) {
       for (const st of STATS) player.stats[st.key] = STAT_MAX;
       applyLevel(player);
@@ -542,6 +546,10 @@
     return mouse.down || state.autoFire || keys.has(" ");
   }
 
+  function breakSpawnProtect(tank) {
+    if (tank && tank.spawnProtect > 0) tank.spawnProtect = 0;
+  }
+
   function shoot(tank, dt) {
     const def = getDef(tank);
     const st = tankStats(tank);
@@ -559,6 +567,7 @@
       if (tank.gunCd[i] > 0) continue;
       if ((gun.type === "drone" || gun.type === "swarm") && countOwned(gun.type, tank) >= Math.max(1, st.maxDrones)) continue;
       tank.gunCd[i] = st.reload * (0.65 + (gun.pos[6] || 0));
+      if (!tank.ai && !autoGun) breakSpawnProtect(tank);
       spawnShot(tank, gun, i, st);
     }
   }
@@ -587,7 +596,7 @@
   function maintainShapes() {
     const counts = { square: 0, triangle: 0, pentagon: 0, alpha: 0, crasher: 0 };
     for (const s of state.shapes) if (s.alive) counts[s.kind]++;
-    const want = { square: 90, crasher: 10 };
+    const want = { square: 90 };
     for (const kind of Object.keys(want)) {
       while (counts[kind] < want[kind]) {
         state.shapes.push(createShape(kind));
@@ -608,6 +617,13 @@
         counts.triangle++;
       }
       state.triangleAt = state.time + rand(60, 180);
+    }
+    if (state.time >= (state.crasherAt || 0)) {
+      if (counts.crasher < 4) {
+        state.shapes.push(createShape("crasher"));
+        counts.crasher++;
+      }
+      state.crasherAt = state.time + rand(60, 120);
     }
     if (counts.alpha < 1 && state.alphaRespawnAt > 0 && state.time >= state.alphaRespawnAt) {
       state.shapes.push(createShape("alpha"));
@@ -686,6 +702,7 @@
       const m = Math.hypot(mx, my) || 1;
       p.vx += (mx / m) * st.moveSpeed * 62 * dt;
       p.vy += (my / m) * st.moveSpeed * 62 * dt;
+      breakSpawnProtect(p);
     }
     const world = screenToWorld(mouse.x, mouse.y);
     if (state.autoSpin) p.angle += 1.8 * dt;
@@ -743,6 +760,8 @@
 
   function damage(target, amount, src) {
     if (!target.alive) return;
+    if (target.spawnProtect > 0) return;
+    if (src && src.spawnProtect > 0) return;
     target.health -= amount;
     if (target.type === "tank") target.bodyHitT = 0.08;
     if (target === state.player) shake = Math.max(shake, Math.min(10, amount * 0.25));
@@ -795,6 +814,7 @@
       tank.x = clamp(tank.x, tank.r, WORLD.w - tank.r);
       tank.y = clamp(tank.y, tank.r, WORLD.h - tank.r);
       tank.bodyHitT = Math.max(0, tank.bodyHitT - dt);
+      if (tank.spawnProtect > 0) tank.spawnProtect = Math.max(0, tank.spawnProtect - dt);
       tank.health = Math.min(tank.maxHealth, tank.health + st.regen * dt);
       const fadeId = getDef(tank).id;
       if (FADE_TANKS.has(fadeId) && spd < 25) tank.fade = Math.max(0.08, tank.fade - dt * 0.7);
@@ -804,7 +824,6 @@
     for (const s of state.shapes) {
       if (!s.alive) continue;
       s.rot += s.spin * dt;
-      const cruise = BASE_MOVE * SPEED_CAP;
       if (s.kind === "alpha") {
         const cx = WORLD.w / 2;
         const cy = WORLD.h / 2;
@@ -813,22 +832,19 @@
         s.vx *= Math.pow(0.0004, dt);
         s.vy *= Math.pow(0.0004, dt);
       } else if (s.kind === "crasher") {
-        const prey = nearest(s, state.tanks, 980);
+        const prey = nearest(s, state.tanks, 980, (t) => !t.spawnProtect);
+        const tankCruise = BASE_MOVE * 62 / -Math.log(0.0008);
+        const spd = tankCruise * 1.1;
         if (prey) {
           const a = Math.atan2(prey.y - s.y, prey.x - s.x);
-          const spd = cruise * 0.9;
-          s.vx = lerp(s.vx, Math.cos(a) * spd, 1 - Math.pow(0.012, dt));
-          s.vy = lerp(s.vy, Math.sin(a) * spd, 1 - Math.pow(0.012, dt));
+          s.vx += Math.cos(a) * BASE_MOVE * 1.1 * 62 * dt;
+          s.vy += Math.sin(a) * BASE_MOVE * 1.1 * 62 * dt;
           s.rot = a;
-        } else {
-          s.vx *= Math.pow(0.08, dt);
-          s.vy *= Math.pow(0.08, dt);
         }
-      } else if (s.kind === "triangle") {
-        if (Math.random() < dt * 0.45) s.wanderA += rand(-1.1, 1.1);
-        const spd = cruise * 0.88;
-        s.vx = lerp(s.vx, Math.cos(s.wanderA) * spd, 1 - Math.pow(0.04, dt));
-        s.vy = lerp(s.vy, Math.sin(s.wanderA) * spd, 1 - Math.pow(0.04, dt));
+        s.vx *= Math.pow(0.0008, dt);
+        s.vy *= Math.pow(0.0008, dt);
+        const mag = Math.hypot(s.vx, s.vy);
+        if (mag > spd) { s.vx *= spd / mag; s.vy *= spd / mag; }
       } else {
         s.vx *= Math.pow(0.04, dt);
         s.vy *= Math.pow(0.04, dt);
@@ -837,8 +853,6 @@
       s.y += s.vy * dt;
       s.x = clamp(s.x, s.r, WORLD.w - s.r);
       s.y = clamp(s.y, s.r, WORLD.h - s.r);
-      if (s.kind === "triangle" && (s.x <= s.r + 2 || s.x >= WORLD.w - s.r - 2)) s.wanderA = Math.PI - s.wanderA;
-      if (s.kind === "triangle" && (s.y <= s.r + 2 || s.y >= WORLD.h - s.r - 2)) s.wanderA = -s.wanderA;
     }
 
     for (const b of state.bullets) {
@@ -1197,6 +1211,13 @@
       c.textAlign = "center";
       c.textBaseline = "bottom";
       c.fillText(tank.name, tank.x, tank.y - tank.r - 6);
+    }
+    if (tank.spawnProtect > 0) {
+      c.beginPath();
+      c.arc(tank.x, tank.y, tank.r + 7, 0, TAU);
+      c.strokeStyle = `rgba(255,255,255,${0.4 + 0.4 * Math.abs(Math.sin(state.time * 8))})`;
+      c.lineWidth = 3;
+      c.stroke();
     }
     c.restore();
     if (!opts.hideHealth) drawHealth(c, tank);
