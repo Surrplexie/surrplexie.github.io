@@ -238,21 +238,6 @@
   }
 
   function tankStats(tank) {
-    if (tank && tank.mothership) {
-      return {
-        maxHealth: 14000,
-        regen: 28,
-        bodyDamage: 55,
-        bulletSpeed: 4.1,
-        bulletPen: 2.4,
-        bulletDamage: 38,
-        reload: 0.48,
-        moveSpeed: BASE_MOVE * 0.38,
-        fov: 1.45,
-        bulletSize: 0.72,
-        maxDrones: 28,
-      };
-    }
     if (tank && tank.closer) {
       return {
         maxHealth: 50000,
@@ -272,7 +257,7 @@
     const def = getDef(tank);
     const m = modsOf(def);
     const lvl = tank.level;
-    return {
+    const out = {
       maxHealth: (48 + s.maxHealth * 22 + lvl * 2.2) * (def.health || 1) * (m.health || 1),
       regen: 0.9 + s.regen * 1.35 + lvl * 0.02,
       bodyDamage: (7 + s.bodyDamage * 4.2) * (def.bodyDamage || 1),
@@ -285,6 +270,13 @@
       bulletSize: (def.bulletSize || 1) * (m.size || 1),
       maxDrones: def.maxDrones || 0,
     };
+    if (tank && tank.mothership) {
+      out.maxHealth = Math.max(14000, out.maxHealth);
+      out.regen = Math.max(28, out.regen);
+      out.fov = Math.max(out.fov, 1.45);
+      out.maxDrones = Math.max(out.maxDrones, 28);
+    }
+    return out;
   }
 
   function skillPointsFor(level) { return Math.min(level - 1, 33); }
@@ -591,6 +583,8 @@
       body.ai = false;
       state.player = body;
       floater(body.x, body.y - 18, "Left mothership");
+      try { renderStats(); } catch (err) {}
+      try { renderClassPanel(); } catch (err) {}
       return;
     }
     if (!body || !body.alive || body.mothership) return;
@@ -600,6 +594,8 @@
     m.ai = false;
     state.player = m;
     floater(m.x, m.y - m.r - 8, "Mothership");
+    try { renderStats(); } catch (err) {}
+    try { renderClassPanel(); } catch (err) {}
   }
 
   function startGame(name, opts = {}) {
@@ -650,7 +646,13 @@
     });
     player.ai = false;
     player.spawnProtect = 30;
-    if (opts.maxStats) maxOutTank(player);
+    if (opts.maxStats && state.mode !== "protect") maxOutTank(player);
+    if (state.mode === "protect") {
+      player.score = 0;
+      for (const st of STATS) player.stats[st.key] = 0;
+      applyLevel(player);
+      player.health = player.maxHealth;
+    }
     state.player = player;
     state.pilotTank = player;
     state.tanks.push(player);
@@ -1075,16 +1077,16 @@
       return;
     }
     if (tank.mothership) {
-      const prey = nearest(tank, state.tanks, 900, (t) => isEnemyTank(tank, t));
+      const prey = nearest(tank, state.tanks, 2800, (t) => isEnemyTank(tank, t));
       tank.aiState = "attack";
-      tank.angle += 0.42 * dt;
-      if (prey && dist2(tank, prey) < 520 * 520) {
+      if (prey) {
         tank.angle = Math.atan2(prey.y - tank.y, prey.x - tank.x);
+        const st = tankStats(tank);
+        tank.vx += Math.cos(tank.angle) * st.moveSpeed * 62 * dt;
+        tank.vy += Math.sin(tank.angle) * st.moveSpeed * 62 * dt;
+      } else {
+        tank.angle += 0.42 * dt;
       }
-      const homeX = tank.homeX != null ? tank.homeX : tank.x;
-      const homeY = tank.homeY != null ? tank.homeY : tank.y;
-      tank.vx += (homeX - tank.x) * 2.4 * dt;
-      tank.vy += (homeY - tank.y) * 2.4 * dt;
       updateTurrets(tank, dt);
       shoot(tank, dt);
       return;
@@ -1302,27 +1304,15 @@
       const spd = Math.hypot(tank.vx, tank.vy);
       const st = tankStats(tank);
       let cap = st.moveSpeed * SPEED_CAP;
-      if (tank.ai && !tank.closer && !tank.mothership && state.player && state.player.alive) {
+      if (tank.ai && !tank.closer && !tank.mothership && state.player && state.player.alive && !state.player.mothership) {
         cap = tankStats(state.player).moveSpeed * SPEED_CAP * 0.95;
       }
       if (tank.closer) cap = tankStats(tank).moveSpeed * SPEED_CAP * 1.35;
-      if (tank.mothership) cap = tankStats(tank).moveSpeed * SPEED_CAP * 0.7;
       if (spd > cap) { tank.vx *= cap / spd; tank.vy *= cap / spd; }
       tank.x += tank.vx * dt;
       tank.y += tank.vy * dt;
       tank.x = clamp(tank.x, tank.r, WORLD.w - tank.r);
       tank.y = clamp(tank.y, tank.r, WORLD.h - tank.r);
-      if (tank.mothership && tank.homeX != null) {
-        const dx = tank.x - tank.homeX;
-        const dy = tank.y - tank.homeY;
-        const d = Math.hypot(dx, dy);
-        if (d > 64) {
-          tank.x = tank.homeX + (dx / d) * 64;
-          tank.y = tank.homeY + (dy / d) * 64;
-          tank.vx *= 0.4;
-          tank.vy *= 0.4;
-        }
-      }
       tank.bodyHitT = Math.max(0, tank.bodyHitT - dt);
       if (tank.spawnProtect > 0) tank.spawnProtect = Math.max(0, tank.spawnProtect - dt);
       const invading = tank.team && zoneAt(tank.x, tank.y) && zoneAt(tank.x, tank.y) !== tank.team;
@@ -1538,7 +1528,7 @@
   }
 
   function updateHud() {
-    const p = menuTank() || state.player;
+    const p = state.player;
     if (!p) return;
     const next = Math.min(LEVEL_CAP, p.level + (p.level < LEVEL_CAP ? 1 : 0));
     const cur = xpForLevel(p.level);
@@ -1617,7 +1607,7 @@
   }
 
   function renderStats() {
-    const p = menuTank();
+    const p = state.player;
     if (!p) return;
     const free = skillPointsFor(p.level) - spentPoints(p);
     if (els.skillPoints) els.skillPoints.textContent = free > 0 ? `x${free}` : "";
@@ -1696,8 +1686,8 @@
   }
 
   function tryUpgrade(key, dump) {
-    const p = menuTank();
-    if (!p || !p.alive) return;
+    const p = state.player;
+    if (!p || !p.alive || p.mothership || p.closer) return;
     let used = false;
     while (true) {
       const free = skillPointsFor(p.level) - spentPoints(p);
@@ -2031,7 +2021,9 @@
     if (k === "c" && running) state.autoSpin = !state.autoSpin;
     if (k === "t" && running && window.TankWorkshop) window.TankWorkshop.open();
     const skippedLevel = k === "n" && running && !state.paused && state.mode === "protect" && skipToLevelCap(menuTank());
-    if (!skippedLevel) {
+    if (k === "h" && running && !state.paused && state.mode === "protect") {
+      toggleMothershipControl();
+    } else if (!skippedLevel) {
       const classIdx = CLASS_KEYS.indexOf(k);
       if (running && !state.paused && classIdx >= 0 && state.classOptions[classIdx] && !state.classDismissed) {
         pickClass(state.classOptions[classIdx]);
