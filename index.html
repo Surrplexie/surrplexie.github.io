@@ -38,7 +38,7 @@ scripts:
                     class="cta-button"
                     aria-expanded="false"
                     aria-controls="resumeSnippet"
-                >View Key Qualifications</button>
+                >View Resume</button>
                 <a
                     href="{{ '/files/Kai_Morgan_Resume.pdf' | relative_url }}"
                     class="cta-button cta-button-secondary"
@@ -46,12 +46,27 @@ scripts:
                 >Download Resume (PDF)</a>
             </div>
 
-            <div id="resumeSnippet" class="snippet-box" role="region" aria-label="Key qualifications summary">
-                <p><strong>Objective:</strong> Internship or entry-level IT support / help desk role.</p>
-                <p><strong>Support skills:</strong> Windows 10/11 administration, hardware and software troubleshooting, user communication, ticket documentation, VirtualBox.</p>
-                <p><strong>Also proficient:</strong> Linux (Ubuntu, Kali), Wireshark, Nmap; IDA Pro / Ghidra for lab and CTF work.</p>
-                <p><strong>Education:</strong> A.A.S. IT Computer Support Specialist &mdash; Milwaukee Area Technical College (GPA: 3.2).</p>
-                <p><strong>Certifications:</strong> Microsoft Enterprise Desktop Support Specialist (earned); CompTIA A+ &amp; Security+ (in progress).</p>
+            <div id="resumeSnippet" class="snippet-box" role="region" aria-label="Resume preview">
+                <div class="resume-summary">
+                    <p><strong>Objective:</strong> Internship or tier-1 IT support / help desk role, growing into enterprise desktop and endpoint environments.</p>
+                    <p><strong>Support skills:</strong> Ticket triage, Windows 10/11 hardware/software/driver troubleshooting, IP renew/release and adapter diagnostics, PowerShell/Python automation, clear documentation.</p>
+                    <p><strong>Experience:</strong> DreamBikes service technician (Mar 2025&ndash;present); Boys &amp; Girls Club bike repair intern (May 2024&ndash;Mar 2025).</p>
+                    <p><strong>Education:</strong> A.A.S. IT Computer Support Specialist &mdash; Milwaukee Area Technical College (GPA 3.2; Feb 2025&ndash;May 2027).</p>
+                    <p><strong>Certifications:</strong> Microsoft Enterprise Desktop Support Specialist (Dec 2025); CompTIA Hardware/Network and Software/Systems competencies (May 2025).</p>
+                </div>
+                <div class="resume-embed-wrap">
+                    <iframe
+                        id="resumeEmbed"
+                        class="resume-embed"
+                        title="Kai Morgan IT support resume"
+                        data-src="{{ '/files/Kai_Morgan_Resume.pdf' | relative_url }}"
+                        loading="lazy"
+                    ></iframe>
+                    <p class="resume-embed-fallback">
+                        If the preview does not load,
+                        <a href="{{ '/files/Kai_Morgan_Resume.pdf' | relative_url }}">open the PDF</a>.
+                    </p>
+                </div>
             </div>
         </section>
 
@@ -59,7 +74,7 @@ scripts:
             <h3>At a Glance</h3>
             <ul class="aside-list">
                 <li><strong>Target roles:</strong> Help desk, desktop support, IT internship</li>
-                <li><strong>Program:</strong> MATC &mdash; IT Computer Support Specialist (A.A.S.)</li>
+                <li><strong>Program:</strong> MATC &mdash; IT Computer Support Specialist (A.A.S.), May 2027</li>
                 <li><strong>GPA:</strong> 3.2 / 4.0</li>
             </ul>
             <h3 class="aside-subheading">Technical Skills</h3>

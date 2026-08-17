@@ -11,7 +11,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const isOpen = snippet.classList.contains('is-open');
             snippet.classList.toggle('is-open', !isOpen);
             toggleBtn.setAttribute('aria-expanded', String(!isOpen));
-            toggleBtn.textContent = isOpen ? 'View Key Qualifications' : 'Hide Key Qualifications';
+            toggleBtn.textContent = isOpen ? 'View Resume' : 'Hide Resume';
+
+            const embed = document.getElementById('resumeEmbed');
+            if (!isOpen && embed && !embed.getAttribute('src')) {
+                embed.setAttribute('src', embed.dataset.src);
+            }
         });
     }
 

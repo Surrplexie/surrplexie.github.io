@@ -304,8 +304,35 @@ h2 {
     font-size: 0.9em;
 }
 
-.snippet-box p:last-child {
+.resume-summary p:last-child {
     margin-bottom: 0;
+}
+
+.resume-embed-wrap {
+    margin-top: 16px;
+    border: 1px solid rgba(0, 188, 212, 0.25);
+    border-radius: 6px;
+    overflow: hidden;
+    background: rgba(10, 10, 10, 0.65);
+}
+
+.resume-embed {
+    display: block;
+    width: 100%;
+    height: min(80vh, 920px);
+    border: 0;
+    background: #111;
+}
+
+.resume-embed-fallback {
+    margin: 10px 14px 12px;
+    font-size: 0.85em;
+    color: var(--color-muted);
+}
+
+.resume-embed-fallback a {
+    color: var(--color-accent);
+    font-weight: 700;
 }
 
 /* --- Project Cards (Labs) --- */
