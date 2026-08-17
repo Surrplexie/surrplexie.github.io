@@ -402,6 +402,9 @@ h2 {
 }
 
 .project-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 20px;
     margin: 14px 0 0;
 }
 
@@ -432,6 +435,12 @@ h2 {
     background: rgba(255, 152, 0, 0.12);
     border: 1px solid rgba(255, 152, 0, 0.4);
     color: var(--color-accent);
+}
+
+.status-active {
+    background: rgba(0, 188, 212, 0.12);
+    border: 1px solid rgba(0, 188, 212, 0.45);
+    color: var(--color-primary);
 }
 
 /* --- Certification Entries --- */

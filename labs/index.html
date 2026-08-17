@@ -2,36 +2,93 @@
 layout: default
 title: Labs & Projects | Kai Morgan
 banner_title: "Kai Morgan // Labs &amp; Projects"
-description: "Hands-on IT and security projects by Kai Morgan, including a Python binary analysis tool, VirusTotal hash scanner, and Rust TOTP authenticator."
+description: "Hands-on IT projects by Kai Morgan, including VaultPass, an offline TOTP authenticator, a PE/ELF binary analyzer, and a structured malware triage logbook."
 ---
         <section class="card">
             <h2>Labs &amp; Projects</h2>
             <p>
-                The following projects represent independent technical work completed outside of coursework.
-                Each entry documents the problem addressed, the tools and languages used, the approach taken,
-                and the outcome. These are written to be discussed in a technical interview context.
+                Independent technical work outside of coursework. Desktop utilities and Windows-first
+                tooling come first; security labs and larger systems work are listed as growth projects.
+                Each entry is written so it can be walked through in a technical interview.
             </p>
 
             <article class="project-card">
                 <div class="project-header">
-                    <h3>Binary Analysis Tool</h3>
+                    <h3>VaultPass &mdash; Offline Password Manager</h3>
                     <span class="status-badge status-complete">Completed</span>
                 </div>
                 <div class="project-stack">
                     <span class="stack-tag">Python</span>
+                    <span class="stack-tag">Tkinter</span>
                     <span class="stack-tag">Windows</span>
                     <span class="stack-tag">Linux</span>
                 </div>
                 <p class="project-description">
-                    A command-line utility that ingests binary files and extracts human-readable strings,
-                    flagging patterns consistent with known suspicious content. The tool applies foundational
-                    static analysis concepts to assist in triage without executing the target file.
+                    A fully offline, single-file credential vault for Windows and Linux. Stores passwords,
+                    cards, addresses, and images in a portable <code>.vpm</code> file with no cloud account
+                    and no network access. Built as a daily-use desktop app for non-technical users.
                 </p>
                 <ul class="project-outcomes">
-                    <li>Implemented file parsing and string extraction using Python's <code>struct</code> and standard I/O libraries.</li>
-                    <li>Applied basic reverse engineering concepts to interpret binary structure and offset data.</li>
-                    <li>Tested against sample files and documented findings in a structured report format.</li>
-                    <li>Designed to run on both Windows and Linux without external dependencies.</li>
+                    <li>Encrypted at rest with PBKDF2-HMAC-SHA256 (480,000 iterations) and Fernet AES.</li>
+                    <li>Autofill HUD detects the active browser window and pastes into the focused field without stealing focus.</li>
+                    <li>Clipboard auto-clears after 30 seconds; advanced search supports field filters and AND/OR/NOT.</li>
+                    <li>Ships as a single executable (<code>VaultPass.exe</code> / Linux binary) with no Python install required.</li>
+                </ul>
+                <p class="project-links">
+                    <a href="https://github.com/Surrplexie/PW-vault" class="cta-link" rel="noopener noreferrer" target="_blank">View repository &rarr;</a>
+                    <a href="https://github.com/Surrplexie/PW-vault/releases" class="cta-link" rel="noopener noreferrer" target="_blank">Releases &rarr;</a>
+                </p>
+            </article>
+
+            <article class="project-card">
+                <div class="project-header">
+                    <h3>custom2fa &mdash; Offline TOTP Authenticator</h3>
+                    <span class="status-badge status-active">Active</span>
+                </div>
+                <div class="project-stack">
+                    <span class="stack-tag">Rust</span>
+                    <span class="stack-tag">AES-256-GCM</span>
+                    <span class="stack-tag">Windows</span>
+                    <span class="stack-tag">Linux</span>
+                </div>
+                <p class="project-description">
+                    An RFC 6238 TOTP generator that runs entirely on-device. Desktop GUI and CLI share an
+                    encrypted <code>.c2fa</code> vault. No cloud, no telemetry, and no network needed to
+                    generate codes. Mobile clients are planned; Windows and Linux desktop/CLI ship today.
+                </p>
+                <ul class="project-outcomes">
+                    <li>AES-256-GCM vault with PBKDF2; optional OS keychain unlock (Windows Credential Manager).</li>
+                    <li>QR and <code>otpauth://</code> import, encrypted backup/restore, passphrase rotation, and category grouping.</li>
+                    <li>Desktop UI: live countdown cards, search, one-click copy with 30-second clipboard clear.</li>
+                    <li>CLI covers add/edit/delete/list/code/import/backup for headless or scripted use.</li>
+                </ul>
+                <p class="project-links">
+                    <a href="https://github.com/Surrplexie/custom2fa" class="cta-link" rel="noopener noreferrer" target="_blank">View repository &rarr;</a>
+                    <a href="https://github.com/Surrplexie/custom2fa/releases" class="cta-link" rel="noopener noreferrer" target="_blank">Releases &rarr;</a>
+                </p>
+            </article>
+
+            <article class="project-card">
+                <div class="project-header">
+                    <h3>Binary Analyzer</h3>
+                    <span class="status-badge status-complete">Completed</span>
+                </div>
+                <div class="project-stack">
+                    <span class="stack-tag">Python</span>
+                    <span class="stack-tag">PE / ELF</span>
+                    <span class="stack-tag">Windows</span>
+                    <span class="stack-tag">Linux</span>
+                </div>
+                <p class="project-description">
+                    Static analysis for Windows PE and Linux ELF binaries. CLI and GUI report file type,
+                    architecture, imports, strings, Shannon entropy, and a risk score without executing
+                    the target. Includes a quarantine workflow for isolating suspicious files.
+                </p>
+                <ul class="project-outcomes">
+                    <li>Parses PE/ELF sections and imported functions; scores suspicion from configurable JSON rules.</li>
+                    <li>UPX packer detection with optional unpack and before/after comparison.</li>
+                    <li>Quarantine: isolate, restore, delete, and export a SHA-256-verified manifest.</li>
+                    <li>GUI supports drag-and-drop analysis, click-to-copy hashes, and JSON/text report export; standalone binaries available.</li>
                 </ul>
                 <p class="project-links">
                     <a href="https://github.com/Surrplexie/binary-analyzer" class="cta-link" rel="noopener noreferrer" target="_blank">View repository &rarr;</a>
@@ -40,56 +97,81 @@ description: "Hands-on IT and security projects by Kai Morgan, including a Pytho
 
             <article class="project-card">
                 <div class="project-header">
-                    <h3>File Hash Scanner with VirusTotal Integration</h3>
-                    <span class="status-badge status-progress">In Progress</span>
+                    <h3>NotesApp &mdash; Windows Notes GUI</h3>
+                    <span class="status-badge status-complete">Completed</span>
                 </div>
                 <div class="project-stack">
                     <span class="stack-tag">Python</span>
-                    <span class="stack-tag">VirusTotal API</span>
                     <span class="stack-tag">Windows</span>
-                    <span class="stack-tag">Linux</span>
+                    <span class="stack-tag">docx</span>
                 </div>
                 <p class="project-description">
-                    A defensive security utility that recursively scans a specified drive or directory,
-                    computes SHA-256 hashes for each file, and submits them to the VirusTotal public API
-                    for threat intelligence lookup. Results are collected and summarized for review.
+                    A Windows desktop app for a structured notes tree (Subjects &rarr; Lessons &rarr; Notes).
+                    Edits <code>.docx</code> files in-app, embeds screenshots, and starts new sessions from
+                    templates without hand-managing folders. Built to keep documentation consistent.
                 </p>
                 <ul class="project-outcomes">
-                    <li>Implemented SHA-256 hashing via Python's <code>hashlib</code> module.</li>
-                    <li>Integrated the VirusTotal v3 API to retrieve scan results programmatically.</li>
-                    <li>Added recursive directory traversal with configurable scope.</li>
-                    <li>Continuously refining rate-limit handling and output formatting.</li>
+                    <li>Tree browser plus Preview / Header / Content / Images / Review / Refs editing tabs.</li>
+                    <li>Save overwrites the source <code>.docx</code> with a session backup; images paste from clipboard or disk.</li>
+                    <li>New Session copies a master template, fills metadata, and updates the subject lesson map.</li>
+                    <li>Filename and full-text search, plus a review-due list for notes past their next review date.</li>
                 </ul>
                 <p class="project-links">
-                    <a href="{{ '/socials/' | relative_url }}" class="cta-link">Request demo / source access &rarr;</a>
+                    <a href="https://github.com/Surrplexie/NotesApp" class="cta-link" rel="noopener noreferrer" target="_blank">View repository &rarr;</a>
                 </p>
             </article>
 
             <article class="project-card">
                 <div class="project-header">
-                    <h3>TOTP Authenticator Application</h3>
+                    <h3>Labs Logbook &mdash; Triage Workflow</h3>
+                    <span class="status-badge status-active">Active</span>
+                </div>
+                <div class="project-stack">
+                    <span class="stack-tag">PowerShell</span>
+                    <span class="stack-tag">Python</span>
+                    <span class="stack-tag">Markdown</span>
+                    <span class="stack-tag">Documentation</span>
+                </div>
+                <p class="project-description">
+                    A public, structured logbook for malware file triage, with the same slot pipeline used
+                    for CTF write-ups, course labs, and threat hunts. No samples are stored &mdash; only
+                    Markdown, CSV, and screenshots. Demonstrates repeatable documentation and change control.
+                </p>
+                <ul class="project-outcomes">
+                    <li>Kind-aware scaffolding (<code>file</code>, <code>ctf</code>, <code>lab</code>, <code>hunt</code>) via PowerShell and a paste-once workflow GUI.</li>
+                    <li>Validate, redact-check, and EXIF-strip scripts run before commit; INDEX.md is generated from findings frontmatter.</li>
+                    <li>Current public work includes a documented NSIS / fake-alert installer triage with IOCs.</li>
+                    <li>Optional <code>workflow_gui</code> binary is the only intended release artifact from the repo.</li>
+                </ul>
+                <p class="project-links">
+                    <a href="https://github.com/Surrplexie/labs" class="cta-link" rel="noopener noreferrer" target="_blank">View repository &rarr;</a>
+                </p>
+            </article>
+
+            <article class="project-card">
+                <div class="project-header">
+                    <h3>NexoraLive &mdash; Session Rules Platform</h3>
                     <span class="status-badge status-progress">In Progress</span>
                 </div>
                 <div class="project-stack">
-                    <span class="stack-tag">Rust</span>
+                    <span class="stack-tag">.NET</span>
                     <span class="stack-tag">Windows</span>
-                    <span class="stack-tag">Linux</span>
-                    <span class="stack-tag">iOS</span>
-                    <span class="stack-tag">Android</span>
+                    <span class="stack-tag">WebSocket</span>
                 </div>
                 <p class="project-description">
-                    A cross-platform TOTP (Time-based One-Time Password) generator built in Rust,
-                    targeting RFC 6238 compliance. The goal is a self-hosted authenticator with
-                    local encrypted secret storage and no third-party cloud dependency.
+                    A larger systems prototype: streamers author plain-text <code>.nle</code> rule files,
+                    a shared engine returns Allow / Block / Warn, and a session host admits players through
+                    a join gate. Not a production service yet &mdash; local demos, Windows tooling, and a
+                    growing control plane.
                 </p>
                 <ul class="project-outcomes">
-                    <li>Implemented HMAC-SHA1 based OTP generation per RFC 6238.</li>
-                    <li>Integrating AES encryption for at-rest secret storage.</li>
-                    <li>Targeting Rust's cross-compilation toolchain for Windows, Linux, iOS, and Android builds.</li>
-                    <li>Designing a minimal, mobile-friendly UI suitable for daily use.</li>
+                    <li>Rule language + engine with a simulator so configs can be tested without a live game.</li>
+                    <li>Windows session host, hotkey daemon, config editor, and moderation console.</li>
+                    <li>Web operator dashboard for join admission, identity checks, and fork catalog prototypes.</li>
+                    <li>Useful interview talk-track for documentation, operator UX, and splitting control plane from game runtime.</li>
                 </ul>
                 <p class="project-links">
-                    <a href="https://github.com/Surrplexie/custom2fa" class="cta-link" rel="noopener noreferrer" target="_blank">View repository &rarr;</a>
+                    <a href="https://github.com/Surrplexie/NexoraLive" class="cta-link" rel="noopener noreferrer" target="_blank">View repository &rarr;</a>
                 </p>
             </article>
 
