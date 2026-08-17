@@ -106,7 +106,7 @@
     renderGuns();
     syncGunFields();
     jsonEl.value = JSON.stringify(current, null, 2);
-    window.TankfieldGame.drawPreview(preview, current, window.TankfieldGame.COLORS.player, gunIndex);
+    window.TankfieldGame.drawPreview(preview, current, window.TankfieldGame.state.selectedColor || window.TankfieldGame.COLORS.player, gunIndex);
     liveApply();
   }
 

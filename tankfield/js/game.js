@@ -23,6 +23,33 @@
     outline: "#555555",
   };
 
+  const TEAM_COLORS = [
+    { name: "Magenta", hex: "#f048c6" },
+    { name: "Light Grey", hex: "#c5c5ce" },
+    { name: "Peach", hex: "#ff8a6b" },
+    { name: "White", hex: "#f4f4f4" },
+    { name: "Black", hex: "#2a2a2a" },
+    { name: "Lime", hex: "#b6e335" },
+    { name: "Red", hex: "#f14e54" },
+    { name: "Teal", hex: "#7ddec8" },
+    { name: "Yellow", hex: "#ffe45c" },
+    { name: "Dark Grey", hex: "#5c5c5c" },
+    { name: "Blue", hex: "#00b2e1" },
+    { name: "Navy", hex: "#3d5afe" },
+    { name: "Cyan", hex: "#4dd0e1" },
+    { name: "Green", hex: "#4caf50" },
+    { name: "Forest", hex: "#2e7d32" },
+    { name: "Purple", hex: "#9b59d0" },
+    { name: "Lavender", hex: "#b39ddb" },
+    { name: "Orange", hex: "#ff9800" },
+    { name: "Brown", hex: "#8d6e63" },
+    { name: "Gold", hex: "#f5c542" },
+    { name: "Crimson", hex: "#c62828" },
+    { name: "Sky", hex: "#81d4fa" },
+    { name: "Indigo", hex: "#5c6bc0" },
+    { name: "Rose", hex: "#ec407a" },
+  ];
+
   const STATS = [
     { key: "regen", name: "Health Regen", color: "#e85d9c" },
     { key: "maxHealth", name: "Max Health", color: "#e56b6b" },
@@ -99,6 +126,7 @@
     mode: "normal",
     paused: false,
     playOpts: null,
+    selectedColor: "#00b2e1",
     alphaRespawnAt: 0,
     pentagonAt: 30,
     triangleAt: 60,
@@ -112,18 +140,34 @@
   function irand(a, b) { return (Math.random() * (b - a + 1) + a) | 0; }
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
   function lerp(a, b, t) { return a + (b - a) * t; }
+  function pickTeamColor(except) {
+    const pool = TEAM_COLORS.filter((c) => c.hex !== except);
+    const list = pool.length ? pool : TEAM_COLORS;
+    return list[irand(0, list.length - 1)].hex;
+  }
   function dist2(a, b) {
     const dx = a.x - b.x;
     const dy = a.y - b.y;
     return dx * dx + dy * dy;
   }
   function darken(hex, amt = 0.28) {
-    const n = parseInt(hex.slice(1), 16);
+    const n = parseInt(String(hex).replace("#", ""), 16);
     const r = (n >> 16) & 255;
     const g = (n >> 8) & 255;
     const b = n & 255;
     const f = 1 - amt;
     return `rgb(${(r * f) | 0},${(g * f) | 0},${(b * f) | 0})`;
+  }
+
+  function outlineFor(hex) {
+    const n = parseInt(String(hex).replace("#", ""), 16);
+    const r = (n >> 16) & 255;
+    const g = (n >> 8) & 255;
+    const b = n & 255;
+    const lum = r * 0.3 + g * 0.59 + b * 0.11;
+    if (lum < 48) return "#8a8a8a";
+    if (lum > 230) return "#6a6a6a";
+    return darken(hex);
   }
 
   function getDef(tank) {
@@ -301,6 +345,7 @@
         ai: true,
         score,
         classId: "basic",
+        color: pickTeamColor(state.selectedColor),
         pos: awayFrom(WORLD.w / 2, WORLD.h / 2, 500),
       });
       autoUpgradeBot(bot);
@@ -361,7 +406,7 @@
     populateWorld();
     const player = createTank({
       name: state.spawnName,
-      color: COLORS.player,
+      color: state.selectedColor || COLORS.player,
       classId: opts.classId || "basic",
       customDef: opts.customDef || null,
       score: opts.sandbox ? xpForLevel(LEVEL_CAP) : 0,
@@ -410,6 +455,7 @@
           ai: true,
           score,
           classId: "basic",
+          color: pickTeamColor(state.player.color),
           pos: awayFrom(state.player.x, state.player.y, 900),
         });
         autoUpgradeBot(bot);
@@ -943,7 +989,7 @@
     if (els.killsFill) els.killsFill.style.width = `${clamp((p.kills || 0) * 10, 8, 100)}%`;
     if (els.skillPoints) els.skillPoints.textContent = free > 0 ? `x${free}` : "";
     els.leaders.innerHTML = ranked.map((t) =>
-      `<li class="${t === p ? "you" : ""}"><div class="lb-fill" style="width:${clamp((t.score / top) * 100, 8, 100)}%"></div><span>${escapeHtml(t.name)} — ${escapeHtml(getDef(t).name)} — ${formatScore(t.score)}</span></li>`
+      `<li class="${t === p ? "you" : ""}"><div class="lb-fill" style="width:${clamp((t.score / top) * 100, 8, 100)}%"></div><span><i class="lb-dot" style="background:${t.color}"></i>${escapeHtml(t.name)} — ${escapeHtml(getDef(t).name)} — ${formatScore(t.score)}</span></li>`
     ).join("");
   }
 
@@ -1016,7 +1062,7 @@
       btn.addEventListener("click", () => pickClass(btn.dataset.class));
     });
     els.classChoices.querySelectorAll("canvas.class-icon").forEach((cv) => {
-      drawPreview(cv, TankCatalog.get(cv.dataset.id), COLORS.player, -1, cv.parentElement.style.getPropertyValue("--tile") || "#cde");
+      drawPreview(cv, TankCatalog.get(cv.dataset.id), (state.player && state.player.color) || state.selectedColor || COLORS.player, -1, cv.parentElement.style.getPropertyValue("--tile") || "#cde");
     });
     const cat = document.getElementById("open-catalog");
     if (cat) cat.addEventListener("click", () => window.TankWorkshop.open());
@@ -1140,7 +1186,7 @@
       c.beginPath();
       c.arc(tank.x, tank.y, tank.r, 0, TAU);
       c.fillStyle = fill;
-      c.strokeStyle = darken(tank.color);
+      c.strokeStyle = outlineFor(tank.color);
       c.lineWidth = 3.4;
       c.fill();
       c.stroke();
@@ -1281,7 +1327,7 @@
     }
     for (const t of state.tanks) {
       if (!t.alive) continue;
-      mctx.fillStyle = t === state.player ? COLORS.player : COLORS.enemy;
+      mctx.fillStyle = t.color;
       mctx.beginPath();
       mctx.arc(mapX(t.x), mapY(t.y), t === state.player ? 4 : 3, 0, TAU);
       mctx.fill();
@@ -1381,13 +1427,32 @@
     },
     applyLevel,
     COLORS,
+    TEAM_COLORS,
     stats: STATS,
     state,
     catalogCount: () => TankCatalog.count(),
   };
 
+  function initColorPicker() {
+    const box = document.getElementById("color-picker");
+    if (!box) return;
+    const saved = localStorage.getItem("tankfield-color");
+    if (saved && TEAM_COLORS.some((c) => c.hex === saved)) state.selectedColor = saved;
+    box.innerHTML = TEAM_COLORS.map((c) =>
+      `<button type="button" class="swatch${c.hex === state.selectedColor ? " selected" : ""}" data-hex="${c.hex}" title="${c.name}" style="background:${c.hex}"></button>`
+    ).join("");
+    box.addEventListener("click", (e) => {
+      const btn = e.target.closest(".swatch");
+      if (!btn) return;
+      state.selectedColor = btn.dataset.hex;
+      localStorage.setItem("tankfield-color", state.selectedColor);
+      box.querySelectorAll(".swatch").forEach((el) => el.classList.toggle("selected", el === btn));
+    });
+  }
+
   resize();
   populateWorld();
+  initColorPicker();
   state.camera.x = WORLD.w / 2;
   state.camera.y = WORLD.h / 2;
   last = performance.now();

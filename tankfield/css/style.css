@@ -82,6 +82,46 @@ input[type="text"]:focus {
   border-color: #00b2e1;
 }
 
+.color-label {
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  margin: 0 0 8px;
+}
+
+.color-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.swatch {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  margin: 0;
+  border: 2px solid #555;
+  border-radius: 3px;
+  position: relative;
+  box-shadow: none;
+}
+
+.swatch::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 2px solid #555;
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+.swatch.selected {
+  outline: 3px solid #00b2e1;
+  outline-offset: 1px;
+}
+
 button {
   cursor: pointer;
   border: 3px solid #555;
@@ -176,13 +216,23 @@ kbd {
 #leader-list li span {
   position: relative;
   z-index: 1;
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   padding: 1px 8px;
   font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   text-shadow: 0 0 3px #000, 0 1px 2px #000;
+}
+
+.lb-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
 }
 
 #minimap-wrap {
