@@ -419,7 +419,7 @@
     const starterTris = irand(1, 3);
     for (let i = 0; i < starterTris; i++) state.shapes.push(createShape("triangle"));
     state.shapes.push(createShape("pentagon"));
-    state.shapes.push(createShape("alpha"));
+    if (state.mode !== "protect") state.shapes.push(createShape("alpha"));
     for (let i = 0; i < 2; i++) state.shapes.push(createShape("crasher"));
   }
 
@@ -451,7 +451,7 @@
         pos: state.mode === "tdm" && team
           ? spawnInBase(team)
           : state.mode === "protect" && mothershipOf(team)
-            ? awayFrom(mothershipOf(team).x, mothershipOf(team).y, 240)
+            ? around(mothershipOf(team).x, mothershipOf(team).y, 220)
             : awayFrom(WORLD.w / 2, WORLD.h / 2, 500),
       });
       autoUpgradeBot(bot);
@@ -496,14 +496,19 @@
     applyLevel(bot);
   }
 
-  function cornerPos(index, pad = 280) {
-    const spots = [
-      { x: pad, y: pad },
-      { x: WORLD.w - pad, y: pad },
-      { x: WORLD.w - pad, y: WORLD.h - pad },
-      { x: pad, y: WORLD.h - pad },
-    ];
-    return spots[((index % 4) + 4) % 4];
+  function around(x, y, dist) {
+    const a = rand(0, TAU);
+    return {
+      x: clamp(x + Math.cos(a) * dist, 140, WORLD.w - 140),
+      y: clamp(y + Math.sin(a) * dist, 140, WORLD.h - 140),
+    };
+  }
+
+  function sidePos(side, pad = 360) {
+    if (side === 0) return { x: pad, y: WORLD.h * 0.5 };
+    if (side === 1) return { x: WORLD.w - pad, y: WORLD.h * 0.5 };
+    if (side === 2) return { x: WORLD.w * 0.5, y: pad };
+    return { x: WORLD.w * 0.5, y: WORLD.h - pad };
   }
 
   function mothershipOf(team) {
@@ -520,24 +525,28 @@
   }
 
   function spawnMotherships() {
-    const start = irand(0, 3);
+    const axis = Math.random() < 0.5 ? 0 : 2;
+    const flip = Math.random() < 0.5 ? 0 : 1;
     const teams = ["green", "red"];
     for (let i = 0; i < 2; i++) {
       const team = teams[i];
-      const pos = cornerPos(start + i * 2);
+      const side = axis + ((i + flip) % 2);
+      const pos = sidePos(side);
       const m = createTank({
-        name: team === "green" ? "Green Mothership" : "Red Mothership",
+        name: "Mothership",
         ai: true,
         mothership: true,
         classId: "mothership",
         team,
         color: TEAMS[team].color,
         score: xpForLevel(LEVEL_CAP),
-        pos,
+        pos: { x: pos.x, y: pos.y },
       });
       m.homeX = pos.x;
       m.homeY = pos.y;
       maxOutTank(m);
+      m.x = pos.x;
+      m.y = pos.y;
       m.spawnProtect = 0;
       state.tanks.push(m);
     }
@@ -621,7 +630,7 @@
       pos: state.mode === "tdm" && team
         ? spawnInBase(team)
         : home
-          ? awayFrom(home.x, home.y, 240)
+          ? around(home.x, home.y, 220)
           : awayFrom(WORLD.w / 2, WORLD.h / 2, 700),
     });
     player.ai = false;
@@ -696,7 +705,7 @@
             team,
             color: TEAMS[team].color,
             score: xpForLevel(LEVEL_CAP),
-            pos: awayFrom(home.x, home.y, 240),
+            pos: around(home.x, home.y, 220),
           });
           maxOutTank(p);
           p.spawnProtect = 8;
@@ -732,7 +741,7 @@
           pos: state.mode === "tdm" && team
             ? spawnInBase(team)
             : state.mode === "protect" && mothershipOf(team)
-              ? awayFrom(mothershipOf(team).x, mothershipOf(team).y, 240)
+              ? around(mothershipOf(team).x, mothershipOf(team).y, 220)
               : awayFrom(state.player.x, state.player.y, 900),
         });
         autoUpgradeBot(bot);
@@ -909,7 +918,7 @@
       }
       state.crasherAt = state.time + rand(60, 120);
     }
-    if (counts.alpha < 1 && state.alphaRespawnAt > 0 && state.time >= state.alphaRespawnAt) {
+    if (counts.alpha < 1 && state.mode !== "protect" && state.alphaRespawnAt > 0 && state.time >= state.alphaRespawnAt) {
       state.shapes.push(createShape("alpha"));
       state.alphaRespawnAt = 0;
     }
@@ -1056,19 +1065,13 @@
       const prey = nearest(tank, state.tanks, 900, (t) => isEnemyTank(tank, t));
       tank.aiState = "attack";
       tank.angle += 0.42 * dt;
-      if (prey && dist2(tank, prey) < 420 * 420) {
+      if (prey && dist2(tank, prey) < 520 * 520) {
         tank.angle = Math.atan2(prey.y - tank.y, prey.x - tank.x);
       }
-      const homeX = tank.homeX != null ? tank.homeX : WORLD.w / 2;
-      const homeY = tank.homeY != null ? tank.homeY : WORLD.h / 2;
-      const st = tankStats(tank);
-      tank.vx += (homeX - tank.x) * 0.8 * dt;
-      tank.vy += (homeY - tank.y) * 0.8 * dt;
-      const ang = Math.atan2(homeY - tank.y, homeX - tank.x);
-      if (Math.hypot(tank.x - homeX, tank.y - homeY) > 90) {
-        tank.vx += Math.cos(ang) * st.moveSpeed * 40 * dt;
-        tank.vy += Math.sin(ang) * st.moveSpeed * 40 * dt;
-      }
+      const homeX = tank.homeX != null ? tank.homeX : tank.x;
+      const homeY = tank.homeY != null ? tank.homeY : tank.y;
+      tank.vx += (homeX - tank.x) * 2.4 * dt;
+      tank.vy += (homeY - tank.y) * 2.4 * dt;
       updateTurrets(tank, dt);
       shoot(tank, dt);
       return;
@@ -1296,6 +1299,17 @@
       tank.y += tank.vy * dt;
       tank.x = clamp(tank.x, tank.r, WORLD.w - tank.r);
       tank.y = clamp(tank.y, tank.r, WORLD.h - tank.r);
+      if (tank.mothership && tank.homeX != null) {
+        const dx = tank.x - tank.homeX;
+        const dy = tank.y - tank.homeY;
+        const d = Math.hypot(dx, dy);
+        if (d > 64) {
+          tank.x = tank.homeX + (dx / d) * 64;
+          tank.y = tank.homeY + (dy / d) * 64;
+          tank.vx *= 0.4;
+          tank.vy *= 0.4;
+        }
+      }
       tank.bodyHitT = Math.max(0, tank.bodyHitT - dt);
       if (tank.spawnProtect > 0) tank.spawnProtect = Math.max(0, tank.spawnProtect - dt);
       const invading = tank.team && zoneAt(tank.x, tank.y) && zoneAt(tank.x, tank.y) !== tank.team;
@@ -1870,10 +1884,12 @@
       ctx.strokeStyle = "rgba(241, 78, 84, 0.5)";
       ctx.strokeRect(WORLD.w - BASE_W + 4, 4, BASE_W - 8, WORLD.h - 8);
     }
-    ctx.fillStyle = "rgba(118, 141, 252, 0.08)";
-    ctx.beginPath();
-    ctx.arc(WORLD.w / 2, WORLD.h / 2, 520, 0, TAU);
-    ctx.fill();
+    if (state.mode !== "protect") {
+      ctx.fillStyle = "rgba(118, 141, 252, 0.08)";
+      ctx.beginPath();
+      ctx.arc(WORLD.w / 2, WORLD.h / 2, 520, 0, TAU);
+      ctx.fill();
+    }
 
     for (const s of state.shapes) {
       if (s.x + s.r < left || s.x - s.r > left + viewW || s.y + s.r < top || s.y - s.r > top + viewH) continue;
@@ -1928,11 +1944,21 @@
     const mapX = (x) => (x / WORLD.w) * s;
     const mapY = (y) => (y / WORLD.h) * s;
     const p = state.player;
-    if (p && p.alive) {
-      mctx.fillStyle = p.color;
+    for (const t of state.tanks) {
+      if (!t.alive || t.closer) continue;
+      const self = t === p;
+      const ally = !!(p && t.team && p.team && t.team === p.team);
+      const boss = !!t.mothership;
+      if (!self && !ally && !boss) continue;
+      mctx.fillStyle = t.color;
       mctx.beginPath();
-      mctx.arc(mapX(p.x), mapY(p.y), 4, 0, TAU);
+      mctx.arc(mapX(t.x), mapY(t.y), boss ? 6 : self ? 4 : 3, 0, TAU);
       mctx.fill();
+      if (boss) {
+        mctx.strokeStyle = "#333";
+        mctx.lineWidth = 1.2;
+        mctx.stroke();
+      }
     }
   }
 
