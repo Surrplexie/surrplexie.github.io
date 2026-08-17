@@ -128,6 +128,7 @@ html, body {
 
 .team-chip[data-team="blue"] { background: #00b2e1; color: #fff; }
 .team-chip[data-team="red"] { background: #f14e54; color: #fff; }
+.team-chip[data-team="green"] { background: #8abc3f; color: #fff; }
 .team-chip { opacity: 0.5; }
 .team-chip.selected { opacity: 1; }
 
