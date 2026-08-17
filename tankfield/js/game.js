@@ -5,8 +5,8 @@
   const TAU = Math.PI * 2;
   const STAT_MAX = 7;
   const LEVEL_CAP = 45;
-  const BASE_MOVE = 19.5;
-  const SPEED_CAP = 100;
+  const BASE_MOVE = 23.2;
+  const SPEED_CAP = 110;
   const FADE_TANKS = new Set(["landmine", "stalker", "manager", "maleficitor"]);
 
   const COLORS = {
@@ -600,8 +600,8 @@
     const st = tankStats(tank);
     const pace = (state.player && state.player.alive ? tankStats(state.player).moveSpeed : st.moveSpeed);
     const ang = Math.atan2(ty - tank.y, tx - tank.x);
-    tank.vx += Math.cos(ang) * pace * 55 * dt;
-    tank.vy += Math.sin(ang) * pace * 55 * dt;
+    tank.vx += Math.cos(ang) * pace * 62 * dt;
+    tank.vy += Math.sin(ang) * pace * 62 * dt;
     updateTurrets(tank, dt);
     shoot(tank, dt);
   }
@@ -618,8 +618,8 @@
     if (keys.has("d") || keys.has("arrowright")) mx += 1;
     if (mx || my) {
       const m = Math.hypot(mx, my) || 1;
-      p.vx += (mx / m) * st.moveSpeed * 55 * dt;
-      p.vy += (my / m) * st.moveSpeed * 55 * dt;
+      p.vx += (mx / m) * st.moveSpeed * 62 * dt;
+      p.vy += (my / m) * st.moveSpeed * 62 * dt;
     }
     const world = screenToWorld(mouse.x, mouse.y);
     if (state.autoSpin) p.angle += 1.8 * dt;
