@@ -88,6 +88,7 @@
     mode: "normal",
     paused: false,
     playOpts: null,
+    alphaRespawnAt: 0,
   };
 
   function rand(a, b) { return a + Math.random() * (b - a); }
@@ -244,6 +245,7 @@
       type: "shape", kind, sides: t.sides, x: p.x, y: p.y, vx: 0, vy: 0,
       r: t.r, health: t.hp, maxHealth: t.hp, score: t.score, color: t.color,
       rot: rand(0, TAU), spin: t.spin * (Math.random() < 0.5 ? 1 : -1), alive: true,
+      wanderA: rand(0, TAU),
     };
   }
 
@@ -332,6 +334,7 @@
     state.autoSpin = false;
     state.time = 0;
     state.paused = false;
+    state.alphaRespawnAt = 0;
     populateWorld();
     const player = createTank({
       name: state.spawnName,
@@ -511,12 +514,16 @@
   function maintainShapes() {
     const counts = { square: 0, triangle: 0, pentagon: 0, alpha: 0, crasher: 0 };
     for (const s of state.shapes) if (s.alive) counts[s.kind]++;
-    const want = { square: 90, triangle: 28, pentagon: 12, alpha: 1, crasher: 10 };
+    const want = { square: 90, triangle: 28, pentagon: 12, crasher: 10 };
     for (const kind of Object.keys(want)) {
       while (counts[kind] < want[kind]) {
         state.shapes.push(createShape(kind));
         counts[kind]++;
       }
+    }
+    if (counts.alpha < 1 && state.alphaRespawnAt > 0 && state.time >= state.alphaRespawnAt) {
+      state.shapes.push(createShape("alpha"));
+      state.alphaRespawnAt = 0;
     }
   }
 
@@ -569,9 +576,10 @@
       tx = player.x; ty = player.y;
     }
     const st = tankStats(tank);
+    const pace = (state.player && state.player.alive ? tankStats(state.player).moveSpeed : st.moveSpeed);
     const ang = Math.atan2(ty - tank.y, tx - tank.x);
-    tank.vx += Math.cos(ang) * st.moveSpeed * 32 * dt;
-    tank.vy += Math.sin(ang) * st.moveSpeed * 32 * dt;
+    tank.vx += Math.cos(ang) * pace * 40 * dt;
+    tank.vy += Math.sin(ang) * pace * 40 * dt;
     updateTurrets(tank, dt);
     shoot(tank, dt);
   }
@@ -606,6 +614,15 @@
     return { x: cam.x + (sx - width / 2) / zoom, y: cam.y + (sy - height / 2) / zoom };
   }
 
+  function massOf(ent) {
+    if (ent.kind === "alpha") return 48000;
+    if (ent.kind === "pentagon") return 1400;
+    if (ent.kind === "triangle") return 90;
+    if (ent.kind === "crasher") return 55;
+    if (ent.kind === "square") return 70;
+    return ent.r * ent.r;
+  }
+
   function collideCircles(a, b, bounce = 0.6) {
     const dx = b.x - a.x;
     const dy = b.y - a.y;
@@ -615,8 +632,8 @@
     const overlap = min - d;
     const nx = dx / d;
     const ny = dy / d;
-    const massA = a.r * a.r;
-    const massB = b.r * b.r;
+    const massA = massOf(a);
+    const massB = massOf(b);
     const shareA = massB / (massA + massB);
     const shareB = massA / (massA + massB);
     a.x -= nx * overlap * shareA;
@@ -644,6 +661,7 @@
     if (target.health <= 0) {
       target.alive = false;
       burst(target.x, target.y, target.color, target.kind === "alpha" ? 36 : 12, 180);
+      if (target.kind === "alpha") state.alphaRespawnAt = state.time + rand(60, 120);
       if (target.type === "shape" && src) giveScore(src, target.score, target.x, target.y);
       else if (target.type === "tank") killTank(target, src);
     }
@@ -679,7 +697,10 @@
       tank.vy *= Math.pow(0.0008, dt);
       const spd = Math.hypot(tank.vx, tank.vy);
       const st = tankStats(tank);
-      const cap = st.moveSpeed * 86;
+      let cap = st.moveSpeed * 86;
+      if (tank.ai && state.player && state.player.alive) {
+        cap = tankStats(state.player).moveSpeed * 86 * 0.9;
+      }
       if (spd > cap) { tank.vx *= cap / spd; tank.vy *= cap / spd; }
       tank.x += tank.vx * dt;
       tank.y += tank.vy * dt;
@@ -695,21 +716,41 @@
     for (const s of state.shapes) {
       if (!s.alive) continue;
       s.rot += s.spin * dt;
-      s.vx *= Math.pow(0.04, dt);
-      s.vy *= Math.pow(0.04, dt);
+      const cruise = 11.2 * 86;
+      if (s.kind === "alpha") {
+        const cx = WORLD.w / 2;
+        const cy = WORLD.h / 2;
+        s.vx += (cx - s.x) * 1.6 * dt;
+        s.vy += (cy - s.y) * 1.6 * dt;
+        s.vx *= Math.pow(0.0004, dt);
+        s.vy *= Math.pow(0.0004, dt);
+      } else if (s.kind === "crasher") {
+        const prey = nearest(s, state.tanks, 980);
+        if (prey) {
+          const a = Math.atan2(prey.y - s.y, prey.x - s.x);
+          const spd = cruise * 0.9;
+          s.vx = lerp(s.vx, Math.cos(a) * spd, 1 - Math.pow(0.012, dt));
+          s.vy = lerp(s.vy, Math.sin(a) * spd, 1 - Math.pow(0.012, dt));
+          s.rot = a;
+        } else {
+          s.vx *= Math.pow(0.08, dt);
+          s.vy *= Math.pow(0.08, dt);
+        }
+      } else if (s.kind === "triangle") {
+        if (Math.random() < dt * 0.45) s.wanderA += rand(-1.1, 1.1);
+        const spd = cruise * 0.88;
+        s.vx = lerp(s.vx, Math.cos(s.wanderA) * spd, 1 - Math.pow(0.04, dt));
+        s.vy = lerp(s.vy, Math.sin(s.wanderA) * spd, 1 - Math.pow(0.04, dt));
+      } else {
+        s.vx *= Math.pow(0.04, dt);
+        s.vy *= Math.pow(0.04, dt);
+      }
       s.x += s.vx * dt;
       s.y += s.vy * dt;
       s.x = clamp(s.x, s.r, WORLD.w - s.r);
       s.y = clamp(s.y, s.r, WORLD.h - s.r);
-      if (s.kind === "crasher") {
-        const prey = nearest(s, state.tanks, 520);
-        if (prey) {
-          const a = Math.atan2(prey.y - s.y, prey.x - s.x);
-          s.vx += Math.cos(a) * 140 * dt;
-          s.vy += Math.sin(a) * 140 * dt;
-          s.rot = a;
-        }
-      }
+      if (s.kind === "triangle" && (s.x <= s.r + 2 || s.x >= WORLD.w - s.r - 2)) s.wanderA = Math.PI - s.wanderA;
+      if (s.kind === "triangle" && (s.y <= s.r + 2 || s.y >= WORLD.h - s.r - 2)) s.wanderA = -s.wanderA;
     }
 
     for (const b of state.bullets) {
@@ -784,8 +825,9 @@
         const dx = s.x - bullet.x;
         const dy = s.y - bullet.y;
         if (dx * dx + dy * dy < (s.r + bullet.r) ** 2) {
-          s.vx += bullet.vx * 0.012;
-          s.vy += bullet.vy * 0.012;
+          const kick = s.kind === "alpha" ? 0.00008 : s.kind === "pentagon" ? 0.0022 : 0.01;
+          s.vx += bullet.vx * kick;
+          s.vy += bullet.vy * kick;
           damage(s, bullet.damage, bullet.owner);
           bullet.health -= bullet.kind === "trap" || bullet.kind === "drone" ? 0.35 : 1;
           if (bullet.health <= 0) bullet.alive = false;
