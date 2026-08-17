@@ -214,7 +214,9 @@
   }
 
   function sameTeam(a, b) {
-    return !!(a && b && a.team && b.team && a.team === b.team);
+    if (!a || !b) return false;
+    if (a.closer && b.closer) return true;
+    return !!(a.team && b.team && a.team === b.team);
   }
 
   function isEnemyTank(self, other) {
@@ -248,16 +250,16 @@
   function tankStats(tank) {
     if (tank && tank.closer) {
       return {
-        maxHealth: 50000,
-        regen: 250,
-        bodyDamage: 9000,
-        bulletSpeed: 8.2,
-        bulletPen: 20,
-        bulletDamage: 12000,
-        reload: 1.55,
-        moveSpeed: BASE_MOVE * 1.22,
-        fov: 1.2,
-        bulletSize: 3.1,
+        maxHealth: 1000000,
+        regen: 8000,
+        bodyDamage: 25000,
+        bulletSpeed: 9.4,
+        bulletPen: 1000000,
+        bulletDamage: 50000,
+        reload: 2.4,
+        moveSpeed: BASE_MOVE * 1.48,
+        fov: 1.35,
+        bulletSize: 3.4,
         maxDrones: 0,
       };
     }
@@ -691,11 +693,19 @@
     }
   }
 
+  function clearOwnedShots(owner) {
+    if (!owner) return;
+    for (const b of state.bullets) {
+      if (b.owner === owner) b.alive = false;
+    }
+  }
+
   function killTank(tank, killer, cause) {
     if (!tank || tank.deadHandled) return;
     tank.deadHandled = true;
     tank.alive = false;
     tank.killedBy = cause || (killer ? killer.name : "a polygon");
+    clearOwnedShots(tank);
     burst(tank.x, tank.y, tank.color, 18, 220);
     if (killer && killer.alive) {
       killer.kills = (killer.kills || 0) + 1;
@@ -836,7 +846,7 @@
     const lifeBase = kind === "trap" ? 9 : kind === "drone" || kind === "swarm" ? 999 : kind === "missile" ? 2.4 : 1.55 + st.fov * 0.15;
     let br = (7.2 * st.bulletSize * sizeMul) * (0.85 + tank.r / 40);
     if (tank.mothership && kind !== "drone" && kind !== "swarm") br = 8.2 * st.bulletSize * sizeMul;
-    if (tank.closer) br = 22;
+    if (tank.closer) br = 26;
     state.bullets.push({
       x: tank.x + ox,
       y: tank.y + oy,
@@ -1262,6 +1272,7 @@
 
   function damage(target, amount, src) {
     if (!target.alive) return;
+    if (target.closer && src && (src.closer || (src.owner && src.owner.closer))) return;
     if (tryTagHit(target, src)) return;
     if (target.spawnProtect > 0 && !(src && src.closer)) return;
     if (src && src.spawnProtect > 0 && !src.closer) return;
@@ -1378,6 +1389,10 @@
     for (const b of state.bullets) {
       if (!b.alive) continue;
       b.age += dt;
+      if (b.owner && !b.owner.alive && (b.kind === "trap" || b.kind === "drone" || b.kind === "swarm" || b.kind === "missile")) {
+        b.alive = false;
+        continue;
+      }
       if (b.kind === "drone" || b.kind === "swarm") {
         if (!b.owner || !b.owner.alive) { b.alive = false; continue; }
         const t = droneTarget(b);
@@ -1450,10 +1465,23 @@
       for (let j = i + 1; j < state.bullets.length; j++) {
         const b = state.bullets[j];
         if (!b.alive || a.owner === b.owner || sameTeam(a.owner, b.owner)) continue;
+        const aClose = a.owner && a.owner.closer;
+        const bClose = b.owner && b.owner.closer;
+        if (aClose && bClose) continue;
         const dx = b.x - a.x;
         const dy = b.y - a.y;
         const rr = a.r + b.r;
         if (dx * dx + dy * dy >= rr * rr) continue;
+        if (aClose) {
+          b.alive = false;
+          burst(b.x, b.y, b.color, 4, 80);
+          continue;
+        }
+        if (bClose) {
+          a.alive = false;
+          burst(a.x, a.y, a.color, 4, 80);
+          break;
+        }
         const ha = a.health;
         const hb = b.health;
         a.health -= hb;
@@ -1481,8 +1509,10 @@
           s.vx += bullet.vx * kick;
           s.vy += bullet.vy * kick;
           damage(s, bullet.damage, bullet.owner);
-          bullet.health -= bullet.kind === "trap" || bullet.kind === "drone" ? 0.35 : 1;
-          if (bullet.health <= 0) bullet.alive = false;
+          if (!(bullet.owner && bullet.owner.closer)) {
+            bullet.health -= bullet.kind === "trap" || bullet.kind === "drone" ? 0.35 : 1;
+            if (bullet.health <= 0) bullet.alive = false;
+          }
         }
       }
       for (const tank of state.tanks) {
@@ -1493,8 +1523,10 @@
           tank.vx += bullet.vx * 0.01;
           tank.vy += bullet.vy * 0.01;
           damage(tank, bullet.damage, bullet.owner);
-          bullet.health -= bullet.kind === "trap" || bullet.kind === "drone" ? 0.45 : 1.2;
-          if (bullet.health <= 0) bullet.alive = false;
+          if (!(bullet.owner && bullet.owner.closer)) {
+            bullet.health -= bullet.kind === "trap" || bullet.kind === "drone" ? 0.45 : 1.2;
+            if (bullet.health <= 0) bullet.alive = false;
+          }
         }
       }
     }
