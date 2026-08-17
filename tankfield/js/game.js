@@ -142,7 +142,7 @@
       bulletPen: (1 + s.bulletPen * 0.55) * (def.bulletPen || 1),
       bulletDamage: (7 + s.bulletDamage * 3.1) * (def.bulletDamage || 1) * (m.damage || 1),
       reload: Math.max(0.08, (0.42 - s.reload * 0.038) * (def.reload || 1) / (m.reload || 1)),
-      moveSpeed: (4.35 + s.moveSpeed * 0.38 - Math.min(lvl, 30) * 0.01) * (def.speed || 1) * (m.speed || 1),
+      moveSpeed: (11.2 + s.moveSpeed * 0.32 - Math.min(lvl, 30) * 0.008) * (def.speed || 1) * (m.speed || 1),
       fov: (def.fov || 1) * (m.fov || 1),
       bulletSize: (def.bulletSize || 1) * (m.size || 1),
       maxDrones: def.maxDrones || 0,
@@ -570,8 +570,8 @@
     }
     const st = tankStats(tank);
     const ang = Math.atan2(ty - tank.y, tx - tank.x);
-    tank.vx += Math.cos(ang) * st.moveSpeed * 18 * dt;
-    tank.vy += Math.sin(ang) * st.moveSpeed * 18 * dt;
+    tank.vx += Math.cos(ang) * st.moveSpeed * 32 * dt;
+    tank.vy += Math.sin(ang) * st.moveSpeed * 32 * dt;
     updateTurrets(tank, dt);
     shoot(tank, dt);
   }
@@ -588,8 +588,8 @@
     if (keys.has("d") || keys.has("arrowright")) mx += 1;
     if (mx || my) {
       const m = Math.hypot(mx, my) || 1;
-      p.vx += (mx / m) * st.moveSpeed * 22 * dt;
-      p.vy += (my / m) * st.moveSpeed * 22 * dt;
+      p.vx += (mx / m) * st.moveSpeed * 40 * dt;
+      p.vy += (my / m) * st.moveSpeed * 40 * dt;
     }
     const world = screenToWorld(mouse.x, mouse.y);
     if (state.autoSpin) p.angle += 1.8 * dt;
@@ -679,7 +679,7 @@
       tank.vy *= Math.pow(0.0008, dt);
       const spd = Math.hypot(tank.vx, tank.vy);
       const st = tankStats(tank);
-      const cap = st.moveSpeed * 72;
+      const cap = st.moveSpeed * 86;
       if (spd > cap) { tank.vx *= cap / spd; tank.vy *= cap / spd; }
       tank.x += tank.vx * dt;
       tank.y += tank.vy * dt;
