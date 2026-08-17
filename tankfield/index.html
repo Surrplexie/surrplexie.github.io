@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
   <title>Tankfield</title>
-  <link rel="stylesheet" href="css/style.css?v=21" />
+  <link rel="stylesheet" href="css/style.css?v=22" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet" />
@@ -34,12 +34,39 @@
         <div class="opt-row"><kbd>1</kbd>–<kbd>8</kbd><span>Upgrade stats</span></div>
         <div class="opt-note">Hold fire to send drones to the cursor.</div>
       </div>
-      <div class="mode-tabs" role="tablist">
-        <button type="button" class="mode-tab active" data-mode="ffa">FFA</button>
-        <button type="button" class="mode-tab" data-mode="tdm">2 Teams</button>
-        <button type="button" class="mode-tab" data-mode="manhunt">Manhunt</button>
-        <button type="button" class="mode-tab" data-mode="tag">Tag</button>
-        <button type="button" class="mode-tab" data-mode="sandbox">Sandbox</button>
+      <div class="server-filters" role="tablist">
+        <button type="button" class="server-filter active" data-filter="all">All</button>
+        <button type="button" class="server-filter" data-filter="ffa">FFA</button>
+        <button type="button" class="server-filter" data-filter="teams">Teams</button>
+        <button type="button" class="server-filter" data-filter="other">Other</button>
+        <button type="button" class="server-filter" data-filter="sandbox">Sandbox</button>
+      </div>
+      <div class="server-list" id="server-list" role="listbox" aria-label="Game modes">
+        <button type="button" class="server-row active" data-mode="ffa" data-group="ffa">
+          <span class="srv-region">Local</span>
+          <span class="srv-name">FFA</span>
+          <span class="srv-count">12/12</span>
+        </button>
+        <button type="button" class="server-row" data-mode="tdm" data-group="teams">
+          <span class="srv-region">Local</span>
+          <span class="srv-name">2 Teams</span>
+          <span class="srv-count">12/12</span>
+        </button>
+        <button type="button" class="server-row" data-mode="manhunt" data-group="other">
+          <span class="srv-region">Local</span>
+          <span class="srv-name">Manhunt</span>
+          <span class="srv-count">12/12</span>
+        </button>
+        <button type="button" class="server-row" data-mode="tag" data-group="teams">
+          <span class="srv-region">Local</span>
+          <span class="srv-name">Tag</span>
+          <span class="srv-count">12/12</span>
+        </button>
+        <button type="button" class="server-row" data-mode="sandbox" data-group="sandbox">
+          <span class="srv-region">Local</span>
+          <span class="srv-name">Sandbox</span>
+          <span class="srv-count">1/1</span>
+        </button>
       </div>
       <div id="team-row" class="team-row hidden">
         <button type="button" class="team-chip selected" data-team="blue" id="chip-blue">Blue</button>
@@ -198,8 +225,8 @@
     </div>
   </div>
 
-  <script src="js/defs.js?v=21"></script>
-  <script src="js/game.js?v=21"></script>
-  <script src="js/editor.js?v=21"></script>
+  <script src="js/defs.js?v=22"></script>
+  <script src="js/game.js?v=22"></script>
+  <script src="js/editor.js?v=22"></script>
 </body>
 </html>

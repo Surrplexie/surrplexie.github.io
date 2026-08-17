@@ -1770,7 +1770,7 @@
 
   function setMenuMode(mode) {
     menuMode = mode;
-    document.querySelectorAll(".mode-tab").forEach((b) => b.classList.toggle("active", b.dataset.mode === mode));
+    document.querySelectorAll(".server-row").forEach((b) => b.classList.toggle("active", b.dataset.mode === mode));
     const row = document.getElementById("team-row");
     const pickTeam = menuMode === "tdm" || menuMode === "tag";
     if (row) row.classList.toggle("hidden", !pickTeam);
@@ -1787,6 +1787,19 @@
     if (hint) hint.textContent = MODE_HINT[menuMode] || "";
   }
 
+  function setServerFilter(filter) {
+    document.querySelectorAll(".server-filter").forEach((b) => b.classList.toggle("active", b.dataset.filter === filter));
+    document.querySelectorAll(".server-row").forEach((row) => {
+      const show = filter === "all" || row.dataset.group === filter;
+      row.classList.toggle("hidden", !show);
+    });
+    const active = document.querySelector(".server-row.active");
+    if (active && active.classList.contains("hidden")) {
+      const first = document.querySelector(".server-row:not(.hidden)");
+      if (first) setMenuMode(first.dataset.mode);
+    }
+  }
+
   if (els.start) {
     els.start.addEventListener("click", (e) => {
       const btn = e.target.closest("button");
@@ -1796,12 +1809,20 @@
       else if (btn.id === "options-btn") {
         const panel = document.getElementById("options-panel");
         if (panel) panel.classList.toggle("hidden");
-      } else if (btn.classList.contains("mode-tab")) {
+      } else if (btn.classList.contains("server-row")) {
         setMenuMode(btn.dataset.mode);
+      } else if (btn.classList.contains("server-filter")) {
+        setServerFilter(btn.dataset.filter);
       } else if (btn.classList.contains("team-chip")) {
         menuTeam = btn.dataset.team;
         document.querySelectorAll(".team-chip").forEach((b) => b.classList.toggle("selected", b === btn));
       }
+    });
+    els.start.addEventListener("dblclick", (e) => {
+      const row = e.target.closest(".server-row");
+      if (!row || row.classList.contains("hidden")) return;
+      setMenuMode(row.dataset.mode);
+      playSelected();
     });
   }
 
