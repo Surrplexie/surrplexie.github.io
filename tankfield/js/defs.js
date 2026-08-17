@@ -1096,10 +1096,17 @@
   });
 
   const mothershipGuns = [];
-  for (let i = 0; i < 24; i++) {
-    mothershipGuns.push(gun(11, 6.2, 1, 0, 0, i * 15, (i % 6) * 0.14, {
+  for (let i = 0; i < 16; i++) {
+    mothershipGuns.push(gun(11, 6.2, 1, 0, 0, i * 22.5, (i % 4) * 0.14, {
       recoil: 0,
       stats: { speed: 0.55, life: 0.42, damage: 1.55 },
+    }));
+  }
+  for (let i = 0; i < 16; i++) {
+    mothershipGuns.push(gun(8, 7, 1.55, 0, 0, i * 22.5 + 11.25, (i % 4) * 0.16, {
+      type: "trap",
+      recoil: 0,
+      stats: { speed: 0.28, damage: 1.7 },
     }));
   }
   for (let i = 0; i < 6; i++) {
@@ -1107,7 +1114,7 @@
   }
   def("mothership", {
     name: "Mothership",
-    desc: "Huge close-range fortress with 360° fire and swarms",
+    desc: "Huge close-range fortress with 360° fire, traps, and swarms",
     guns: mothershipGuns,
     health: 16,
     speed: 0.34,

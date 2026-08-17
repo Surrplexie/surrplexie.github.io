@@ -434,8 +434,8 @@
       for (let i = 0; i < 5; i++) teams.push(state.player.team);
       for (let i = 0; i < 6; i++) teams.push(other);
     } else if (state.mode === "protect") {
-      for (let i = 0; i < 4; i++) teams.push("green");
-      for (let i = 0; i < 7; i++) teams.push("red");
+      for (let i = 0; i < 5; i++) teams.push("green");
+      for (let i = 0; i < 5; i++) teams.push("red");
     }
     for (let i = 0; i < 11; i++) {
       const team = teams[i] || null;
@@ -449,13 +449,12 @@
         color: team ? TEAMS[team].color : pickTeamColor(state.player ? state.player.color : state.selectedColor),
         pos: state.mode === "tdm" && team
           ? spawnInBase(team)
-          : state.mode === "protect" && team === "green"
-            ? awayFrom(WORLD.w / 2, WORLD.h / 2, 280)
-            : state.mode === "protect"
-              ? awayFrom(WORLD.w / 2, WORLD.h / 2, 1100)
-              : awayFrom(WORLD.w / 2, WORLD.h / 2, 500),
+          : state.mode === "protect" && mothershipOf(team)
+            ? awayFrom(mothershipOf(team).x, mothershipOf(team).y, 240)
+            : awayFrom(WORLD.w / 2, WORLD.h / 2, 500),
       });
       autoUpgradeBot(bot);
+      if (state.mode === "protect") maxOutTank(bot);
       bot.health = bot.maxHealth;
       state.tanks.push(bot);
     }
@@ -496,24 +495,54 @@
     applyLevel(bot);
   }
 
+  function cornerPos(index, pad = 280) {
+    const spots = [
+      { x: pad, y: pad },
+      { x: WORLD.w - pad, y: pad },
+      { x: WORLD.w - pad, y: WORLD.h - pad },
+      { x: pad, y: WORLD.h - pad },
+    ];
+    return spots[((index % 4) + 4) % 4];
+  }
+
+  function mothershipOf(team) {
+    return state.tanks.find((t) => t.mothership && t.alive && t.team === team) || null;
+  }
+
+  function maxOutTank(tank) {
+    tank.score = Math.max(tank.score, xpForLevel(LEVEL_CAP));
+    for (const st of STATS) tank.stats[st.key] = STAT_MAX;
+    applyLevel(tank);
+    tank.health = tank.maxHealth;
+    if (tank.mothership) tank.r = 82;
+  }
+
+  function spawnMotherships() {
+    const start = irand(0, 3);
+    const teams = ["green", "red"];
+    for (let i = 0; i < 2; i++) {
+      const team = teams[i];
+      const pos = cornerPos(start + i * 2);
+      const m = createTank({
+        name: team === "green" ? "Green Mothership" : "Red Mothership",
+        ai: true,
+        mothership: true,
+        classId: "mothership",
+        team,
+        color: TEAMS[team].color,
+        score: xpForLevel(LEVEL_CAP),
+        pos,
+      });
+      m.homeX = pos.x;
+      m.homeY = pos.y;
+      maxOutTank(m);
+      m.spawnProtect = 0;
+      state.tanks.push(m);
+    }
+  }
+
   function spawnMothership() {
-    const m = createTank({
-      name: "Mothership",
-      ai: true,
-      mothership: true,
-      classId: "mothership",
-      team: "green",
-      color: TEAMS.green.color,
-      score: xpForLevel(LEVEL_CAP),
-      pos: { x: WORLD.w / 2, y: WORLD.h / 2 },
-    });
-    for (const st of STATS) m.stats[st.key] = STAT_MAX;
-    applyLevel(m);
-    m.health = m.maxHealth;
-    m.spawnProtect = 0;
-    m.r = 82;
-    state.mothership = m;
-    state.tanks.push(m);
+    spawnMotherships();
   }
 
   function menuTank() {
@@ -523,11 +552,12 @@
 
   function toggleMothershipControl() {
     if (state.mode !== "protect") return;
-    const m = state.mothership;
+    const body = state.player && state.player.mothership ? state.pilotTank : state.player;
+    const team = body && body.team;
+    const m = mothershipOf(team);
     if (!m || !m.alive) return;
     if (state.player === m) {
-      const body = state.pilotTank;
-      if (!body || !body.alive) {
+      if (!body || !body.alive || body === m) {
         floater(m.x, m.y - m.r - 8, "No tank to return to");
         return;
       }
@@ -537,7 +567,6 @@
       floater(body.x, body.y - 18, "Left mothership");
       return;
     }
-    const body = state.player;
     if (!body || !body.alive || body.mothership) return;
     body.ai = true;
     body.aiState = "defend";
@@ -575,35 +604,30 @@
     populateWorld();
     const team = state.mode === "tdm"
       ? (opts.team === "red" ? "red" : "blue")
-      : state.mode === "tag"
+      : state.mode === "tag" || state.mode === "protect"
         ? (opts.team === "red" ? "red" : "green")
-        : state.mode === "protect"
-          ? "green"
-          : null;
+        : null;
+    if (state.mode === "protect") spawnMotherships();
+    const home = team ? mothershipOf(team) : null;
     const player = createTank({
       name: state.spawnName,
       team,
       color: team ? TEAMS[team].color : (state.mode === "sandbox" ? (state.selectedColor || COLORS.player) : pickTeamColor()),
       classId: opts.classId || "basic",
       customDef: opts.customDef || null,
-      score: opts.sandbox ? xpForLevel(LEVEL_CAP) : 0,
+      score: opts.sandbox || state.mode === "protect" ? xpForLevel(LEVEL_CAP) : 0,
       pos: state.mode === "tdm" && team
         ? spawnInBase(team)
-        : state.mode === "protect"
-          ? awayFrom(WORLD.w / 2, WORLD.h / 2, 260)
+        : home
+          ? awayFrom(home.x, home.y, 240)
           : awayFrom(WORLD.w / 2, WORLD.h / 2, 700),
     });
     player.ai = false;
     player.spawnProtect = 30;
-    if (opts.maxStats) {
-      for (const st of STATS) player.stats[st.key] = STAT_MAX;
-      applyLevel(player);
-      player.health = player.maxHealth;
-    }
+    if (opts.maxStats || state.mode === "protect") maxOutTank(player);
     state.player = player;
     state.pilotTank = player;
     state.tanks.push(player);
-    if (state.mode === "protect") spawnMothership();
     spawnBots();
     state.camera.x = player.x;
     state.camera.y = player.y;
@@ -645,22 +669,34 @@
       if (huntedBonus) floater(tank.x, tank.y - 24, "Hunted down");
     }
     if (tank === state.player) {
-      if (tank.mothership || (state.mode === "protect" && (!state.mothership || !state.mothership.alive))) {
-        shake = 14;
-        showDeath(tank);
-      } else if (state.mode === "protect") {
+      if (tank.mothership) {
+        const body = state.pilotTank;
+        checkProtectClose();
+        if (body && body.alive && body !== tank) {
+          body.ai = false;
+          state.player = body;
+          shake = 10;
+          floater(body.x, body.y - 18, "Mothership down");
+        } else {
+          shake = 14;
+          showDeath(tank);
+        }
+      } else if (state.mode === "protect" && mothershipOf(tank.team) && !state.closing) {
         shake = 10;
+        const team = tank.team;
         setTimeout(() => {
-          if (!running || !state.mothership || !state.mothership.alive) return;
+          if (!running || state.closing || !mothershipOf(team)) return;
+          const home = mothershipOf(team);
           const p = createTank({
             name: state.spawnName,
             ai: false,
-            score: 0,
             classId: "basic",
-            team: "green",
-            color: TEAMS.green.color,
-            pos: awayFrom(state.mothership.x, state.mothership.y, 280),
+            team,
+            color: TEAMS[team].color,
+            score: xpForLevel(LEVEL_CAP),
+            pos: awayFrom(home.x, home.y, 240),
           });
+          maxOutTank(p);
           p.spawnProtect = 8;
           state.player = p;
           state.pilotTank = p;
@@ -673,17 +709,16 @@
         showDeath(tank);
       }
     } else if (tank.mothership) {
-      const p = state.pilotTank && state.pilotTank.alive ? state.pilotTank : state.player;
-      if (p && p.alive && p !== tank) {
-        p.alive = false;
-        p.killedBy = "the mothership being destroyed";
-        showDeath(p);
+      if (state.player === tank && state.pilotTank && state.pilotTank.alive) {
+        state.pilotTank.ai = false;
+        state.player = state.pilotTank;
       }
+      floater(tank.x, tank.y - tank.r - 8, `${TEAMS[tank.team] ? TEAMS[tank.team].name : ""} mothership down`);
+      checkProtectClose();
     } else if (!tank.closer && !state.closing) {
       const team = tank.team;
       setTimeout(() => {
         if (!running || !state.player || !state.player.alive || state.closing) return;
-        if (state.mode === "protect" && (!state.mothership || !state.mothership.alive)) return;
         const score = irand(0, 400);
         const bot = createTank({
           name: tank.name,
@@ -692,9 +727,14 @@
           classId: "basic",
           team,
           color: team ? TEAMS[team].color : pickTeamColor(state.player.color),
-          pos: state.mode === "tdm" && team ? spawnInBase(team) : awayFrom(state.player.x, state.player.y, 900),
+          pos: state.mode === "tdm" && team
+            ? spawnInBase(team)
+            : state.mode === "protect" && mothershipOf(team)
+              ? awayFrom(mothershipOf(team).x, mothershipOf(team).y, 240)
+              : awayFrom(state.player.x, state.player.y, 900),
         });
         autoUpgradeBot(bot);
+        if (state.mode === "protect") maxOutTank(bot);
         bot.health = bot.maxHealth;
         bot.spawnProtect = 8;
         state.tanks.push(bot);
@@ -903,15 +943,27 @@
     return true;
   }
 
+  function beginArenaClose() {
+    if (state.closing) return;
+    state.closing = true;
+    state.closeAt = state.time + 2.2;
+    const p = state.player;
+    if (p && p.alive) floater(p.x, p.y - 28, "Arena closing");
+  }
+
   function checkTagVictory() {
     if (state.mode !== "tag" || state.closing) return;
     const living = state.tanks.filter((t) => t.alive && !t.closer);
     const teams = new Set(living.map((t) => t.team).filter(Boolean));
     if (living.length < 1 || teams.size !== 1) return;
-    state.closing = true;
-    state.closeAt = state.time + 2.2;
-    const p = state.player;
-    if (p && p.alive) floater(p.x, p.y - 28, "Arena closing");
+    beginArenaClose();
+  }
+
+  function checkProtectClose() {
+    if (state.mode !== "protect" || state.closing) return;
+    const alive = state.tanks.filter((t) => t.mothership && t.alive);
+    if (alive.length >= 2) return;
+    beginArenaClose();
   }
 
   function spawnArenaClosers() {
@@ -1004,8 +1056,8 @@
       if (prey && dist2(tank, prey) < 420 * 420) {
         tank.angle = Math.atan2(prey.y - tank.y, prey.x - tank.x);
       }
-      const homeX = WORLD.w / 2;
-      const homeY = WORLD.h / 2;
+      const homeX = tank.homeX != null ? tank.homeX : WORLD.w / 2;
+      const homeY = tank.homeY != null ? tank.homeY : WORLD.h / 2;
       const st = tankStats(tank);
       tank.vx += (homeX - tank.x) * 0.8 * dt;
       tank.vy += (homeY - tank.y) * 0.8 * dt;
@@ -1021,13 +1073,14 @@
     const mark = state.hunted;
     const hunting = state.mode === "manhunt" && mark && mark.alive && mark !== tank;
     const huntedSelf = state.mode === "manhunt" && mark === tank;
-    const moth = state.mothership;
-    const defending = state.mode === "protect" && moth && moth.alive && tank.team === moth.team;
-    const assaulting = state.mode === "protect" && moth && moth.alive && tank.team !== moth.team;
+    const ownMoth = mothershipOf(tank.team);
+    const foeMoth = state.tanks.find((t) => t.mothership && t.alive && t.team && t.team !== tank.team) || null;
+    const defending = state.mode === "protect" && ownMoth;
+    const assaulting = state.mode === "protect" && foeMoth;
     let enemy = hunting
       ? mark
       : assaulting
-        ? moth
+        ? (nearest(tank, state.tanks, 380, (t) => isEnemyTank(tank, t) && !t.mothership) || foeMoth)
         : nearest(tank, state.tanks, state.mode === "tag" || state.mode === "protect" ? 1400 : 720, (t) => isEnemyTank(tank, t));
     const closerNear = nearest(tank, state.tanks, 980, (t) => t.closer);
     const shape = nearest(tank, state.shapes, 900, (s) => s.kind !== "alpha" || tank.level >= 20);
@@ -1063,10 +1116,10 @@
         ty = enemy.y;
       }
       tank.angle = Math.atan2(enemy.y - tank.y, enemy.x - tank.x);
-    } else if (tank.aiState === "defend" && moth) {
+    } else if (tank.aiState === "defend" && ownMoth) {
       const a = (tank.wanderA || 0) + state.time * 0.55;
-      tx = moth.x + Math.cos(a) * 250;
-      ty = moth.y + Math.sin(a) * 250;
+      tx = ownMoth.x + Math.cos(a) * 250;
+      ty = ownMoth.y + Math.sin(a) * 250;
       if (enemy) tank.angle = Math.atan2(enemy.y - tank.y, enemy.x - tank.x);
       else tank.angle = Math.atan2(ty - tank.y, tx - tank.x);
     } else if (tank.aiState === "flee" && (closerNear || hunterNear || enemy)) {
@@ -1217,10 +1270,9 @@
     state.time += dt;
     shake = Math.max(0, shake - dt * 18);
     refreshHunted();
-    if (state.mode === "tag") {
-      checkTagVictory();
-      if (state.closing && !state.closersSpawned && state.time >= state.closeAt) spawnArenaClosers();
-    }
+    if (state.mode === "tag") checkTagVictory();
+    if (state.mode === "protect") checkProtectClose();
+    if (state.closing && !state.closersSpawned && state.time >= state.closeAt) spawnArenaClosers();
     updatePlayer(dt);
 
     for (const tank of state.tanks) {
@@ -1467,13 +1519,14 @@
       }
     }
     if (els.arenaMode && state.mode === "protect") {
-      const m = state.mothership;
-      if (!m || !m.alive) els.arenaMode.textContent = "Mothership down";
+      if (state.closing) els.arenaMode.textContent = "Arena closing";
       else {
-        const pct = Math.max(0, Math.round((m.health / Math.max(1, m.maxHealth)) * 100));
-        els.arenaMode.textContent = state.player === m
-          ? `Mothership ${pct}% · [H] leave`
-          : `Protect ${pct}% · [H] control`;
+        const g = mothershipOf("green");
+        const r = mothershipOf("red");
+        const gp = g ? Math.round((g.health / Math.max(1, g.maxHealth)) * 100) : 0;
+        const rp = r ? Math.round((r.health / Math.max(1, r.maxHealth)) * 100) : 0;
+        const piloting = state.player && state.player.mothership;
+        els.arenaMode.textContent = `Protect · G ${gp}%  R ${rp}%${piloting ? " · [H] leave" : " · [H] control"}`;
       }
     }
     if (els.skillPoints) els.skillPoints.textContent = free > 0 ? `x${free}` : "";
@@ -1489,6 +1542,12 @@
       const redn = state.tanks.filter((t) => t.alive && !t.closer && t.team === "red").length;
       html += `<li class="team-tot"><span><i class="lb-dot" style="background:${TEAMS.green.color}"></i>Green — ${green}</span></li>`;
       html += `<li class="team-tot"><span><i class="lb-dot" style="background:${TEAMS.red.color}"></i>Red — ${redn}</span></li>`;
+    }
+    if (state.mode === "protect") {
+      const g = mothershipOf("green");
+      const r = mothershipOf("red");
+      html += `<li class="team-tot"><span><i class="lb-dot" style="background:${TEAMS.green.color}"></i>Green mothership — ${g ? Math.round((g.health / g.maxHealth) * 100) : 0}%</span></li>`;
+      html += `<li class="team-tot"><span><i class="lb-dot" style="background:${TEAMS.red.color}"></i>Red mothership — ${r ? Math.round((r.health / r.maxHealth) * 100) : 0}%</span></li>`;
     }
     els.leaders.innerHTML = html + ranked.map((t) =>
       `<li class="${t === p ? "you" : ""} ${t === state.hunted ? "hunted" : ""}"><div class="lb-fill" style="width:${clamp((t.score / top) * 100, 8, 100)}%"></div><span><i class="lb-dot" style="background:${t.color}"></i>${escapeHtml(t.name)}${t === state.hunted ? " · hunted" : ""} — ${escapeHtml(getDef(t).name)} — ${formatScore(t.score)}</span></li>`
@@ -1932,7 +1991,7 @@
     tdm: "Red vs blue · bases protect your team",
     manhunt: "Everyone hunts whoever is #1",
     tag: "Shoot to convert · last team standing closes the arena",
-    protect: "Defend the mothership · [H] to take control",
+    protect: "Two motherships · defend yours · [H] to take control",
     sandbox: "Level 45 · pick any tank",
   };
 
@@ -1942,7 +2001,7 @@
     else if (menuMode === "tdm") startGame(name, { mode: "tdm", team: menuTeam === "red" ? "red" : "blue" });
     else if (menuMode === "manhunt") startGame(name, { mode: "manhunt" });
     else if (menuMode === "tag") startGame(name, { mode: "tag", team: menuTeam === "red" ? "red" : "green" });
-    else if (menuMode === "protect") startGame(name, { mode: "protect" });
+    else if (menuMode === "protect") startGame(name, { mode: "protect", team: menuTeam === "red" ? "red" : "green" });
     else startGame(name, { mode: "ffa" });
   }
 
@@ -1954,13 +2013,13 @@
     menuMode = mode;
     document.querySelectorAll(".server-row").forEach((b) => b.classList.toggle("active", b.dataset.mode === mode));
     const row = document.getElementById("team-row");
-    const pickTeam = menuMode === "tdm" || menuMode === "tag";
+    const pickTeam = menuMode === "tdm" || menuMode === "tag" || menuMode === "protect";
     if (row) row.classList.toggle("hidden", !pickTeam);
     const blue = document.getElementById("chip-blue");
     const green = document.getElementById("chip-green");
-    if (blue) blue.classList.toggle("hidden", menuMode === "tag");
-    if (green) green.classList.toggle("hidden", menuMode !== "tag");
-    if (menuMode === "tag" && menuTeam !== "red") menuTeam = "green";
+    if (blue) blue.classList.toggle("hidden", menuMode === "tag" || menuMode === "protect");
+    if (green) green.classList.toggle("hidden", menuMode !== "tag" && menuMode !== "protect");
+    if ((menuMode === "tag" || menuMode === "protect") && menuTeam !== "red") menuTeam = "green";
     if (menuMode === "tdm" && menuTeam !== "red") menuTeam = "blue";
     document.querySelectorAll(".team-chip").forEach((b) => {
       b.classList.toggle("selected", b.dataset.team === menuTeam && !b.classList.contains("hidden"));
