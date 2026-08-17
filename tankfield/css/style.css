@@ -102,7 +102,7 @@ html, body {
   margin: 0 0 10px;
 }
 
-.mode-tabs { grid-template-columns: 1fr 1fr 1fr; }
+.mode-tabs { grid-template-columns: 1fr 1fr; }
 .team-row { grid-template-columns: 1fr 1fr; }
 .action-row { grid-template-columns: 1fr 1fr; margin-top: 4px; }
 
@@ -358,6 +358,10 @@ kbd {
 
 #leader-list li.you .lb-fill {
   background: rgba(142, 207, 95, 0.55);
+}
+
+#leader-list li.hunted .lb-fill {
+  background: rgba(232, 176, 32, 0.55);
 }
 
 #leader-list li span {

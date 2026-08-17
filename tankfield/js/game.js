@@ -139,6 +139,7 @@
     crasherAt: 60,
     classDismissed: false,
     classOptions: [],
+    hunted: null,
     fpsT: 0,
     frames: 0,
   };
@@ -460,6 +461,7 @@
     state.crasherAt = rand(60, 120);
     state.classDismissed = false;
     state.classOptions = [];
+    state.hunted = null;
     populateWorld();
     const team = state.mode === "tdm" ? (opts.team === "red" ? "red" : "blue") : null;
     const player = createTank({
@@ -494,7 +496,7 @@
     const colorBox = document.getElementById("sandbox-colors");
     if (colorBox) colorBox.classList.toggle("hidden", state.mode !== "sandbox");
     if (els.arenaMode) {
-      els.arenaMode.textContent = state.mode === "tdm" ? "2 Teams" : state.mode === "sandbox" ? "Sandbox" : "FFA";
+      els.arenaMode.textContent = state.mode === "tdm" ? "2 Teams" : state.mode === "sandbox" ? "Sandbox" : state.mode === "manhunt" ? "Manhunt" : "FFA";
     }
       try { renderStats(); } catch (err) { console.error(err); }
       try { renderClassPanel(); } catch (err) { console.error(err); }
@@ -515,8 +517,10 @@
     burst(tank.x, tank.y, tank.color, 18, 220);
     if (killer && killer.alive) {
       killer.kills = (killer.kills || 0) + 1;
-      const gain = Math.max(20, Math.floor(tank.score * 0.45) + 20);
+      const huntedBonus = state.mode === "manhunt" && tank === state.hunted ? Math.max(80, Math.floor(tank.score * 0.2)) : 0;
+      const gain = Math.max(20, Math.floor(tank.score * 0.45) + 20) + huntedBonus;
       giveScore(killer, gain, tank.x, tank.y);
+      if (huntedBonus) floater(tank.x, tank.y - 24, "Hunted down");
     }
     if (tank === state.player) {
       shake = 14;
@@ -645,7 +649,7 @@
       if (tank.gunCd[i] > 0) continue;
       if ((gun.type === "drone" || gun.type === "swarm") && countOwned(gun.type, tank) >= Math.max(1, st.maxDrones)) continue;
       tank.gunCd[i] = st.reload * (0.65 + (gun.pos[6] || 0));
-      if (!tank.ai && !autoGun) breakSpawnProtect(tank);
+      if (!autoGun) breakSpawnProtect(tank);
       spawnShot(tank, gun, i, st);
     }
   }
@@ -721,16 +725,48 @@
     return best;
   }
 
+  function refreshHunted() {
+    if (state.mode !== "manhunt") {
+      state.hunted = null;
+      return;
+    }
+    const alive = state.tanks.filter((t) => t.alive);
+    if (!alive.length) {
+      state.hunted = null;
+      return;
+    }
+    alive.sort((a, b) => b.score - a.score);
+    const lead = alive[0];
+    if (!lead || lead.score <= 0) {
+      state.hunted = null;
+      return;
+    }
+    const tied = alive.filter((t) => t.score === lead.score);
+    const next = (state.hunted && state.hunted.alive && tied.includes(state.hunted)) ? state.hunted : lead;
+    if (next !== state.hunted) {
+      state.hunted = next;
+      if (next) floater(next.x, next.y - 18, "HUNTED");
+    }
+  }
+
   function updateAI(tank, dt) {
     tank.aiT -= dt;
     const player = state.player;
-    const enemy = nearest(tank, state.tanks, 720, (t) => isEnemyTank(tank, t));
+    const mark = state.hunted;
+    const hunting = state.mode === "manhunt" && mark && mark.alive && mark !== tank;
+    const huntedSelf = state.mode === "manhunt" && mark === tank;
+    let enemy = hunting
+      ? mark
+      : nearest(tank, state.tanks, 720, (t) => isEnemyTank(tank, t));
     const shape = nearest(tank, state.shapes, 900, (s) => s.kind !== "alpha" || tank.level >= 20);
     const low = tank.health < tank.maxHealth * 0.34;
     const zone = zoneAt(tank.x, tank.y);
     const invading = !!(tank.team && zone && zone !== tank.team);
+    const hunterNear = huntedSelf ? nearest(tank, state.tanks, 640, (t) => t !== tank) : null;
     if (invading || (state.mode === "tdm" && tank.team && low)) tank.aiState = "home";
+    else if (huntedSelf && hunterNear && dist2(tank, hunterNear) < 480 * 480) tank.aiState = "flee";
     else if (low && enemy) tank.aiState = "flee";
+    else if (hunting) tank.aiState = "attack";
     else if (enemy && dist2(tank, enemy) < 380 * 380) tank.aiState = "attack";
     else if (shape) tank.aiState = "farm";
     else tank.aiState = "wander";
@@ -752,9 +788,10 @@
         ty = enemy.y;
       }
       tank.angle = Math.atan2(enemy.y - tank.y, enemy.x - tank.x);
-    } else if (tank.aiState === "flee" && enemy) {
-      tx = tank.x * 2 - enemy.x; ty = tank.y * 2 - enemy.y;
-      tank.angle = Math.atan2(enemy.y - tank.y, enemy.x - tank.x);
+    } else if (tank.aiState === "flee" && (hunterNear || enemy)) {
+      const from = hunterNear || enemy;
+      tx = tank.x * 2 - from.x; ty = tank.y * 2 - from.y;
+      tank.angle = Math.atan2(from.y - tank.y, from.x - tank.x);
     } else if (tank.aiState === "farm" && shape) {
       tx = shape.x; ty = shape.y;
       tank.angle = Math.atan2(ty - tank.y, tx - tank.x);
@@ -767,7 +804,7 @@
       ty = tank.y + Math.sin(tank.wanderA || 0) * 200;
       tank.angle = tank.wanderA || tank.angle;
     }
-    if (player && player.alive && isEnemyTank(tank, player) && dist2(tank, player) < 520 * 520 && Math.random() < 0.4 && tank.aiState !== "home") {
+    if (!hunting && !huntedSelf && player && player.alive && isEnemyTank(tank, player) && dist2(tank, player) < 520 * 520 && Math.random() < 0.4 && tank.aiState !== "home") {
       tank.aiState = "attack";
       tank.angle = Math.atan2(player.y - tank.y, player.x - tank.x);
       tx = player.x; ty = player.y;
@@ -785,6 +822,7 @@
     const ang = Math.atan2(ty - tank.y, tx - tank.x);
     tank.vx += Math.cos(ang) * pace * 62 * dt;
     tank.vy += Math.sin(ang) * pace * 62 * dt;
+    breakSpawnProtect(tank);
     updateTurrets(tank, dt);
     shoot(tank, dt);
   }
@@ -896,6 +934,7 @@
   function update(dt) {
     state.time += dt;
     shake = Math.max(0, shake - dt * 18);
+    refreshHunted();
     updatePlayer(dt);
 
     for (const tank of state.tanks) {
@@ -1083,6 +1122,7 @@
     state.tanks = state.tanks.filter((t) => t.alive || t === state.player);
     state.particles = state.particles.filter((p) => p.life > 0);
     state.floaters = state.floaters.filter((f) => f.life > 0);
+    refreshHunted();
     maintainShapes();
 
     const p = state.player;
@@ -1113,11 +1153,21 @@
     const free = skillPointsFor(p.level) - spentPoints(p);
     if (els.xpFill) els.xpFill.style.width = `${clamp(pct, 0, 100)}%`;
     if (els.xpLabel) els.xpLabel.textContent = `Level ${p.level} ${def.name}`;
-    if (els.playerName) els.playerName.textContent = p.name;
+    if (els.playerName) {
+      els.playerName.textContent = state.hunted === p ? p.name + "  ·  HUNTED" : p.name;
+    }
     if (els.scoreText) els.scoreText.textContent = `Score: ${Math.floor(p.score).toLocaleString()}`;
     if (els.scoreFill) els.scoreFill.style.width = `${clamp((p.score / top) * 100, 8, 100)}%`;
     if (els.killsText) els.killsText.textContent = `Kills: ${p.kills || 0}`;
     if (els.killsFill) els.killsFill.style.width = `${clamp((p.kills || 0) * 10, 8, 100)}%`;
+    if (els.arenaMode && state.mode === "manhunt") {
+      const mark = state.hunted;
+      els.arenaMode.textContent = !mark
+        ? "Manhunt"
+        : mark === p
+          ? "Manhunt · you are hunted"
+          : `Manhunt · hunt ${mark.name}`;
+    }
     if (els.skillPoints) els.skillPoints.textContent = free > 0 ? `x${free}` : "";
     let html = "";
     if (state.mode === "tdm") {
@@ -1127,7 +1177,7 @@
       html += `<li class="team-tot"><span><i class="lb-dot" style="background:${TEAMS.red.color}"></i>Red — ${formatScore(red)}</span></li>`;
     }
     els.leaders.innerHTML = html + ranked.map((t) =>
-      `<li class="${t === p ? "you" : ""}"><div class="lb-fill" style="width:${clamp((t.score / top) * 100, 8, 100)}%"></div><span><i class="lb-dot" style="background:${t.color}"></i>${escapeHtml(t.name)} — ${escapeHtml(getDef(t).name)} — ${formatScore(t.score)}</span></li>`
+      `<li class="${t === p ? "you" : ""} ${t === state.hunted ? "hunted" : ""}"><div class="lb-fill" style="width:${clamp((t.score / top) * 100, 8, 100)}%"></div><span><i class="lb-dot" style="background:${t.color}"></i>${escapeHtml(t.name)}${t === state.hunted ? " · hunted" : ""} — ${escapeHtml(getDef(t).name)} — ${formatScore(t.score)}</span></li>`
     ).join("");
   }
 
@@ -1330,11 +1380,18 @@
       c.stroke();
     }
     if (!opts.hideName) {
-      c.fillStyle = "#3a3a3a";
+      c.fillStyle = tank === state.hunted ? "#c9a227" : "#3a3a3a";
       c.font = "bold 13px Segoe UI, sans-serif";
       c.textAlign = "center";
       c.textBaseline = "bottom";
-      c.fillText(tank.name, tank.x, tank.y - tank.r - 6);
+      c.fillText(tank === state.hunted ? tank.name + "  HUNTED" : tank.name, tank.x, tank.y - tank.r - 6);
+    }
+    if (tank === state.hunted) {
+      c.beginPath();
+      c.arc(tank.x, tank.y, tank.r + 10, 0, TAU);
+      c.strokeStyle = `rgba(232, 176, 32,${0.55 + 0.35 * Math.abs(Math.sin(state.time * 5))})`;
+      c.lineWidth = 3.5;
+      c.stroke();
     }
     if (tank.spawnProtect > 0) {
       c.beginPath();
@@ -1506,6 +1563,7 @@
     }
     for (const t of state.tanks) {
       if (!t.alive) continue;
+      if (state.mode !== "tdm" && t !== state.player) continue;
       mctx.fillStyle = t.color;
       mctx.beginPath();
       mctx.arc(mapX(t.x), mapY(t.y), t === state.player ? 4 : 3, 0, TAU);
@@ -1575,6 +1633,7 @@
   const MODE_HINT = {
     ffa: "Everyone for themselves",
     tdm: "Red vs blue · bases protect your team",
+    manhunt: "Everyone hunts whoever is #1",
     sandbox: "Level 45 · pick any tank",
   };
 
@@ -1582,6 +1641,7 @@
     const name = (els.name && els.name.value.trim()) || "Unnamed Tank";
     if (menuMode === "sandbox") startGame(name, { sandbox: true, classId: "basic" });
     else if (menuMode === "tdm") startGame(name, { mode: "tdm", team: menuTeam });
+    else if (menuMode === "manhunt") startGame(name, { mode: "manhunt" });
     else startGame(name, { mode: "ffa" });
   }
 
