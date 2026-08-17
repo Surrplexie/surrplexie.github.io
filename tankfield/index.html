@@ -21,9 +21,12 @@
         Nickname
         <input id="name-input" type="text" maxlength="16" placeholder="Unnamed Tank" autocomplete="off" />
       </label>
-      <div class="color-label">Team color</div>
-      <div id="color-picker" class="color-picker"></div>
-      <button id="play-btn" class="primary">Play (level up)</button>
+      <button id="play-btn" class="primary">FFA</button>
+      <div class="mode-label">2 Teams</div>
+      <div class="tdm-picks">
+        <button id="tdm-blue" type="button">Blue</button>
+        <button id="tdm-red" type="button">Red</button>
+      </div>
       <button id="sandbox-btn">Sandbox (level 45)</button>
       <button id="workshop-btn">Tank workshop</button>
       <div class="controls-help">
@@ -47,6 +50,10 @@
     <button id="show-classes" class="hidden" type="button">Upgrades</button>
 
     <div id="stats-wrap">
+      <div id="sandbox-colors" class="hidden">
+        <div class="sandbox-color-label">Color</div>
+        <div id="color-picker" class="color-picker"></div>
+      </div>
       <div id="skill-points"></div>
       <div id="stats-panel"></div>
     </div>
@@ -61,6 +68,7 @@
     <div id="minimap-wrap">
       <div id="meta-info">
         <div>tankfield</div>
+        <div id="arena-mode">FFA</div>
         <div id="fps-label">60 FPS</div>
       </div>
       <canvas id="minimap" width="168" height="168"></canvas>

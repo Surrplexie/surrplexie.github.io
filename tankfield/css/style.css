@@ -82,6 +82,35 @@ input[type="text"]:focus {
   border-color: #00b2e1;
 }
 
+.mode-label {
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  margin: 4px 0 8px;
+}
+
+.tdm-picks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+
+.tdm-picks button {
+  width: 100%;
+  margin: 0;
+  color: #fff;
+}
+
+#tdm-blue {
+  background: #00b2e1;
+}
+
+#tdm-red {
+  background: #f14e54;
+}
+
 .color-label {
   text-align: left;
   font-size: 13px;
@@ -98,7 +127,10 @@ input[type="text"]:focus {
 }
 
 .swatch {
+  flex: 0 0 28px;
   width: 28px;
+  min-width: 28px;
+  max-width: 28px;
   height: 28px;
   padding: 0;
   margin: 0;
@@ -106,15 +138,21 @@ input[type="text"]:focus {
   border-radius: 3px;
   position: relative;
   box-shadow: none;
+  overflow: hidden;
 }
 
 .swatch::after {
   content: "";
   position: absolute;
-  inset: 5px;
+  width: 10px;
+  height: 10px;
+  left: 50%;
+  top: 50%;
+  margin: -5px 0 0 -5px;
   border: 2px solid #555;
   transform: rotate(45deg);
   pointer-events: none;
+  box-sizing: border-box;
 }
 
 .swatch.selected {
@@ -202,6 +240,12 @@ kbd {
   background: rgba(0, 0, 0, 0.18);
 }
 
+#leader-list li.team-tot {
+  background: rgba(0, 0, 0, 0.32);
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+
 #leader-list .lb-fill {
   position: absolute;
   inset: 0 auto 0 0;
@@ -260,6 +304,31 @@ kbd {
   background: rgba(200, 200, 200, 0.55);
   border: 2px solid rgba(80, 80, 80, 0.45);
   border-radius: 6px;
+}
+
+#sandbox-colors {
+  width: 232px;
+  margin: 0 0 10px;
+}
+
+.sandbox-color-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 0 3px #000, 0 1px 2px #000;
+  margin: 0 0 6px 4px;
+}
+
+#sandbox-colors .color-picker {
+  margin-bottom: 0;
+}
+
+#sandbox-colors .swatch {
+  flex-basis: 22px;
+  width: 22px;
+  min-width: 22px;
+  max-width: 22px;
+  height: 22px;
 }
 
 #stats-wrap {
@@ -509,7 +578,7 @@ kbd {
   color: #444;
 }
 
-.start-panel button {
+.start-panel button:not(.swatch) {
   width: 100%;
   margin: 0 0 8px;
 }
