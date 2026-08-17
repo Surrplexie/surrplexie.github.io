@@ -1,0 +1,547 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #cdcdcd;
+  font-family: "Segoe UI", Tahoma, sans-serif;
+  color: #222;
+  user-select: none;
+}
+
+#game {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(40, 44, 52, 0.55);
+  z-index: 20;
+}
+
+.panel {
+  background: #ededed;
+  border: 4px solid #555;
+  border-radius: 12px;
+  padding: 28px 32px 24px;
+  min-width: 360px;
+  text-align: center;
+  box-shadow: 0 12px 0 rgba(0, 0, 0, 0.12);
+}
+
+.start-panel h1,
+#death h1 {
+  font-size: 42px;
+  letter-spacing: 0.5px;
+  color: #3a3a3a;
+}
+
+.tagline {
+  color: #666;
+  margin: 6px 0 18px;
+}
+
+label {
+  display: block;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 16px;
+}
+
+input[type="text"] {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 12px;
+  font-size: 16px;
+  border: 3px solid #888;
+  border-radius: 8px;
+  outline: none;
+  background: #fff;
+}
+
+input[type="text"]:focus {
+  border-color: #00b2e1;
+}
+
+button {
+  cursor: pointer;
+  border: 3px solid #555;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 16px;
+  font-weight: 700;
+  background: #ddd;
+  color: #333;
+  margin: 4px;
+}
+
+button:hover {
+  filter: brightness(1.05);
+}
+
+button.primary {
+  background: #00b2e1;
+  color: #fff;
+  width: 100%;
+  margin: 0 0 8px;
+  padding: 12px;
+  font-size: 18px;
+}
+
+.controls-help {
+  margin-top: 16px;
+  text-align: left;
+  font-size: 13px;
+  color: #555;
+  line-height: 1.7;
+}
+
+kbd {
+  display: inline-block;
+  background: #fff;
+  border: 2px solid #999;
+  border-bottom-width: 3px;
+  border-radius: 4px;
+  padding: 0 6px;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+#hud {
+  pointer-events: none;
+}
+
+#scoreboard {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.28);
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 8px;
+  min-width: 180px;
+  z-index: 5;
+}
+
+#scoreboard h2 {
+  font-size: 14px;
+  margin-bottom: 6px;
+  opacity: 0.9;
+}
+
+#leader-list {
+  list-style: none;
+  font-size: 13px;
+}
+
+#leader-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 1px 0;
+}
+
+#leader-list li.you {
+  color: #7fe3ff;
+  font-weight: 700;
+}
+
+#minimap-wrap {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 5;
+  background: rgba(0, 0, 0, 0.28);
+  padding: 6px;
+  border-radius: 8px;
+}
+
+#minimap {
+  display: block;
+  background: #b8b8b8;
+  border: 3px solid #555;
+  border-radius: 4px;
+}
+
+#stats-panel {
+  position: fixed;
+  left: 12px;
+  bottom: 52px;
+  z-index: 6;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  border-radius: 4px;
+  padding: 3px 6px 3px 3px;
+  cursor: pointer;
+  width: 250px;
+  border: 2px solid transparent;
+}
+
+.stat-row:hover {
+  border-color: #fff;
+}
+
+.stat-row.maxed {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.stat-key {
+  width: 18px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.8;
+}
+
+.stat-pips {
+  display: flex;
+  gap: 2px;
+  flex: 1;
+}
+
+.stat-pips span {
+  flex: 1;
+  height: 12px;
+  background: #333;
+  border-radius: 1px;
+}
+
+.stat-pips span.on {
+  background: var(--pip);
+}
+
+.stat-name {
+  width: 92px;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: right;
+}
+
+#xp-wrap {
+  position: fixed;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  width: min(420px, 70vw);
+  z-index: 5;
+}
+
+#xp-label {
+  text-align: center;
+  font-weight: 800;
+  color: #3a3a3a;
+  font-size: 14px;
+  margin-bottom: 4px;
+  text-shadow: 0 1px 0 #fff;
+}
+
+#xp-bar {
+  height: 18px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 3px solid #555;
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+#xp-fill {
+  height: 100%;
+  width: 0%;
+  background: #8dff6e;
+}
+
+#class-panel {
+  position: fixed;
+  left: 12px;
+  top: 12px;
+  z-index: 7;
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  padding: 12px;
+  border-radius: 10px;
+  min-width: 220px;
+}
+
+#class-panel h2 {
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+#class-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.class-btn {
+  background: #00b2e1;
+  color: #fff;
+  border-color: #226;
+  text-align: left;
+  width: 100%;
+  margin: 0;
+}
+
+.class-btn small {
+  display: block;
+  font-weight: 500;
+  opacity: 0.9;
+  font-size: 12px;
+}
+
+#death-stats,
+#best-score {
+  margin: 8px 0;
+  color: #444;
+}
+
+.start-panel button {
+  width: 100%;
+  margin: 0 0 8px;
+}
+
+.ingame-edit {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 8;
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  border-color: #333;
+  font-size: 13px;
+  padding: 6px 12px;
+}
+
+#workshop {
+  z-index: 30;
+  align-items: stretch;
+  padding: 16px;
+  background: rgba(20, 22, 28, 0.72);
+}
+
+.workshop {
+  display: grid;
+  grid-template-columns: 220px minmax(280px, 1fr) 340px;
+  gap: 12px;
+  width: min(1180px, 100%);
+  height: min(860px, 100%);
+  margin: auto;
+  background: #e8e8e8;
+  border: 4px solid #555;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.ws-col,
+.ws-preview {
+  padding: 12px;
+  overflow: auto;
+}
+
+.ws-col {
+  background: #dedede;
+}
+
+.ws-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.ws-head h2,
+.ws-edit h2,
+.ws-edit h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.ws-edit h3 {
+  margin-top: 14px;
+  font-size: 13px;
+  color: #555;
+}
+
+#tank-count {
+  font-size: 11px;
+  color: #666;
+}
+
+#tank-search {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+#tank-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: calc(100% - 120px);
+  overflow: auto;
+  margin-bottom: 8px;
+}
+
+.tank-item {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin: 0;
+  text-align: left;
+  font-size: 13px;
+  padding: 6px 8px;
+  background: #f4f4f4;
+}
+
+.tank-item.active {
+  background: #00b2e1;
+  color: #fff;
+}
+
+.tank-item small {
+  opacity: 0.7;
+}
+
+.ws-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #cdcdcd;
+}
+
+#preview {
+  background: #cdcdcd;
+  border: 3px solid #555;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+}
+
+.ws-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  width: 100%;
+}
+
+.ws-actions button {
+  margin: 0;
+}
+
+.ws-edit label {
+  margin-bottom: 8px;
+}
+
+.ws-edit input[type="range"] {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.ws-edit select,
+.ws-edit input[type="number"],
+.ws-edit textarea {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 6px 8px;
+  border: 3px solid #888;
+  border-radius: 8px;
+  font: inherit;
+  background: #fff;
+}
+
+.ws-edit textarea {
+  min-height: 120px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 11px;
+}
+
+.ws-edit textarea.bad {
+  border-color: #e85d5d;
+}
+
+.ws-edit .check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ws-edit .check input {
+  width: auto;
+  margin: 0;
+}
+
+#gun-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.gun-chip {
+  margin: 0;
+  font-size: 12px;
+  padding: 4px 8px;
+}
+
+.gun-chip.active {
+  background: #00b2e1;
+  color: #fff;
+}
+
+.row {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.row button {
+  flex: 1;
+  margin: 0;
+  font-size: 12px;
+  padding: 6px;
+}
+
+@media (max-width: 980px) {
+  .workshop {
+    grid-template-columns: 1fr;
+    height: 100%;
+  }
+}

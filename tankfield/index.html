@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Tankfield</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="start" class="overlay">
+    <div class="panel start-panel">
+      <h1>Tankfield</h1>
+      <p class="tagline">Local arena · 100+ tanks · built-in workshop</p>
+      <label>
+        Nickname
+        <input id="name-input" type="text" maxlength="16" placeholder="Unnamed Tank" autocomplete="off" />
+      </label>
+      <button id="play-btn" class="primary">Play (level up)</button>
+      <button id="sandbox-btn">Sandbox (level 45)</button>
+      <button id="workshop-btn">Tank workshop</button>
+      <div class="controls-help">
+        <div><kbd>WASD</kbd> move · <kbd>Mouse</kbd> aim/shoot</div>
+        <div><kbd>E</kbd> auto fire · <kbd>C</kbd> auto spin · <kbd>T</kbd> editor</div>
+        <div><kbd>1</kbd>–<kbd>8</kbd> upgrade stats</div>
+        <div>Hold fire to send drones to the cursor</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="hud" class="hidden">
+    <div id="scoreboard">
+      <h2>Leaderboard</h2>
+      <ol id="leader-list"></ol>
+    </div>
+
+    <div id="minimap-wrap">
+      <canvas id="minimap" width="168" height="168"></canvas>
+    </div>
+
+    <div id="stats-panel"></div>
+
+    <div id="class-panel" class="hidden">
+      <h2>Upgrade your tank</h2>
+      <div id="class-choices"></div>
+    </div>
+
+    <button id="edit-ingame" class="ingame-edit">Workshop (T)</button>
+
+    <div id="xp-wrap">
+      <div id="xp-label">Lvl 1</div>
+      <div id="xp-bar"><div id="xp-fill"></div></div>
+    </div>
+  </div>
+
+  <div id="death" class="overlay hidden">
+    <div class="panel">
+      <h1>You died</h1>
+      <p id="death-msg"></p>
+      <p id="death-stats"></p>
+      <p id="best-score"></p>
+      <button id="again-btn" class="primary">Play again</button>
+      <button id="menu-btn">Main menu</button>
+    </div>
+  </div>
+
+  <div id="workshop" class="overlay hidden">
+    <div class="workshop">
+      <aside class="ws-col">
+        <div class="ws-head">
+          <h2>Catalog</h2>
+          <span id="tank-count"></span>
+        </div>
+        <input id="tank-search" type="text" placeholder="Search tanks" />
+        <div id="tank-list"></div>
+        <button id="new-tank">New custom tank</button>
+      </aside>
+
+      <section class="ws-preview">
+        <canvas id="preview" width="360" height="280"></canvas>
+        <div class="ws-actions">
+          <button id="play-tank" class="primary">Play this tank</button>
+          <button id="play-maxed">Play maxed</button>
+          <button id="save-tank">Save custom</button>
+          <button id="close-workshop">Close</button>
+        </div>
+      </section>
+
+      <aside class="ws-col ws-edit">
+        <h2>Editor</h2>
+        <label>Name <input id="ed-name" type="text" maxlength="24" /></label>
+        <label>Body
+          <select id="ed-body">
+            <option value="0">Circle</option>
+            <option value="3">Triangle</option>
+            <option value="4">Square (director)</option>
+            <option value="5">Pentagon</option>
+            <option value="6">Hexagon</option>
+          </select>
+        </label>
+        <label class="check"><input id="ed-smasher" type="checkbox" /> Smasher ring</label>
+        <label>Max drones <input id="ed-drones" type="number" min="0" max="24" /></label>
+
+        <h3>Guns</h3>
+        <div id="gun-list"></div>
+        <div class="row">
+          <button id="add-gun">Add gun</button>
+          <button id="dup-gun">Duplicate</button>
+          <button id="del-gun">Remove</button>
+        </div>
+        <label>Type
+          <select id="ed-type">
+            <option value="bullet">Bullet</option>
+            <option value="trap">Trap</option>
+            <option value="drone">Drone</option>
+            <option value="swarm">Swarm</option>
+            <option value="missile">Missile</option>
+            <option value="auto">Auto turret</option>
+            <option value="deco">Decoration</option>
+          </select>
+        </label>
+        <label>Length <span id="ed-length-v"></span><input id="ed-length" type="range" min="2" max="36" step="0.5" /></label>
+        <label>Width <span id="ed-width-v"></span><input id="ed-width" type="range" min="2" max="24" step="0.5" /></label>
+        <label>Aspect <span id="ed-aspect-v"></span><input id="ed-aspect" type="range" min="-1.6" max="2.2" step="0.05" /></label>
+        <label>X offset <span id="ed-x-v"></span><input id="ed-x" type="range" min="-12" max="24" step="0.5" /></label>
+        <label>Y offset <span id="ed-y-v"></span><input id="ed-y" type="range" min="-16" max="16" step="0.5" /></label>
+        <label>Angle <span id="ed-angle-v"></span><input id="ed-angle" type="range" min="-180" max="180" step="1" /></label>
+        <label>Delay <span id="ed-delay-v"></span><input id="ed-delay" type="range" min="0" max="1" step="0.05" /></label>
+        <label>Spread <span id="ed-spread-v"></span><input id="ed-spread" type="range" min="0" max="0.5" step="0.01" /></label>
+
+        <h3>Modifiers</h3>
+        <label>Damage <span id="mod-damage-v"></span><input id="mod-damage" type="range" min="0.3" max="4" step="0.1" /></label>
+        <label>Reload <span id="mod-reload-v"></span><input id="mod-reload" type="range" min="0.3" max="4" step="0.1" /></label>
+        <label>Speed <span id="mod-speed-v"></span><input id="mod-speed" type="range" min="0.4" max="2.5" step="0.1" /></label>
+        <label>Size <span id="mod-size-v"></span><input id="mod-size" type="range" min="0.6" max="2.2" step="0.1" /></label>
+        <label>FOV <span id="mod-fov-v"></span><input id="mod-fov" type="range" min="0.7" max="2.2" step="0.1" /></label>
+        <label>Health <span id="mod-health-v"></span><input id="mod-health" type="range" min="0.4" max="4" step="0.1" /></label>
+
+        <h3>JSON</h3>
+        <textarea id="tank-json" spellcheck="false"></textarea>
+        <button id="copy-json">Copy JSON</button>
+      </aside>
+    </div>
+  </div>
+
+  <script src="js/defs.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/editor.js"></script>
+</body>
+</html>
