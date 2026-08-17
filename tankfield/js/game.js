@@ -255,16 +255,16 @@
     }
     if (tank && tank.closer) {
       return {
-        maxHealth: 80000,
-        regen: 400,
-        bodyDamage: 140,
-        bulletSpeed: 11,
-        bulletPen: 10,
-        bulletDamage: 90,
-        reload: 0.52,
-        moveSpeed: BASE_MOVE * 1.45,
-        fov: 1.35,
-        bulletSize: 1.2,
+        maxHealth: 50000,
+        regen: 250,
+        bodyDamage: 9000,
+        bulletSpeed: 8.2,
+        bulletPen: 20,
+        bulletDamage: 12000,
+        reload: 1.55,
+        moveSpeed: BASE_MOVE * 1.22,
+        fov: 1.2,
+        bulletSize: 3.1,
         maxDrones: 0,
       };
     }
@@ -367,6 +367,7 @@
     const m = modsOf(getDef(tank));
     tank.r = (20 + Math.min(tank.level, 45) * 0.18) * (m.size || 1);
     if (tank.mothership) tank.r = 82;
+    if (tank.closer) tank.r = 46;
     const st = tankStats(tank);
     const ratio = tank.maxHealth > 0 ? tank.health / tank.maxHealth : 1;
     tank.maxHealth = st.maxHealth;
@@ -515,6 +516,7 @@
     applyLevel(tank);
     tank.health = tank.maxHealth;
     if (tank.mothership) tank.r = 82;
+    if (tank.closer) tank.r = 46;
   }
 
   function spawnMotherships() {
@@ -795,13 +797,14 @@
     const gs = gun.stats || {};
     const speedMul = gs.speed || (kind === "trap" ? 0.45 : kind === "drone" || kind === "swarm" ? 0.7 : kind === "missile" ? 0.55 : 1);
     const speed = st.bulletSpeed * 58 * speedMul;
-    const recoil = gun.recoil != null ? gun.recoil : kind === "trap" ? 0.2 : 0.55;
-    tank.vx -= Math.cos(ang) * recoil * (st.bulletDamage / 10);
-    tank.vy -= Math.sin(ang) * recoil * (st.bulletDamage / 10);
+    const recoil = tank.closer ? 0.4 : (gun.recoil != null ? gun.recoil : kind === "trap" ? 0.2 : 0.55);
+    tank.vx -= Math.cos(ang) * recoil * (tank.closer ? 8 : st.bulletDamage / 10);
+    tank.vy -= Math.sin(ang) * recoil * (tank.closer ? 8 : st.bulletDamage / 10);
     const sizeMul = gun.size || gs.size || (kind === "swarm" ? 0.55 : kind === "trap" ? 1.15 : 1);
     const lifeBase = kind === "trap" ? 9 : kind === "drone" || kind === "swarm" ? 999 : kind === "missile" ? 2.4 : 1.55 + st.fov * 0.15;
     let br = (7.2 * st.bulletSize * sizeMul) * (0.85 + tank.r / 40);
     if (tank.mothership && kind !== "drone" && kind !== "swarm") br = 8.2 * st.bulletSize * sizeMul;
+    if (tank.closer) br = 22;
     state.bullets.push({
       x: tank.x + ox,
       y: tank.y + oy,
@@ -982,8 +985,8 @@
         name: "Arena Closer",
         ai: true,
         closer: true,
-        classId: "annihilator",
-        color: "#ffe45c",
+        classId: "arena_closer",
+        color: COLORS.square,
         score: xpForLevel(LEVEL_CAP),
         pos,
       });

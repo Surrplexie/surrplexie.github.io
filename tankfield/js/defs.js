@@ -1130,9 +1130,26 @@
     needLevel: 45,
   });
 
+  def("arena_closer", {
+    name: "Arena Closer",
+    desc: "Classic yellow closer · huge shell, nearly instant kill",
+    guns: [gun(22, 16, 1, 0, 0, 0, 0, { recoil: 1.15 })],
+    health: 8,
+    speed: 1.15,
+    fov: 1.25,
+    reload: 1.85,
+    bulletSpeed: 0.95,
+    bulletDamage: 8,
+    bulletPen: 4,
+    bulletSize: 2.4,
+    bodyDamage: 6,
+    upgrades: [],
+    needLevel: 45,
+  });
+
   const skipAuto = new Set([
     "auto3", "auto5", "auto8", "auto2", "autosmasher", "autogunner", "autosniper", "engineer",
-    "mothership",
+    "mothership", "arena_closer",
   ]);
   for (const id of Object.keys(tanks)) {
     const t = tanks[id];
