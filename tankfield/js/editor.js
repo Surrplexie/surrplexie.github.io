@@ -369,7 +369,8 @@
 
   function close() {
     workshop.classList.add("hidden");
-    window.TankfieldGame.state.paused = false;
+    const g = window.TankfieldGame;
+    if (g && g.state) g.state.paused = !!g.state.userPaused;
   }
 
   bind();

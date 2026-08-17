@@ -102,6 +102,7 @@ html, body {
 }
 
 .team-row { grid-template-columns: 1fr 1fr; }
+.team-row.teams-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
 .action-row { grid-template-columns: 1fr 1fr; margin-top: 4px; }
 
 .server-filters {
@@ -167,7 +168,7 @@ html, body {
 
 #start .server-row {
   display: grid;
-  grid-template-columns: 88px 1fr 52px;
+  grid-template-columns: 88px 1fr 64px;
   align-items: center;
   width: 100%;
   margin: 0;
@@ -193,6 +194,7 @@ html, body {
 .team-chip[data-team="blue"] { background: #00b2e1; color: #fff; }
 .team-chip[data-team="red"] { background: #f14e54; color: #fff; }
 .team-chip[data-team="green"] { background: #8abc3f; color: #fff; }
+.team-chip[data-team="purple"] { background: #be7ff5; color: #fff; }
 .team-chip { opacity: 0.5; }
 .team-chip.selected { opacity: 1; }
 
@@ -756,9 +758,51 @@ kbd {
   border: 0;
 }
 
-#death #menu-btn {
+#death #menu-btn,
+#pause #pause-menu-btn {
   background: #d8d8d8;
   color: #555;
+}
+
+#pause {
+  z-index: 25;
+}
+
+#spectate-bar {
+  position: fixed;
+  left: 50%;
+  top: 12px;
+  transform: translateX(-50%);
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(30, 30, 30, 0.72);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  pointer-events: auto;
+}
+
+#spectate-bar.hidden {
+  display: none !important;
+}
+
+#spectate-bar button {
+  border: 0;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  background: #fff;
+  color: #111;
+}
+
+#close-timer:empty {
+  display: none;
 }
 
 .ingame-edit {

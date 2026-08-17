@@ -54,8 +54,12 @@
     blue: { id: "blue", name: "Blue", color: "#00b2e1" },
     red: { id: "red", name: "Red", color: "#f14e54" },
     green: { id: "green", name: "Green", color: "#8abc3f" },
+    purple: { id: "purple", name: "Purple", color: "#be7ff5" },
   };
   const BASE_W = 560;
+  const FFA_CLOSE_AT = 300;
+  const DOM_HOLD = 8;
+  const TEAM4 = ["blue", "red", "green", "purple"];
 
   const STATS = [
     { key: "regen", name: "Health Regen", color: "#e85d9c" },
@@ -101,12 +105,22 @@
     skillPoints: document.getElementById("skill-points"),
     fps: document.getElementById("fps-label"),
     arenaMode: document.getElementById("arena-mode"),
+    closeTimer: document.getElementById("close-timer"),
     skipUpgrade: document.getElementById("skip-upgrade"),
     showClasses: document.getElementById("show-classes"),
     deathMsg: document.getElementById("death-msg"),
     deathStats: document.getElementById("death-stats"),
     bestScore: document.getElementById("best-score"),
     editInGame: document.getElementById("edit-ingame"),
+    pause: document.getElementById("pause"),
+    resume: document.getElementById("resume-btn"),
+    pauseMenu: document.getElementById("pause-menu-btn"),
+    spectateBtn: document.getElementById("spectate-btn"),
+    spectateBar: document.getElementById("spectate-bar"),
+    spectateLabel: document.getElementById("spectate-label"),
+    spectateNext: document.getElementById("spectate-next"),
+    spectateAgain: document.getElementById("spectate-again"),
+    spectateMenu: document.getElementById("spectate-menu"),
   };
 
   const keys = new Set();
@@ -146,6 +160,14 @@
     closing: false,
     closeAt: 0,
     closersSpawned: false,
+    userPaused: false,
+    spectating: false,
+    spectateTarget: null,
+    lastKiller: null,
+    walls: [],
+    doms: [],
+    domHold: null,
+    domHoldT: 0,
     fpsT: 0,
     frames: 0,
   };
@@ -193,20 +215,39 @@
   }
 
   function zoneAt(x, y) {
-    if (state.mode !== "tdm") return null;
-    if (x <= BASE_W) return "blue";
-    if (x >= WORLD.w - BASE_W) return "red";
-    return null;
+    if (state.mode === "tdm") {
+      if (x <= BASE_W) return "blue";
+      if (x >= WORLD.w - BASE_W) return "red";
+      return null;
+    }
+    if (state.mode !== "4tdm") return null;
+    const dL = BASE_W - x;
+    const dR = x - (WORLD.w - BASE_W);
+    const dT = BASE_W - y;
+    const dB = y - (WORLD.h - BASE_W);
+    let best = null;
+    let bestD = 0;
+    if (x <= BASE_W && dL > bestD) { best = "blue"; bestD = dL; }
+    if (x >= WORLD.w - BASE_W && dR > bestD) { best = "red"; bestD = dR; }
+    if (y <= BASE_W && dT > bestD) { best = "green"; bestD = dT; }
+    if (y >= WORLD.h - BASE_W && dB > bestD) { best = "purple"; bestD = dB; }
+    return best;
   }
 
   function spawnInBase(team) {
     const pad = 90;
+    if (state.mode === "4tdm") {
+      if (team === "green") return { x: rand(BASE_W + pad, WORLD.w - BASE_W - pad), y: rand(pad, BASE_W - pad) };
+      if (team === "purple") return { x: rand(BASE_W + pad, WORLD.w - BASE_W - pad), y: rand(WORLD.h - BASE_W + pad, WORLD.h - pad) };
+    }
     const x0 = team === "blue" ? pad : WORLD.w - BASE_W + pad;
     const x1 = team === "blue" ? BASE_W - pad : WORLD.w - pad;
     return { x: rand(x0, x1), y: rand(pad, WORLD.h - pad) };
   }
 
   function baseCenter(team) {
+    if (team === "green") return { x: WORLD.w * 0.5, y: BASE_W * 0.5 };
+    if (team === "purple") return { x: WORLD.w * 0.5, y: WORLD.h - BASE_W * 0.5 };
     return {
       x: team === "blue" ? BASE_W * 0.5 : WORLD.w - BASE_W * 0.5,
       y: WORLD.h * 0.5,
@@ -302,9 +343,11 @@
   }
 
   function randomInWorld(margin = 80) {
-    for (let i = 0; i < 24; i++) {
+    for (let i = 0; i < 40; i++) {
       const p = { x: rand(margin, WORLD.w - margin), y: rand(margin, WORLD.h - margin) };
-      if (!zoneAt(p.x, p.y)) return p;
+      if (zoneAt(p.x, p.y)) continue;
+      if (hitsWall(p.x, p.y, margin * 0.45)) continue;
+      return p;
     }
     return { x: WORLD.w / 2, y: WORLD.h / 2 };
   }
@@ -315,6 +358,189 @@
       if ((p.x - x) ** 2 + (p.y - y) ** 2 > minDist * minDist) return p;
     }
     return randomInWorld(120);
+  }
+
+  function hitsWall(x, y, r) {
+    for (const w of state.walls) {
+      const nx = clamp(x, w.x, w.x + w.w);
+      const ny = clamp(y, w.y, w.y + w.h);
+      const dx = x - nx;
+      const dy = y - ny;
+      if (dx * dx + dy * dy < r * r) return true;
+    }
+    return false;
+  }
+
+  function pushOutWalls(ent) {
+    if (!state.walls.length) return false;
+    let hit = false;
+    for (const w of state.walls) {
+      const nx = clamp(ent.x, w.x, w.x + w.w);
+      const ny = clamp(ent.y, w.y, w.y + w.h);
+      let dx = ent.x - nx;
+      let dy = ent.y - ny;
+      let d2 = dx * dx + dy * dy;
+      if (d2 >= ent.r * ent.r) continue;
+      hit = true;
+      if (d2 < 1e-6) {
+        const left = ent.x - w.x;
+        const right = w.x + w.w - ent.x;
+        const top = ent.y - w.y;
+        const bot = w.y + w.h - ent.y;
+        const m = Math.min(left, right, top, bot);
+        if (m === left) { ent.x = w.x - ent.r; ent.vx = Math.min(0, ent.vx); }
+        else if (m === right) { ent.x = w.x + w.w + ent.r; ent.vx = Math.max(0, ent.vx); }
+        else if (m === top) { ent.y = w.y - ent.r; ent.vy = Math.min(0, ent.vy); }
+        else { ent.y = w.y + w.h + ent.r; ent.vy = Math.max(0, ent.vy); }
+        continue;
+      }
+      const d = Math.sqrt(d2);
+      const overlap = ent.r - d + 0.5;
+      dx /= d;
+      dy /= d;
+      ent.x += dx * overlap;
+      ent.y += dy * overlap;
+      const vn = ent.vx * dx + ent.vy * dy;
+      if (vn < 0) {
+        ent.vx -= vn * dx;
+        ent.vy -= vn * dy;
+      }
+    }
+    return hit;
+  }
+
+  function buildMaze() {
+    const cols = 10;
+    const rows = 10;
+    const thick = 54;
+    const pad = 70;
+    const cellW = (WORLD.w - pad * 2) / cols;
+    const cellH = (WORLD.h - pad * 2) / rows;
+    const east = Array.from({ length: rows }, () => Array(cols).fill(true));
+    const south = Array.from({ length: rows }, () => Array(cols).fill(true));
+    const seen = Array.from({ length: rows }, () => Array(cols).fill(false));
+    const stack = [[0, 0]];
+    seen[0][0] = true;
+    while (stack.length) {
+      const [r, c] = stack[stack.length - 1];
+      const opts = [];
+      if (r > 0 && !seen[r - 1][c]) opts.push([r - 1, c, "N"]);
+      if (r < rows - 1 && !seen[r + 1][c]) opts.push([r + 1, c, "S"]);
+      if (c > 0 && !seen[r][c - 1]) opts.push([r, c - 1, "W"]);
+      if (c < cols - 1 && !seen[r][c + 1]) opts.push([r, c + 1, "E"]);
+      if (!opts.length) {
+        stack.pop();
+        continue;
+      }
+      const [nr, nc, dir] = opts[irand(0, opts.length - 1)];
+      if (dir === "E") east[r][c] = false;
+      else if (dir === "W") east[r][nc] = false;
+      else if (dir === "S") south[r][c] = false;
+      else south[nr][c] = false;
+      seen[nr][nc] = true;
+      stack.push([nr, nc]);
+    }
+    for (let i = 0; i < 22; i++) {
+      if (Math.random() < 0.5) east[irand(0, rows - 1)][irand(0, cols - 2)] = false;
+      else south[irand(0, rows - 2)][irand(0, cols - 1)] = false;
+    }
+    const walls = [];
+    const x0 = pad;
+    const y0 = pad;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const x = x0 + c * cellW;
+        const y = y0 + r * cellH;
+        if (c < cols - 1 && east[r][c]) {
+          walls.push({ x: x + cellW - thick / 2, y: y + 8, w: thick, h: cellH - 16 });
+        }
+        if (r < rows - 1 && south[r][c]) {
+          walls.push({ x: x + 8, y: y + cellH - thick / 2, w: cellW - 16, h: thick });
+        }
+      }
+    }
+    state.walls = walls;
+  }
+
+  function spawnDoms() {
+    const inset = 980;
+    state.doms = [
+      { x: inset, y: inset, r: 118, team: null, progress: 0 },
+      { x: WORLD.w - inset, y: inset, r: 118, team: null, progress: 0 },
+      { x: inset, y: WORLD.h - inset, r: 118, team: null, progress: 0 },
+      { x: WORLD.w - inset, y: WORLD.h - inset, r: 118, team: null, progress: 0 },
+    ];
+  }
+
+  function updateDoms(dt) {
+    if (state.mode !== "domination") return;
+    for (const d of state.doms) {
+      const inside = [];
+      for (const t of state.tanks) {
+        if (!t.alive || t.closer || t.mothership || !t.team) continue;
+        if (dist2(t, d) < d.r * d.r) inside.push(t);
+      }
+      const teams = new Set(inside.map((t) => t.team));
+      if (teams.size === 1) {
+        const team = inside[0].team;
+        if (d.team === team) d.progress = 1;
+        else {
+          d.progress += dt / 4.2;
+          if (d.progress >= 1) {
+            d.team = team;
+            d.progress = 1;
+            floater(d.x, d.y - 24, `${TEAMS[team].name} captured`);
+          }
+        }
+      } else if (teams.size > 1) {
+        d.progress = Math.max(0, d.progress - dt * 0.35);
+      } else if (!d.team) {
+        d.progress = Math.max(0, d.progress - dt * 0.2);
+      } else {
+        d.progress = 1;
+      }
+    }
+    const counts = { blue: 0, red: 0 };
+    for (const d of state.doms) if (d.team) counts[d.team] += 1;
+    const lead = counts.blue >= 3 ? "blue" : counts.red >= 3 ? "red" : null;
+    if (!lead) {
+      state.domHold = null;
+      state.domHoldT = 0;
+      return;
+    }
+    if (state.domHold !== lead) {
+      state.domHold = lead;
+      state.domHoldT = state.time;
+    }
+    if (state.time - state.domHoldT >= DOM_HOLD) beginArenaClose();
+  }
+
+  function botCountFor(mode) {
+    if (mode === "sandbox") return 0;
+    if (mode === "maze") return 8;
+    return 11;
+  }
+
+  function modeLabel(mode) {
+    return ({
+      ffa: "FFA",
+      tdm: "2 Teams",
+      "4tdm": "4 Teams",
+      manhunt: "Manhunt",
+      tag: "Tag",
+      protect: "Protect",
+      maze: "Maze",
+      domination: "Domination",
+      sandbox: "Sandbox",
+    })[mode] || "FFA";
+  }
+
+  function pickStartTeam(mode, opts) {
+    const t = opts.team;
+    if (mode === "tdm" || mode === "domination") return t === "red" ? "red" : "blue";
+    if (mode === "4tdm") return TEAM4.includes(t) ? t : "blue";
+    if (mode === "tag" || mode === "protect") return t === "red" ? "red" : "green";
+    return null;
   }
 
   function createTank(opts) {
@@ -421,28 +647,39 @@
     const starterTris = irand(1, 3);
     for (let i = 0; i < starterTris; i++) state.shapes.push(createShape("triangle"));
     state.shapes.push(createShape("pentagon"));
-    if (state.mode !== "protect") state.shapes.push(createShape("alpha"));
+    if (state.mode !== "protect" && state.mode !== "maze") state.shapes.push(createShape("alpha"));
     for (let i = 0; i < 2; i++) state.shapes.push(createShape("crasher"));
   }
 
   function spawnBots() {
     const names = BOT_NAMES.slice().sort(() => Math.random() - 0.5);
     const teams = [];
-    if (state.mode === "tdm" && state.player && state.player.team) {
-      const other = state.player.team === "blue" ? "red" : "blue";
-      for (let i = 0; i < 5; i++) teams.push(state.player.team);
-      for (let i = 0; i < 6; i++) teams.push(other);
-    } else if (state.mode === "tag" && state.player && state.player.team) {
-      const other = state.player.team === "green" ? "red" : "green";
-      for (let i = 0; i < 5; i++) teams.push(state.player.team);
-      for (let i = 0; i < 6; i++) teams.push(other);
-    } else if (state.mode === "protect") {
-      const mine = (state.player && state.player.team) || "green";
-      const other = mine === "red" ? "green" : "red";
+    const mine = state.player && state.player.team;
+    if (state.mode === "tdm" && mine) {
+      const other = mine === "blue" ? "red" : "blue";
       for (let i = 0; i < 5; i++) teams.push(mine);
       for (let i = 0; i < 6; i++) teams.push(other);
+    } else if (state.mode === "4tdm" && mine) {
+      for (let i = 0; i < 2; i++) teams.push(mine);
+      for (const team of TEAM4) {
+        if (team === mine) continue;
+        for (let i = 0; i < 3; i++) teams.push(team);
+      }
+    } else if (state.mode === "domination" && mine) {
+      const other = mine === "blue" ? "red" : "blue";
+      for (let i = 0; i < 5; i++) teams.push(mine);
+      for (let i = 0; i < 6; i++) teams.push(other);
+    } else if (state.mode === "tag" && mine) {
+      const other = mine === "green" ? "red" : "green";
+      for (let i = 0; i < 5; i++) teams.push(mine);
+      for (let i = 0; i < 6; i++) teams.push(other);
+    } else if (state.mode === "protect") {
+      const own = mine || "green";
+      const other = own === "red" ? "green" : "red";
+      for (let i = 0; i < 5; i++) teams.push(own);
+      for (let i = 0; i < 6; i++) teams.push(other);
     }
-    const nBots = teams.length || 11;
+    const nBots = teams.length || botCountFor(state.mode);
     for (let i = 0; i < nBots; i++) {
       const team = teams[i] || null;
       const score = irand(0, 1800);
@@ -453,11 +690,13 @@
         classId: "basic",
         team,
         color: colorFor({ team }),
-        pos: state.mode === "tdm" && team
+        pos: (state.mode === "tdm" || state.mode === "4tdm") && team
           ? spawnInBase(team)
           : state.mode === "protect" && mothershipOf(team)
             ? around(mothershipOf(team).x, mothershipOf(team).y, 220)
-            : awayFrom(WORLD.w / 2, WORLD.h / 2, 500),
+            : state.mode === "domination"
+              ? awayFrom(WORLD.w / 2, WORLD.h / 2, 400)
+              : awayFrom(WORLD.w / 2, WORLD.h / 2, 500),
       });
       autoUpgradeBot(bot);
       bot.health = bot.maxHealth;
@@ -617,10 +856,18 @@
     state.bullets = [];
     state.particles = [];
     state.floaters = [];
+    state.walls = [];
+    state.doms = [];
+    state.domHold = null;
+    state.domHoldT = 0;
     state.autoFire = false;
     state.autoSpin = false;
     state.time = 0;
     state.paused = false;
+    state.userPaused = false;
+    state.spectating = false;
+    state.spectateTarget = null;
+    state.lastKiller = null;
     state.alphaRespawnAt = 0;
     state.pentagonAt = rand(30, 60);
     state.triangleAt = rand(60, 180);
@@ -633,12 +880,10 @@
     state.closing = false;
     state.closeAt = 0;
     state.closersSpawned = false;
+    if (state.mode === "maze") buildMaze();
+    if (state.mode === "domination") spawnDoms();
     populateWorld();
-    const team = state.mode === "tdm"
-      ? (opts.team === "red" ? "red" : "blue")
-      : state.mode === "tag" || state.mode === "protect"
-        ? (opts.team === "red" ? "red" : "green")
-        : null;
+    const team = pickStartTeam(state.mode, opts);
     if (state.mode === "protect") spawnMotherships();
     const home = team ? mothershipOf(team) : null;
     const player = createTank({
@@ -648,7 +893,7 @@
       classId: opts.classId || "basic",
       customDef: opts.customDef || null,
       score: opts.sandbox ? xpForLevel(LEVEL_CAP) : 0,
-      pos: state.mode === "tdm" && team
+      pos: (state.mode === "tdm" || state.mode === "4tdm") && team
         ? spawnInBase(team)
         : home
           ? around(home.x, home.y, 220)
@@ -671,17 +916,18 @@
     state.camera.y = player.y;
     running = true;
     state.paused = false;
+    state.userPaused = false;
     last = performance.now();
     els.start.classList.add("hidden");
     els.death.classList.add("hidden");
+    if (els.pause) els.pause.classList.add("hidden");
+    if (els.spectateBar) els.spectateBar.classList.add("hidden");
     els.hud.classList.remove("hidden");
     const ws = document.getElementById("workshop");
     if (ws) ws.classList.add("hidden");
     const colorBox = document.getElementById("sandbox-colors");
     if (colorBox) colorBox.classList.toggle("hidden", state.mode !== "sandbox");
-    if (els.arenaMode) {
-      els.arenaMode.textContent = state.mode === "tdm" ? "2 Teams" : state.mode === "sandbox" ? "Sandbox" : state.mode === "manhunt" ? "Manhunt" : state.mode === "tag" ? "Tag" : state.mode === "protect" ? "Protect" : "FFA";
-    }
+    if (els.arenaMode) els.arenaMode.textContent = modeLabel(state.mode);
       try { renderStats(); } catch (err) { console.error(err); }
       try { renderClassPanel(); } catch (err) { console.error(err); }
       render();
@@ -708,6 +954,7 @@
     clearOwnedShots(tank);
     burst(tank.x, tank.y, tank.color, 18, 220);
     if (killer && killer.alive) {
+      state.lastKiller = killer;
       killer.kills = (killer.kills || 0) + 1;
       const huntedBonus = state.mode === "manhunt" && tank === state.hunted ? Math.max(80, Math.floor(tank.score * 0.2)) : 0;
       const gain = Math.max(20, Math.floor(tank.score * 0.45) + 20) + huntedBonus;
@@ -763,7 +1010,7 @@
     } else if (!tank.closer && !state.closing) {
       const team = tank.team;
       setTimeout(() => {
-        if (!running || !state.player || !state.player.alive || state.closing) return;
+        if (!running || state.closing) return;
         const score = irand(0, 400);
         const bot = createTank({
           name: tank.name,
@@ -772,11 +1019,11 @@
           classId: "basic",
           team,
           color: colorFor({ team }),
-          pos: state.mode === "tdm" && team
+          pos: (state.mode === "tdm" || state.mode === "4tdm") && team
             ? spawnInBase(team)
             : state.mode === "protect" && mothershipOf(team)
               ? around(mothershipOf(team).x, mothershipOf(team).y, 220)
-              : awayFrom(state.player.x, state.player.y, 900),
+              : awayFrom(WORLD.w / 2, WORLD.h / 2, 900),
         });
         autoUpgradeBot(bot);
         bot.health = bot.maxHealth;
@@ -808,6 +1055,89 @@
     els.deathStats.textContent = `Score ${Math.floor(tank.score)}  ·  Level ${tank.level}  ·  ${getDef(tank).name}`;
     els.bestScore.textContent = `Best score: ${Math.floor(best)}`;
     els.death.classList.remove("hidden");
+  }
+
+  function spectateList() {
+    return state.tanks.filter((t) => t.alive && !t.closer);
+  }
+
+  function cameraFocus() {
+    if (state.spectating && state.spectateTarget && state.spectateTarget.alive) return state.spectateTarget;
+    if (state.player && state.player.alive) return state.player;
+    return spectateList()[0] || state.player;
+  }
+
+  function beginSpectate() {
+    if (!running) return;
+    state.spectating = true;
+    els.death.classList.add("hidden");
+    if (els.pause) els.pause.classList.add("hidden");
+    state.userPaused = false;
+    const ws = document.getElementById("workshop");
+    state.paused = !!(ws && !ws.classList.contains("hidden"));
+    const list = spectateList();
+    const killer = state.lastKiller && state.lastKiller.alive ? state.lastKiller : null;
+    state.spectateTarget = killer || list[0] || null;
+    if (els.spectateBar) els.spectateBar.classList.remove("hidden");
+    updateSpectateLabel();
+    try { renderClassPanel(); } catch (err) {}
+  }
+
+  function cycleSpectate(dir) {
+    const list = spectateList();
+    if (!list.length) return;
+    let i = list.indexOf(state.spectateTarget);
+    if (i < 0) i = 0;
+    i = (i + dir + list.length) % list.length;
+    state.spectateTarget = list[i];
+    updateSpectateLabel();
+  }
+
+  function updateSpectateLabel() {
+    const t = state.spectateTarget;
+    if (els.spectateLabel) els.spectateLabel.textContent = t && t.alive ? `Spectating ${t.name}` : "Spectating";
+  }
+
+  function setUserPaused(on) {
+    state.userPaused = !!on;
+    const ws = document.getElementById("workshop");
+    const workshopOpen = ws && !ws.classList.contains("hidden");
+    state.paused = state.userPaused || workshopOpen;
+    if (els.pause) els.pause.classList.toggle("hidden", !state.userPaused);
+    if (state.userPaused) keys.clear();
+  }
+
+  function goToMenu() {
+    running = false;
+    state.userPaused = false;
+    state.paused = false;
+    state.spectating = false;
+    if (els.pause) els.pause.classList.add("hidden");
+    if (els.spectateBar) els.spectateBar.classList.add("hidden");
+    els.death.classList.add("hidden");
+    els.hud.classList.add("hidden");
+    els.start.classList.remove("hidden");
+    const ws = document.getElementById("workshop");
+    if (ws) ws.classList.add("hidden");
+  }
+
+  function handleEscape(e) {
+    const tag = (e.target && e.target.tagName) || "";
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") {
+      e.target.blur();
+      return;
+    }
+    const ws = document.getElementById("workshop");
+    if (ws && !ws.classList.contains("hidden")) {
+      if (window.TankWorkshop) window.TankWorkshop.close();
+      return;
+    }
+    if (!els.start.classList.contains("hidden")) return;
+    if (running && !els.death.classList.contains("hidden")) {
+      beginSpectate();
+      return;
+    }
+    if (running) setUserPaused(!state.userPaused);
   }
 
   function unitOf(tank) { return tank.r / 12; }
@@ -953,7 +1283,7 @@
       }
       state.crasherAt = state.time + rand(60, 120);
     }
-    if (counts.alpha < 1 && state.mode !== "protect" && state.alphaRespawnAt > 0 && state.time >= state.alphaRespawnAt) {
+    if (counts.alpha < 1 && state.mode !== "protect" && state.mode !== "maze" && state.alphaRespawnAt > 0 && state.time >= state.alphaRespawnAt) {
       state.shapes.push(createShape("alpha"));
       state.alphaRespawnAt = 0;
     }
@@ -1130,7 +1460,7 @@
     const invading = !!(tank.team && zone && zone !== tank.team);
     const hunterNear = huntedSelf ? nearest(tank, state.tanks, 640, (t) => t !== tank) : null;
     if (closerNear) tank.aiState = "flee";
-    else if (invading || (state.mode === "tdm" && tank.team && low)) tank.aiState = "home";
+    else if (invading || ((state.mode === "tdm" || state.mode === "4tdm") && tank.team && low)) tank.aiState = "home";
     else if (huntedSelf && hunterNear && dist2(tank, hunterNear) < 480 * 480) tank.aiState = "flee";
     else if (low && enemy && state.mode !== "tag" && !assaulting) tank.aiState = "flee";
     else if (hunting || (state.mode === "tag" && enemy) || assaulting) tank.aiState = "attack";
@@ -1150,8 +1480,9 @@
     } else if (tank.aiState === "attack" && enemy) {
       const ez = zoneAt(enemy.x, enemy.y);
       if (ez && ez === enemy.team) {
-        tx = ez === "blue" ? BASE_W + 140 : WORLD.w - BASE_W - 140;
-        ty = enemy.y;
+        const edge = baseCenter(ez);
+        tx = ez === "blue" ? BASE_W + 140 : ez === "red" ? WORLD.w - BASE_W - 140 : edge.x;
+        ty = ez === "green" ? BASE_W + 140 : ez === "purple" ? WORLD.h - BASE_W - 140 : enemy.y;
       } else {
         tx = enemy.x;
         ty = enemy.y;
@@ -1184,7 +1515,7 @@
       tank.angle = Math.atan2(player.y - tank.y, player.x - tank.x);
       tx = player.x; ty = player.y;
     }
-    if (state.mode === "tdm" && tank.team && tank.aiState !== "home") {
+    if ((state.mode === "tdm" || state.mode === "4tdm") && tank.team && tank.aiState !== "home") {
       const destZone = zoneAt(tx, ty);
       if (destZone && destZone !== tank.team) {
         const home = baseCenter(tank.team);
@@ -1227,7 +1558,7 @@
 
   function screenToWorld(sx, sy) {
     const cam = state.camera;
-    const p = state.player;
+    const p = cameraFocus();
     const fov = p ? tankStats(p).fov : 1;
     const zoom = cam.zoom / fov;
     return { x: cam.x + (sx - width / 2) / zoom, y: cam.y + (sy - height / 2) / zoom };
@@ -1351,8 +1682,10 @@
     refreshHunted();
     if (state.mode === "tag") checkTagVictory();
     if (state.mode === "protect") checkProtectClose();
+    if (state.mode === "ffa" && !state.closing && state.time >= FFA_CLOSE_AT) beginArenaClose();
+    updateDoms(dt);
     if (state.closing && !state.closersSpawned && state.time >= state.closeAt) spawnArenaClosers();
-    updatePlayer(dt);
+    if (!state.spectating) updatePlayer(dt);
 
     for (const tank of state.tanks) {
       if (!tank.alive) continue;
@@ -1371,6 +1704,7 @@
       tank.y += tank.vy * dt;
       tank.x = clamp(tank.x, tank.r, WORLD.w - tank.r);
       tank.y = clamp(tank.y, tank.r, WORLD.h - tank.r);
+      pushOutWalls(tank);
       tank.bodyHitT = Math.max(0, tank.bodyHitT - dt);
       if (tank.spawnProtect > 0) tank.spawnProtect = Math.max(0, tank.spawnProtect - dt);
       const invading = tank.team && zoneAt(tank.x, tank.y) && zoneAt(tank.x, tank.y) !== tank.team;
@@ -1419,6 +1753,10 @@
       s.y += s.vy * dt;
       s.x = clamp(s.x, s.r, WORLD.w - s.r);
       s.y = clamp(s.y, s.r, WORLD.h - s.r);
+      if (pushOutWalls(s) && s.kind === "crasher") {
+        s.vx *= 0.4;
+        s.vy *= 0.4;
+      }
       if (s.kind === "crasher" && zoneAt(s.x, s.y)) {
         s.alive = false;
         burst(s.x, s.y, s.color, 8, 140);
@@ -1460,6 +1798,10 @@
       b.x += b.vx * dt;
       b.y += b.vy * dt;
       if (b.life <= 0 || b.x < 0 || b.y < 0 || b.x > WORLD.w || b.y > WORLD.h) b.alive = false;
+      else if (hitsWall(b.x, b.y, b.r)) {
+        b.alive = false;
+        burst(b.x, b.y, b.color, 3, 60);
+      }
       else if (b.owner && b.owner.team) {
         const z = zoneAt(b.x, b.y);
         if (z && z !== b.owner.team) b.alive = false;
@@ -1592,7 +1934,7 @@
     if (state.mode === "tag") checkTagVictory();
     maintainShapes();
 
-    const p = state.player;
+    const p = cameraFocus();
     if (p) {
       state.camera.x = lerp(state.camera.x, p.x, 1 - Math.pow(0.0002, dt));
       state.camera.y = lerp(state.camera.y, p.y, 1 - Math.pow(0.0002, dt));
@@ -1608,7 +1950,7 @@
   }
 
   function updateHud() {
-    const p = state.player;
+    const p = state.spectating && state.spectateTarget && state.spectateTarget.alive ? state.spectateTarget : state.player;
     if (!p) return;
     const next = Math.min(LEVEL_CAP, p.level + (p.level < LEVEL_CAP ? 1 : 0));
     const cur = xpForLevel(p.level);
@@ -1621,18 +1963,31 @@
     if (els.xpFill) els.xpFill.style.width = `${clamp(pct, 0, 100)}%`;
     if (els.xpLabel) els.xpLabel.textContent = `Level ${p.level} ${def.name}`;
     if (els.playerName) {
-      if (state.player && state.player.mothership) els.playerName.textContent = p.name + "  ·  Mothership";
+      if (state.spectating) els.playerName.textContent = (p.name || "Tank") + "  ·  spectate";
+      else if (state.player && state.player.mothership) els.playerName.textContent = p.name + "  ·  Mothership";
       else els.playerName.textContent = state.hunted === p ? p.name + "  ·  HUNTED" : p.name;
     }
     if (els.scoreText) els.scoreText.textContent = `Score: ${Math.floor(p.score).toLocaleString()}`;
     if (els.scoreFill) els.scoreFill.style.width = `${clamp((p.score / top) * 100, 8, 100)}%`;
     if (els.killsText) els.killsText.textContent = `Kills: ${p.kills || 0}`;
     if (els.killsFill) els.killsFill.style.width = `${clamp((p.kills || 0) * 10, 8, 100)}%`;
+    if (els.closeTimer) {
+      if (state.closing) els.closeTimer.textContent = "Arena closing";
+      else if (state.mode === "ffa") {
+        const left = Math.max(0, FFA_CLOSE_AT - state.time);
+        const m = Math.floor(left / 60);
+        const s = String(Math.floor(left % 60)).padStart(2, "0");
+        els.closeTimer.textContent = `Closer ${m}:${s}`;
+      } else if (state.mode === "domination" && state.domHold) {
+        const left = Math.max(0, DOM_HOLD - (state.time - state.domHoldT));
+        els.closeTimer.textContent = `${TEAMS[state.domHold].name} hold ${left.toFixed(0)}s`;
+      } else els.closeTimer.textContent = "";
+    }
     if (els.arenaMode && state.mode === "manhunt") {
       const mark = state.hunted;
       els.arenaMode.textContent = !mark
         ? "Manhunt"
-        : mark === p
+        : mark === state.player
           ? "Manhunt · you are hunted"
           : `Manhunt · hunt ${mark.name}`;
     }
@@ -1655,13 +2010,19 @@
         els.arenaMode.textContent = `Protect · G ${gp}%  R ${rp}%${piloting ? " · [H] leave" : " · [H] control"} · [N] lv45`;
       }
     }
-    if (els.skillPoints) els.skillPoints.textContent = free > 0 ? `x${free}` : "";
+    if (els.arenaMode && state.mode === "domination") {
+      const b = state.doms.filter((d) => d.team === "blue").length;
+      const r = state.doms.filter((d) => d.team === "red").length;
+      els.arenaMode.textContent = state.closing ? "Arena closing" : `Domination · Blue ${b} – ${r} Red`;
+    }
+    if (els.skillPoints) els.skillPoints.textContent = state.spectating ? "" : (free > 0 ? `x${free}` : "");
     let html = "";
-    if (state.mode === "tdm") {
-      const blue = state.tanks.filter((t) => t.alive && t.team === "blue").reduce((n, t) => n + t.score, 0);
-      const red = state.tanks.filter((t) => t.alive && t.team === "red").reduce((n, t) => n + t.score, 0);
-      html += `<li class="team-tot"><span><i class="lb-dot" style="background:${TEAMS.blue.color}"></i>Blue — ${formatScore(blue)}</span></li>`;
-      html += `<li class="team-tot"><span><i class="lb-dot" style="background:${TEAMS.red.color}"></i>Red — ${formatScore(red)}</span></li>`;
+    if (state.mode === "tdm" || state.mode === "4tdm") {
+      const ids = state.mode === "4tdm" ? TEAM4 : ["blue", "red"];
+      for (const id of ids) {
+        const sum = state.tanks.filter((t) => t.alive && t.team === id).reduce((n, t) => n + t.score, 0);
+        html += `<li class="team-tot"><span><i class="lb-dot" style="background:${TEAMS[id].color}"></i>${TEAMS[id].name} — ${formatScore(sum)}</span></li>`;
+      }
     }
     if (state.mode === "tag") {
       const green = state.tanks.filter((t) => t.alive && !t.closer && t.team === "green").length;
@@ -1675,8 +2036,12 @@
       html += `<li class="team-tot"><span><i class="lb-dot" style="background:${TEAMS.green.color}"></i>Green mothership — ${g ? Math.round((g.health / g.maxHealth) * 100) : 0}%</span></li>`;
       html += `<li class="team-tot"><span><i class="lb-dot" style="background:${TEAMS.red.color}"></i>Red mothership — ${r ? Math.round((r.health / r.maxHealth) * 100) : 0}%</span></li>`;
     }
+    if (state.mode === "domination") {
+      html += `<li class="team-tot"><span><i class="lb-dot" style="background:${TEAMS.blue.color}"></i>Blue points — ${state.doms.filter((d) => d.team === "blue").length}</span></li>`;
+      html += `<li class="team-tot"><span><i class="lb-dot" style="background:${TEAMS.red.color}"></i>Red points — ${state.doms.filter((d) => d.team === "red").length}</span></li>`;
+    }
     els.leaders.innerHTML = html + ranked.map((t) =>
-      `<li class="${t === p ? "you" : ""} ${t === state.hunted ? "hunted" : ""}"><div class="lb-fill" style="width:${clamp((t.score / top) * 100, 8, 100)}%"></div><span><i class="lb-dot" style="background:${t.color}"></i>${escapeHtml(t.name)}${t === state.hunted ? " · hunted" : ""} — ${escapeHtml(getDef(t).name)} — ${formatScore(t.score)}</span></li>`
+      `<li class="${t === state.player ? "you" : ""} ${t === state.hunted ? "hunted" : ""}"><div class="lb-fill" style="width:${clamp((t.score / top) * 100, 8, 100)}%"></div><span><i class="lb-dot" style="background:${t.color}"></i>${escapeHtml(t.name)}${t === state.hunted ? " · hunted" : ""} — ${escapeHtml(getDef(t).name)} — ${formatScore(t.score)}</span></li>`
     ).join("");
   }
 
@@ -1712,6 +2077,12 @@
   const CLASS_TILES = ["#a8d8ea", "#c5e1a5", "#f8bbd0", "#ffe082", "#d1c4e9", "#ffccbc", "#b2dfdb", "#f0f4c3"];
 
   function renderClassPanel() {
+    const show = document.getElementById("show-classes");
+    if (state.spectating) {
+      els.classes.classList.add("hidden");
+      if (show) show.classList.add("hidden");
+      return;
+    }
     const p = menuTank();
     if (!p) return;
     const def = getDef(p);
@@ -1720,7 +2091,6 @@
       return child && p.level >= (child.needLevel || 15);
     });
     state.classOptions = options;
-    const show = document.getElementById("show-classes");
     if (!options.length && state.mode !== "sandbox") {
       els.classes.classList.add("hidden");
       if (show) show.classList.add("hidden");
@@ -1951,7 +2321,7 @@
 
   function render() {
     const cam = state.camera;
-    const p = state.player;
+    const p = cameraFocus();
     const fov = p && p.alive ? tankStats(p).fov : 1;
     const zoom = cam.zoom / fov;
     const sx = (Math.random() - 0.5) * shake;
@@ -1982,18 +2352,53 @@
     ctx.strokeStyle = "#9a9a9a";
     ctx.lineWidth = 8;
     ctx.strokeRect(0, 0, WORLD.w, WORLD.h);
-    if (state.mode === "tdm") {
-      ctx.fillStyle = "rgba(0, 178, 225, 0.16)";
-      ctx.fillRect(0, 0, BASE_W, WORLD.h);
-      ctx.strokeStyle = "rgba(0, 178, 225, 0.5)";
-      ctx.lineWidth = 8;
-      ctx.strokeRect(4, 4, BASE_W - 8, WORLD.h - 8);
-      ctx.fillStyle = "rgba(241, 78, 84, 0.16)";
-      ctx.fillRect(WORLD.w - BASE_W, 0, BASE_W, WORLD.h);
-      ctx.strokeStyle = "rgba(241, 78, 84, 0.5)";
-      ctx.strokeRect(WORLD.w - BASE_W + 4, 4, BASE_W - 8, WORLD.h - 8);
+    if (state.mode === "tdm" || state.mode === "4tdm") {
+      const paint = (team, x, y, w, h) => {
+        const c = TEAMS[team].color;
+        ctx.fillStyle = c;
+        ctx.globalAlpha = 0.16;
+        ctx.fillRect(x, y, w, h);
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = c;
+        ctx.globalAlpha = 0.5;
+        ctx.lineWidth = 8;
+        ctx.strokeRect(x + 4, y + 4, w - 8, h - 8);
+        ctx.globalAlpha = 1;
+      };
+      paint("blue", 0, 0, BASE_W, WORLD.h);
+      paint("red", WORLD.w - BASE_W, 0, BASE_W, WORLD.h);
+      if (state.mode === "4tdm") {
+        paint("green", BASE_W, 0, WORLD.w - BASE_W * 2, BASE_W);
+        paint("purple", BASE_W, WORLD.h - BASE_W, WORLD.w - BASE_W * 2, BASE_W);
+      }
     }
-    if (state.mode !== "protect") {
+    for (const w of state.walls) {
+      ctx.fillStyle = "#9a9a9a";
+      ctx.strokeStyle = "#6e6e6e";
+      ctx.lineWidth = 4;
+      ctx.fillRect(w.x, w.y, w.w, w.h);
+      ctx.strokeRect(w.x, w.y, w.w, w.h);
+    }
+    for (const d of state.doms) {
+      const col = d.team && TEAMS[d.team] ? TEAMS[d.team].color : "#888888";
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, d.r, 0, TAU);
+      ctx.fillStyle = col;
+      ctx.globalAlpha = 0.22;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 10;
+      ctx.stroke();
+      if (d.progress > 0 && d.progress < 1) {
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, d.r - 18, -Math.PI / 2, -Math.PI / 2 + TAU * d.progress);
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 6;
+        ctx.stroke();
+      }
+    }
+    if (state.mode !== "protect" && state.mode !== "maze") {
       ctx.fillStyle = "rgba(118, 141, 252, 0.08)";
       ctx.beginPath();
       ctx.arc(WORLD.w / 2, WORLD.h / 2, 520, 0, TAU);
@@ -2052,7 +2457,17 @@
     mctx.fillRect(0, 0, s, s);
     const mapX = (x) => (x / WORLD.w) * s;
     const mapY = (y) => (y / WORLD.h) * s;
-    const p = state.player;
+    mctx.fillStyle = "#8e8e8e";
+    for (const w of state.walls) {
+      mctx.fillRect(mapX(w.x), mapY(w.y), (w.w / WORLD.w) * s, (w.h / WORLD.h) * s);
+    }
+    for (const d of state.doms) {
+      mctx.beginPath();
+      mctx.arc(mapX(d.x), mapY(d.y), 7, 0, TAU);
+      mctx.fillStyle = d.team && TEAMS[d.team] ? TEAMS[d.team].color : "#777";
+      mctx.fill();
+    }
+    const p = cameraFocus();
     for (const t of state.tanks) {
       if (!t.alive || t.closer) continue;
       const self = t === p;
@@ -2092,10 +2507,24 @@
 
   window.addEventListener("resize", resize);
   window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      handleEscape(e);
+      return;
+    }
+    if (e.key === "Tab" && running && state.spectating) {
+      e.preventDefault();
+      cycleSpectate(e.shiftKey ? -1 : 1);
+      return;
+    }
     const tag = (e.target && e.target.tagName) || "";
     if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
     const k = e.key.toLowerCase();
     if (["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(k)) e.preventDefault();
+    if (state.paused || state.spectating) {
+      if (k === "t" && running && !state.spectating) openWorkshop();
+      return;
+    }
     keys.add(k);
     if (k === "e" && running) state.autoFire = !state.autoFire;
     if (k === "c" && running) state.autoSpin = !state.autoSpin;
@@ -2130,21 +2559,32 @@
   let menuMode = "ffa";
   let menuTeam = "blue";
   const MODE_HINT = {
-    ffa: "Everyone for themselves",
+    ffa: "Everyone for themselves · arena closers after 5 minutes",
     tdm: "Red vs blue · bases protect your team",
+    "4tdm": "Four bases · blue, red, green, purple",
     manhunt: "Everyone hunts whoever is #1",
     tag: "Shoot to convert · last team standing closes the arena",
     protect: "Two motherships · defend yours · start at lv1 · [N] skip to 45 · [H] to take control",
+    maze: "FFA inside generated walls",
+    domination: "Capture 4 points · hold 3 to close the arena",
     sandbox: "Level 45 · pick any tank",
   };
 
+  function saveName(name) {
+    try { localStorage.setItem("tankfield-name", String(name || "").slice(0, 16)); } catch (err) {}
+  }
+
   function playSelected() {
     const name = (els.name && els.name.value.trim()) || "Unnamed Tank";
+    saveName(name);
     if (menuMode === "sandbox") startGame(name, { sandbox: true, classId: "basic" });
     else if (menuMode === "tdm") startGame(name, { mode: "tdm", team: menuTeam === "red" ? "red" : "blue" });
+    else if (menuMode === "4tdm") startGame(name, { mode: "4tdm", team: TEAM4.includes(menuTeam) ? menuTeam : "blue" });
     else if (menuMode === "manhunt") startGame(name, { mode: "manhunt" });
     else if (menuMode === "tag") startGame(name, { mode: "tag", team: menuTeam === "red" ? "red" : "green" });
     else if (menuMode === "protect") startGame(name, { mode: "protect", team: menuTeam === "red" ? "red" : "green" });
+    else if (menuMode === "maze") startGame(name, { mode: "maze" });
+    else if (menuMode === "domination") startGame(name, { mode: "domination", team: menuTeam === "red" ? "red" : "blue" });
     else startGame(name, { mode: "ffa" });
   }
 
@@ -2156,14 +2596,24 @@
     menuMode = mode;
     document.querySelectorAll(".server-row").forEach((b) => b.classList.toggle("active", b.dataset.mode === mode));
     const row = document.getElementById("team-row");
-    const pickTeam = menuMode === "tdm" || menuMode === "tag" || menuMode === "protect";
-    if (row) row.classList.toggle("hidden", !pickTeam);
+    const pickTeam = menuMode === "tdm" || menuMode === "4tdm" || menuMode === "tag" || menuMode === "protect" || menuMode === "domination";
+    if (row) {
+      row.classList.toggle("hidden", !pickTeam);
+      row.classList.toggle("teams-4", menuMode === "4tdm");
+    }
     const blue = document.getElementById("chip-blue");
     const green = document.getElementById("chip-green");
-    if (blue) blue.classList.toggle("hidden", menuMode === "tag" || menuMode === "protect");
-    if (green) green.classList.toggle("hidden", menuMode !== "tag" && menuMode !== "protect");
-    if ((menuMode === "tag" || menuMode === "protect") && menuTeam !== "red") menuTeam = "green";
-    if (menuMode === "tdm" && menuTeam !== "red") menuTeam = "blue";
+    const red = document.getElementById("chip-red");
+    const purple = document.getElementById("chip-purple");
+    const four = menuMode === "4tdm";
+    const gp = menuMode === "tag" || menuMode === "protect";
+    if (blue) blue.classList.toggle("hidden", gp);
+    if (green) green.classList.toggle("hidden", !gp && !four);
+    if (red) red.classList.toggle("hidden", false);
+    if (purple) purple.classList.toggle("hidden", !four);
+    if (gp && menuTeam !== "red") menuTeam = "green";
+    if ((menuMode === "tdm" || menuMode === "domination") && menuTeam !== "red") menuTeam = "blue";
+    if (four && !TEAM4.includes(menuTeam)) menuTeam = "blue";
     document.querySelectorAll(".team-chip").forEach((b) => {
       b.classList.toggle("selected", b.dataset.team === menuTeam && !b.classList.contains("hidden"));
     });
@@ -2210,16 +2660,18 @@
     });
   }
 
-  if (els.name) els.name.addEventListener("keydown", (e) => { if (e.key === "Enter") playSelected(); });
-  if (els.again) els.again.addEventListener("click", () => startGame(state.spawnName, state.playOpts || {}));
-  if (els.menu) {
-    els.menu.addEventListener("click", () => {
-      running = false;
-      els.death.classList.add("hidden");
-      els.hud.classList.add("hidden");
-      els.start.classList.remove("hidden");
-    });
+  if (els.name) {
+    els.name.addEventListener("keydown", (e) => { if (e.key === "Enter") playSelected(); });
+    els.name.addEventListener("change", () => saveName(els.name.value.trim()));
   }
+  if (els.again) els.again.addEventListener("click", () => startGame(state.spawnName, state.playOpts || {}));
+  if (els.menu) els.menu.addEventListener("click", goToMenu);
+  if (els.resume) els.resume.addEventListener("click", () => setUserPaused(false));
+  if (els.pauseMenu) els.pauseMenu.addEventListener("click", goToMenu);
+  if (els.spectateBtn) els.spectateBtn.addEventListener("click", beginSpectate);
+  if (els.spectateNext) els.spectateNext.addEventListener("click", () => cycleSpectate(1));
+  if (els.spectateAgain) els.spectateAgain.addEventListener("click", () => startGame(state.spawnName, state.playOpts || {}));
+  if (els.spectateMenu) els.spectateMenu.addEventListener("click", goToMenu);
   if (els.editInGame) els.editInGame.addEventListener("click", openWorkshop);
   if (els.skipUpgrade) {
     els.skipUpgrade.addEventListener("click", () => {
@@ -2277,6 +2729,16 @@
   resize();
   populateWorld();
   initColorPicker();
+  try {
+    const savedName = localStorage.getItem("tankfield-name");
+    if (savedName && els.name) els.name.value = savedName.slice(0, 16);
+  } catch (err) {}
+  document.querySelectorAll(".server-row").forEach((row) => {
+    const count = row.querySelector(".srv-count");
+    if (!count) return;
+    const n = botCountFor(row.dataset.mode);
+    count.textContent = n ? `${n} bots` : "solo";
+  });
   state.camera.x = WORLD.w / 2;
   state.camera.y = WORLD.h / 2;
   last = performance.now();

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
   <title>Tankfield</title>
-  <link rel="stylesheet" href="css/style.css?v=32" />
+  <link rel="stylesheet" href="css/style.css?v=33" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet" />
@@ -35,6 +35,7 @@
         <div class="opt-row"><kbd>M</kbd>+<kbd>1</kbd>–<kbd>8</kbd><span>Max a stat with leftover points</span></div>
         <div class="opt-row"><kbd>H</kbd><span>Take / leave mothership</span></div>
         <div class="opt-row"><kbd>N</kbd><span>Protect: skip to level 45</span></div>
+        <div class="opt-row"><kbd>Esc</kbd><span>Pause / close workshop / leave a field</span></div>
         <div class="opt-note">Hold fire to send drones to the cursor.</div>
       </div>
       <div class="server-filters" role="tablist">
@@ -48,38 +49,54 @@
         <button type="button" class="server-row active" data-mode="ffa" data-group="ffa">
           <span class="srv-region">Local</span>
           <span class="srv-name">FFA</span>
-          <span class="srv-count">12/12</span>
+          <span class="srv-count">11 bots</span>
         </button>
         <button type="button" class="server-row" data-mode="tdm" data-group="teams">
           <span class="srv-region">Local</span>
           <span class="srv-name">2 Teams</span>
-          <span class="srv-count">12/12</span>
+          <span class="srv-count">11 bots</span>
+        </button>
+        <button type="button" class="server-row" data-mode="4tdm" data-group="teams">
+          <span class="srv-region">Local</span>
+          <span class="srv-name">4 Teams</span>
+          <span class="srv-count">11 bots</span>
         </button>
         <button type="button" class="server-row" data-mode="manhunt" data-group="other">
           <span class="srv-region">Local</span>
           <span class="srv-name">Manhunt</span>
-          <span class="srv-count">12/12</span>
+          <span class="srv-count">11 bots</span>
         </button>
         <button type="button" class="server-row" data-mode="tag" data-group="teams">
           <span class="srv-region">Local</span>
           <span class="srv-name">Tag</span>
-          <span class="srv-count">12/12</span>
+          <span class="srv-count">11 bots</span>
         </button>
         <button type="button" class="server-row" data-mode="protect" data-group="teams">
           <span class="srv-region">Local</span>
           <span class="srv-name">Protect</span>
-          <span class="srv-count">12/12</span>
+          <span class="srv-count">11 bots</span>
+        </button>
+        <button type="button" class="server-row" data-mode="maze" data-group="other">
+          <span class="srv-region">Local</span>
+          <span class="srv-name">Maze</span>
+          <span class="srv-count">8 bots</span>
+        </button>
+        <button type="button" class="server-row" data-mode="domination" data-group="teams">
+          <span class="srv-region">Local</span>
+          <span class="srv-name">Domination</span>
+          <span class="srv-count">11 bots</span>
         </button>
         <button type="button" class="server-row" data-mode="sandbox" data-group="sandbox">
           <span class="srv-region">Local</span>
           <span class="srv-name">Sandbox</span>
-          <span class="srv-count">1/1</span>
+          <span class="srv-count">solo</span>
         </button>
       </div>
       <div id="team-row" class="team-row hidden">
         <button type="button" class="team-chip selected" data-team="blue" id="chip-blue">Blue</button>
         <button type="button" class="team-chip hidden" data-team="green" id="chip-green">Green</button>
-        <button type="button" class="team-chip" data-team="red">Red</button>
+        <button type="button" class="team-chip" data-team="red" id="chip-red">Red</button>
+        <button type="button" class="team-chip hidden" data-team="purple" id="chip-purple">Purple</button>
       </div>
       <p id="mode-hint" class="mode-hint">Everyone for themselves</p>
       <input id="name-input" type="text" maxlength="16" placeholder="Nickname" autocomplete="off" />
@@ -110,6 +127,13 @@
       <div id="stats-panel"></div>
     </div>
 
+    <div id="spectate-bar" class="hidden">
+      <span id="spectate-label">Spectating</span>
+      <button id="spectate-next" type="button">Next [Tab]</button>
+      <button id="spectate-again" type="button">Play again</button>
+      <button id="spectate-menu" type="button">Menu</button>
+    </div>
+
     <div id="status-wrap">
       <div id="player-name">Tank</div>
       <div class="hud-bar score-bar"><div id="score-fill"></div><span id="score-text">Score: 0</span></div>
@@ -121,6 +145,7 @@
       <div id="meta-info">
         <div>tankfield</div>
         <div id="arena-mode">FFA</div>
+        <div id="close-timer"></div>
         <div id="fps-label">60 FPS</div>
       </div>
       <canvas id="minimap" width="168" height="168"></canvas>
@@ -134,8 +159,18 @@
       <p id="death-msg"></p>
       <p id="death-stats"></p>
       <p id="best-score"></p>
-      <button id="again-btn" class="primary">Play again</button>
+      <button id="spectate-btn" class="primary">Spectate</button>
+      <button id="again-btn">Play again</button>
       <button id="menu-btn">Main menu</button>
+    </div>
+  </div>
+
+  <div id="pause" class="overlay hidden">
+    <div class="panel">
+      <h1>Paused</h1>
+      <p>Esc to resume</p>
+      <button id="resume-btn" class="primary">Resume</button>
+      <button id="pause-menu-btn">Main menu</button>
     </div>
   </div>
 
@@ -233,8 +268,8 @@
     </div>
   </div>
 
-  <script src="js/defs.js?v=32"></script>
-  <script src="js/game.js?v=32"></script>
-  <script src="js/editor.js?v=32"></script>
+  <script src="js/defs.js?v=33"></script>
+  <script src="js/game.js?v=33"></script>
+  <script src="js/editor.js?v=33"></script>
 </body>
 </html>
