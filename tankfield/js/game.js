@@ -435,10 +435,13 @@
       for (let i = 0; i < 5; i++) teams.push(state.player.team);
       for (let i = 0; i < 6; i++) teams.push(other);
     } else if (state.mode === "protect") {
-      for (let i = 0; i < 5; i++) teams.push("green");
-      for (let i = 0; i < 5; i++) teams.push("red");
+      const mine = (state.player && state.player.team) || "green";
+      const other = mine === "red" ? "green" : "red";
+      for (let i = 0; i < 5; i++) teams.push(mine);
+      for (let i = 0; i < 6; i++) teams.push(other);
     }
-    for (let i = 0; i < 11; i++) {
+    const nBots = teams.length || 11;
+    for (let i = 0; i < nBots; i++) {
       const team = teams[i] || null;
       const score = irand(0, 1800);
       const bot = createTank({
@@ -455,7 +458,6 @@
             : awayFrom(WORLD.w / 2, WORLD.h / 2, 500),
       });
       autoUpgradeBot(bot);
-      if (state.mode === "protect") maxOutTank(bot);
       bot.health = bot.maxHealth;
       state.tanks.push(bot);
     }
@@ -522,6 +524,19 @@
     tank.health = tank.maxHealth;
     if (tank.mothership) tank.r = 82;
     if (tank.closer) tank.r = 46;
+  }
+
+  function skipToLevelCap(tank) {
+    if (!tank || !tank.alive || tank.mothership || tank.closer) return false;
+    if (tank.level >= LEVEL_CAP) return false;
+    tank.score = Math.max(tank.score, xpForLevel(LEVEL_CAP));
+    applyLevel(tank);
+    tank.health = tank.maxHealth;
+    state.classDismissed = false;
+    try { renderStats(); } catch (err) {}
+    try { renderClassPanel(); } catch (err) {}
+    floater(tank.x, tank.y - tank.r - 8, "Level 45");
+    return true;
   }
 
   function spawnMotherships() {
@@ -626,7 +641,7 @@
       color: team ? TEAMS[team].color : (state.mode === "sandbox" ? (state.selectedColor || COLORS.player) : pickTeamColor()),
       classId: opts.classId || "basic",
       customDef: opts.customDef || null,
-      score: opts.sandbox || state.mode === "protect" ? xpForLevel(LEVEL_CAP) : 0,
+      score: opts.sandbox ? xpForLevel(LEVEL_CAP) : 0,
       pos: state.mode === "tdm" && team
         ? spawnInBase(team)
         : home
@@ -635,7 +650,7 @@
     });
     player.ai = false;
     player.spawnProtect = 30;
-    if (opts.maxStats || state.mode === "protect") maxOutTank(player);
+    if (opts.maxStats) maxOutTank(player);
     state.player = player;
     state.pilotTank = player;
     state.tanks.push(player);
@@ -704,10 +719,9 @@
             classId: "basic",
             team,
             color: TEAMS[team].color,
-            score: xpForLevel(LEVEL_CAP),
+            score: 0,
             pos: around(home.x, home.y, 220),
           });
-          maxOutTank(p);
           p.spawnProtect = 8;
           state.player = p;
           state.pilotTank = p;
@@ -745,7 +759,6 @@
               : awayFrom(state.player.x, state.player.y, 900),
         });
         autoUpgradeBot(bot);
-        if (state.mode === "protect") maxOutTank(bot);
         bot.health = bot.maxHealth;
         bot.spawnProtect = 8;
         state.tanks.push(bot);
@@ -1569,7 +1582,7 @@
         const gp = g ? Math.round((g.health / Math.max(1, g.maxHealth)) * 100) : 0;
         const rp = r ? Math.round((r.health / Math.max(1, r.maxHealth)) * 100) : 0;
         const piloting = state.player && state.player.mothership;
-        els.arenaMode.textContent = `Protect · G ${gp}%  R ${rp}%${piloting ? " · [H] leave" : " · [H] control"}`;
+        els.arenaMode.textContent = `Protect · G ${gp}%  R ${rp}%${piloting ? " · [H] leave" : " · [H] control"} · [N] lv45`;
       }
     }
     if (els.skillPoints) els.skillPoints.textContent = free > 0 ? `x${free}` : "";
@@ -2017,11 +2030,14 @@
     if (k === "e" && running) state.autoFire = !state.autoFire;
     if (k === "c" && running) state.autoSpin = !state.autoSpin;
     if (k === "t" && running && window.TankWorkshop) window.TankWorkshop.open();
-    const classIdx = CLASS_KEYS.indexOf(k);
-    if (running && !state.paused && classIdx >= 0 && state.classOptions[classIdx] && !state.classDismissed) {
-      pickClass(state.classOptions[classIdx]);
-    } else if (k === "h" && running && !state.paused) {
-      toggleMothershipControl();
+    const skippedLevel = k === "n" && running && !state.paused && state.mode === "protect" && skipToLevelCap(menuTank());
+    if (!skippedLevel) {
+      const classIdx = CLASS_KEYS.indexOf(k);
+      if (running && !state.paused && classIdx >= 0 && state.classOptions[classIdx] && !state.classDismissed) {
+        pickClass(state.classOptions[classIdx]);
+      } else if (k === "h" && running && !state.paused) {
+        toggleMothershipControl();
+      }
     }
     const n = parseInt(e.key, 10);
     if (running && !state.paused && n >= 1 && n <= 8) tryUpgrade(STATS[n - 1].key, keys.has("m"));
@@ -2046,7 +2062,7 @@
     tdm: "Red vs blue · bases protect your team",
     manhunt: "Everyone hunts whoever is #1",
     tag: "Shoot to convert · last team standing closes the arena",
-    protect: "Two motherships · defend yours · [H] to take control",
+    protect: "Two motherships · defend yours · start at lv1 · [N] skip to 45 · [H] to take control",
     sandbox: "Level 45 · pick any tank",
   };
 
