@@ -1433,6 +1433,32 @@
       }
     }
 
+    for (let i = 0; i < state.bullets.length; i++) {
+      const a = state.bullets[i];
+      if (!a.alive) continue;
+      for (let j = i + 1; j < state.bullets.length; j++) {
+        const b = state.bullets[j];
+        if (!b.alive || a.owner === b.owner || sameTeam(a.owner, b.owner)) continue;
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const rr = a.r + b.r;
+        if (dx * dx + dy * dy >= rr * rr) continue;
+        const ha = a.health;
+        const hb = b.health;
+        a.health -= hb;
+        b.health -= ha;
+        if (a.health <= 0) {
+          a.alive = false;
+          burst(a.x, a.y, a.color, 4, 80);
+        }
+        if (b.health <= 0) {
+          b.alive = false;
+          burst(b.x, b.y, b.color, 4, 80);
+        }
+        if (!a.alive) break;
+      }
+    }
+
     for (const bullet of state.bullets) {
       if (!bullet.alive) continue;
       for (const s of state.shapes) {
