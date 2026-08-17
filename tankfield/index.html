@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
   <title>Tankfield</title>
-  <link rel="stylesheet" href="css/style.css?v=22" />
+  <link rel="stylesheet" href="css/style.css?v=23" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet" />
@@ -32,6 +32,8 @@
         <div class="opt-row"><kbd>C</kbd><span>Auto spin</span></div>
         <div class="opt-row"><kbd>T</kbd><span>Workshop</span></div>
         <div class="opt-row"><kbd>1</kbd>–<kbd>8</kbd><span>Upgrade stats</span></div>
+        <div class="opt-row"><kbd>M</kbd>+<kbd>1</kbd>–<kbd>8</kbd><span>Max a stat with leftover points</span></div>
+        <div class="opt-row"><kbd>H</kbd><span>Take / leave mothership</span></div>
         <div class="opt-note">Hold fire to send drones to the cursor.</div>
       </div>
       <div class="server-filters" role="tablist">
@@ -60,6 +62,11 @@
         <button type="button" class="server-row" data-mode="tag" data-group="teams">
           <span class="srv-region">Local</span>
           <span class="srv-name">Tag</span>
+          <span class="srv-count">12/12</span>
+        </button>
+        <button type="button" class="server-row" data-mode="protect" data-group="other">
+          <span class="srv-region">Local</span>
+          <span class="srv-name">Protect</span>
           <span class="srv-count">12/12</span>
         </button>
         <button type="button" class="server-row" data-mode="sandbox" data-group="sandbox">
@@ -225,8 +232,8 @@
     </div>
   </div>
 
-  <script src="js/defs.js?v=22"></script>
-  <script src="js/game.js?v=22"></script>
-  <script src="js/editor.js?v=22"></script>
+  <script src="js/defs.js?v=23"></script>
+  <script src="js/game.js?v=23"></script>
+  <script src="js/editor.js?v=23"></script>
 </body>
 </html>

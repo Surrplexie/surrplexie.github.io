@@ -1095,8 +1095,37 @@
     needLevel: 45,
   });
 
+  const mothershipGuns = [];
+  for (let i = 0; i < 24; i++) {
+    mothershipGuns.push(gun(11, 6.2, 1, 0, 0, i * 15, (i % 6) * 0.14, {
+      recoil: 0,
+      stats: { speed: 0.55, life: 0.42, damage: 1.55 },
+    }));
+  }
+  for (let i = 0; i < 6; i++) {
+    mothershipGuns.push(gun(7, 10, 1.15, 6, 0, i * 60 + 30, 0.18, { type: "swarm", recoil: 0 }));
+  }
+  def("mothership", {
+    name: "Mothership",
+    desc: "Huge close-range fortress with 360° fire and swarms",
+    guns: mothershipGuns,
+    health: 16,
+    speed: 0.34,
+    fov: 1.45,
+    reload: 1.05,
+    bulletSpeed: 0.36,
+    bulletDamage: 3.2,
+    bulletPen: 1.4,
+    bulletSize: 0.72,
+    bodyDamage: 2.4,
+    maxDrones: 28,
+    upgrades: [],
+    needLevel: 45,
+  });
+
   const skipAuto = new Set([
     "auto3", "auto5", "auto8", "auto2", "autosmasher", "autogunner", "autosniper", "engineer",
+    "mothership",
   ]);
   for (const id of Object.keys(tanks)) {
     const t = tanks[id];
