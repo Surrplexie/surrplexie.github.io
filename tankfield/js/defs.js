@@ -1147,9 +1147,46 @@
     needLevel: 45,
   });
 
+  def("dom_gun", {
+    name: "Dominator",
+    desc: "Stationary hexagonal gun that holds a point",
+    body: 6,
+    guns: [gun(22, 16, 1, 0, 0, 0, 0, { recoil: 0 })],
+    health: 22,
+    speed: 0.01,
+    fov: 1.15,
+    reload: 2.15,
+    bulletSpeed: 1.05,
+    bulletDamage: 3.1,
+    bulletPen: 3.2,
+    bulletSize: 1.85,
+    bodyDamage: 4.2,
+    upgrades: [],
+    needLevel: 45,
+  });
+
+  def("dom_heal", {
+    name: "Healer",
+    desc: "Main spawn dominator that fires healing shells",
+    guns: [0, 45, 90, 135, 180, 225, 270, 315].map((a) =>
+      gun(14, 7.2, 1, 0, 0, a, a / 360, { type: "heal", recoil: 0, size: 0.95, stats: { speed: 0.52, life: 0.72 } })
+    ),
+    health: 30,
+    speed: 0.01,
+    fov: 1.1,
+    reload: 0.82,
+    bulletSpeed: 0.7,
+    bulletDamage: 0.2,
+    bulletPen: 1,
+    bulletSize: 1.15,
+    bodyDamage: 3.4,
+    upgrades: [],
+    needLevel: 45,
+  });
+
   const skipAuto = new Set([
     "auto3", "auto5", "auto8", "auto2", "autosmasher", "autogunner", "autosniper", "engineer",
-    "mothership", "arena_closer",
+    "mothership", "arena_closer", "dom_gun", "dom_heal",
   ]);
   for (const id of Object.keys(tanks)) {
     const t = tanks[id];

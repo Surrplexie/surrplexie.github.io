@@ -59,6 +59,7 @@
   const BASE_W = 560;
   const FFA_CLOSE_AT = 4 * 60 * 60;
   const DOM_HOLD = 8;
+  const ASSAULT_WIN = 10 * 60;
   const TEAM4 = ["blue", "red", "green", "purple"];
 
   const STATS = [
@@ -273,6 +274,8 @@
 
   function isEnemyTank(self, other) {
     if (!other || other === self || !other.alive || other.type !== "tank") return false;
+    if (other.dominator && other.destroyed) return false;
+    if (self.dominator && other.dominator) return false;
     if (self.closer || other.closer) return !(self.closer && other.closer);
     if (sameTeam(self, other)) return false;
     return true;
@@ -724,15 +727,230 @@
       filled[0][c] = false;
       filled[rows - 1][c] = false;
     }
+    state.maze = { cube, x0, y0, cols, rows, filled };
+    rebuildMazeWalls();
+  }
+
+  function rebuildMazeWalls() {
+    const m = state.maze;
+    if (!m) {
+      state.walls = [];
+      return;
+    }
     const walls = [];
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        if (!filled[r][c]) continue;
-        walls.push({ x: x0 + c * cube, y: y0 + r * cube, w: cube, h: cube });
+    for (let r = 0; r < m.rows; r++) {
+      for (let c = 0; c < m.cols; c++) {
+        if (!m.filled[r][c]) continue;
+        walls.push({ x: m.x0 + c * m.cube, y: m.y0 + r * m.cube, w: m.cube, h: m.cube });
       }
     }
-    state.maze = { cube, x0, y0, cols, rows, filled };
     state.walls = walls;
+  }
+
+  function punchMazeAt(x, y, radius) {
+    const m = state.maze;
+    if (!m) return;
+    for (let r = 0; r < m.rows; r++) {
+      for (let c = 0; c < m.cols; c++) {
+        const cx = m.x0 + (c + 0.5) * m.cube;
+        const cy = m.y0 + (r + 0.5) * m.cube;
+        if ((cx - x) * (cx - x) + (cy - y) * (cy - y) <= radius * radius) m.filled[r][c] = false;
+      }
+    }
+  }
+
+  function openAround(x, y, minD, maxD, rad = 42) {
+    for (let i = 0; i < 40; i++) {
+      const a = rand(0, TAU);
+      const d = rand(minD, maxD);
+      const p = { x: x + Math.cos(a) * d, y: y + Math.sin(a) * d };
+      if (p.x < 140 || p.y < 140 || p.x > WORLD.w - 140 || p.y > WORLD.h - 140) continue;
+      if (hitsWall(p.x, p.y, rad)) continue;
+      return p;
+    }
+    return randomInWorld(160);
+  }
+
+  function assaultDoms() {
+    return state.tanks.filter((t) => t.dominator);
+  }
+
+  function assaultLiveCount() {
+    return assaultDoms().filter((t) => !t.destroyed).length;
+  }
+
+  function assaultNeed() {
+    return Math.max(1, Math.ceil(assaultDoms().length * 0.75));
+  }
+
+  function healerDominator() {
+    return state.tanks.find((t) => t.dominator && t.mainBase) || null;
+  }
+
+  function formatClock(sec) {
+    const t = Math.max(0, Math.floor(sec));
+    const h = Math.floor(t / 3600);
+    const m = Math.floor((t % 3600) / 60);
+    const s = String(t % 60).padStart(2, "0");
+    if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${s}`;
+    return `${m}:${s}`;
+  }
+
+  function assaultSpawn(team) {
+    if (team === "green") {
+      const h = healerDominator();
+      if (h) return openAround(h.x, h.y, 150, 280, 36);
+    }
+    if (state.assaultBlue) return openAround(state.assaultBlue.x, state.assaultBlue.y, 40, 380, 36);
+    return randomInWorld(200);
+  }
+
+  function welcomeSpawnNotes() {
+    note("You have spawned! Welcome to the game.");
+    note("You will be invulnerable until you move or shoot.");
+  }
+
+  function buildAssaultArena() {
+    buildMaze();
+    const m = state.maze;
+    if (Math.random() < 0.42 && m) {
+      const extra = Math.floor(m.cols * m.rows * rand(0.12, 0.22));
+      for (let i = 0; i < extra; i++) {
+        const r = irand(2, m.rows - 3);
+        const c = irand(2, m.cols - 3);
+        m.filled[r][c] = false;
+      }
+    }
+    const n = irand(4, 8);
+    const corners = [
+      { x: 1680, y: WORLD.h - 1680 },
+      { x: WORLD.w - 1680, y: WORLD.h - 1680 },
+      { x: 1680, y: 1680 },
+      { x: WORLD.w - 1680, y: 1680 },
+    ];
+    const home = corners[irand(0, corners.length - 1)];
+    state.assaultBlue = { x: WORLD.w - home.x, y: WORLD.h - home.y };
+    punchMazeAt(home.x, home.y, 520);
+    punchMazeAt(state.assaultBlue.x, state.assaultBlue.y, 460);
+    const spots = [home];
+    for (let i = 1; i < n; i++) {
+      const t = i / (n - 1 || 1);
+      let placed = null;
+      for (let k = 0; k < 36; k++) {
+        const x = home.x + (state.assaultBlue.x - home.x) * (0.12 + t * 0.7) + rand(-980, 980);
+        const y = home.y + (state.assaultBlue.y - home.y) * (0.12 + t * 0.7) + rand(-980, 980);
+        const p = { x: clamp(x, 620, WORLD.w - 620), y: clamp(y, 620, WORLD.h - 620) };
+        if (spots.some((s) => (s.x - p.x) ** 2 + (s.y - p.y) ** 2 < 1500 * 1500)) continue;
+        placed = p;
+        break;
+      }
+      spots.push(placed || { x: WORLD.w * (0.25 + 0.5 * Math.random()), y: WORLD.h * (0.25 + 0.5 * Math.random()) });
+    }
+    for (const p of spots) punchMazeAt(p.x, p.y, 380);
+    rebuildMazeWalls();
+    for (let i = 0; i < spots.length; i++) {
+      const main = i === 0;
+      const d = createTank({
+        name: main ? "Healer" : "Dominator",
+        ai: true,
+        classId: main ? "dom_heal" : "dom_gun",
+        team: "green",
+        color: TEAMS.green.color,
+        score: xpForLevel(LEVEL_CAP),
+        pos: spots[i],
+      });
+      d.dominator = true;
+      d.mainBase = main;
+      d.destroyed = false;
+      d.repair = 0;
+      d.homeX = spots[i].x;
+      d.homeY = spots[i].y;
+      d.x = spots[i].x;
+      d.y = spots[i].y;
+      d.spawnProtect = 0;
+      d.ai = true;
+      applyLevel(d);
+      d.health = d.maxHealth;
+      d.r = main ? 78 : 64;
+      state.tanks.push(d);
+    }
+    state.assaultHold = true;
+    state.assaultWinAt = ASSAULT_WIN;
+  }
+
+  function wreckDominator(d, src) {
+    if (!d || d.destroyed) return;
+    d.destroyed = true;
+    d.health = 0;
+    d.alive = true;
+    d.repair = 0;
+    d.color = "#8a8a8a";
+    d.vx = 0;
+    d.vy = 0;
+    clearOwnedShots(d);
+    burst(d.x, d.y, TEAMS.green.color, 22, 240);
+    floater(d.x, d.y - d.r - 8, "Destroyed");
+    note(d.mainBase ? "The GREEN spawn dominator has been destroyed!" : "A GREEN dominator has been destroyed!");
+    if (src && src.alive && !src.dominator) giveScore(src, d.mainBase ? 2400 : 900, d.x, d.y);
+    if (d.mainBase) assaultWin("blue", "Blue captured the main dominator.");
+    else if (assaultLiveCount() <= 0) assaultWin("blue", "Blue destroyed every dominator.");
+  }
+
+  function repairDominator(d) {
+    if (!d || !d.destroyed) return;
+    d.destroyed = false;
+    d.repair = 0;
+    d.color = TEAMS.green.color;
+    d.health = d.maxHealth;
+    d.alive = true;
+    burst(d.x, d.y, TEAMS.green.color, 16, 180);
+    floater(d.x, d.y - d.r - 8, "Repaired");
+    note("A GREEN dominator has been repaired!");
+  }
+
+  function assaultWin(team, msg) {
+    if (state.mode !== "assault" || state.closing) return;
+    note(msg || (team === "blue" ? "Blue team wins!" : "Green team wins!"), 5000);
+    beginArenaClose();
+  }
+
+  function updateAssault(dt) {
+    if (state.mode !== "assault") return;
+    for (const d of assaultDoms()) {
+      d.x = d.homeX;
+      d.y = d.homeY;
+      d.vx = 0;
+      d.vy = 0;
+      if (!d.destroyed) continue;
+      d.health = 0;
+      d.alive = true;
+      const reach = (d.r + 86) * (d.r + 86);
+      let green = 0;
+      let blue = 0;
+      for (const t of state.tanks) {
+        if (!t.alive || t.dominator || t.closer || !t.team) continue;
+        if (dist2(t, d) > reach) continue;
+        if (t.team === "green") green++;
+        else if (t.team === "blue") blue++;
+      }
+      if (green && !blue) d.repair = (d.repair || 0) + dt / 6.8;
+      else if (blue) d.repair = Math.max(0, (d.repair || 0) - dt * 0.45);
+      if (d.repair >= 1) repairDominator(d);
+    }
+    if (state.closing) return;
+    const live = assaultLiveCount();
+    const need = assaultNeed();
+    const held = live >= need;
+    if (held) {
+      if (!state.assaultHold) {
+        state.assaultHold = true;
+        state.assaultWinAt = state.time + ASSAULT_WIN;
+        note("GREEN recaptured 3/4 of the dominators. Victory timer reset.");
+      }
+      if (state.time >= state.assaultWinAt) assaultWin("green", "Green held 3/4 of the dominators for 10 minutes.");
+    } else {
+      state.assaultHold = false;
+    }
   }
 
   function spawnDoms() {
@@ -792,6 +1010,7 @@
   function botCountFor(mode) {
     if (mode === "sandbox") return 0;
     if (mode === "maze") return 16;
+    if (mode === "assault") return 18;
     if (mode === "4tdm") return 20;
     return 18;
   }
@@ -811,6 +1030,10 @@
     }
     if (mode === "domination" && mine) {
       const other = mine === "blue" ? "red" : "blue";
+      return Array(8).fill(mine).concat(Array(10).fill(other));
+    }
+    if (mode === "assault" && mine) {
+      const other = mine === "blue" ? "green" : "blue";
       return Array(8).fill(mine).concat(Array(10).fill(other));
     }
     if (mode === "tag" && mine) {
@@ -835,12 +1058,14 @@
       protect: "Protect",
       maze: "Maze",
       domination: "Domination",
+      assault: "Assault",
       sandbox: "Sandbox",
     })[mode] || "FFA";
   }
 
   function pickStartTeam(mode) {
     if (mode === "tdm" || mode === "domination") return Math.random() < 0.5 ? "red" : "blue";
+    if (mode === "assault") return Math.random() < 0.5 ? "blue" : "green";
     if (mode === "4tdm") return TEAM4[irand(0, TEAM4.length - 1)];
     if (mode === "tag" || mode === "protect") return Math.random() < 0.5 ? "red" : "green";
     return null;
@@ -905,6 +1130,7 @@
     tank.r = (20 + Math.min(tank.level, 45) * 0.18) * (m.size || 1);
     if (tank.mothership) tank.r = 82;
     if (tank.closer) tank.r = 46;
+    if (tank.dominator) tank.r = tank.mainBase ? 78 : 64;
     const st = tankStats(tank);
     const ratio = tank.maxHealth > 0 ? tank.health / tank.maxHealth : 1;
     tank.maxHealth = st.maxHealth;
@@ -1010,7 +1236,7 @@
     const starterTris = irand(1, 3);
     for (let i = 0; i < starterTris; i++)     state.shapes.push(createShape("triangle"));
     for (let i = 0; i < 6; i++) state.shapes.push(createShape("pentagon", nestPos()));
-    if (state.mode !== "protect" && state.mode !== "maze") state.shapes.push(createShape("alpha"));
+    if (state.mode !== "protect" && state.mode !== "maze" && state.mode !== "assault") state.shapes.push(createShape("alpha"));
     for (let i = 0; i < 2; i++) state.shapes.push(createShape("crasher"));
   }
 
@@ -1024,7 +1250,9 @@
       const score = xpForLevel(LEVEL_CAP);
       const aiJob = state.mode === "protect"
         ? (Math.random() < 0.48 ? "hunt" : Math.random() < 0.28 ? "defend" : "roam")
-        : null;
+        : state.mode === "assault"
+          ? (team === "green" ? (Math.random() < 0.55 ? "defend" : "roam") : (Math.random() < 0.38 ? "hunt" : "roam"))
+          : null;
       const home = state.mode === "protect" ? mothershipOf(team) : null;
       const bot = createTank({
         name: names[i % names.length],
@@ -1035,7 +1263,9 @@
         color: colorFor({ team }),
         pos: (state.mode === "tdm" || state.mode === "4tdm") && team
           ? spawnInBase(team)
-          : home
+          : state.mode === "assault" && team
+            ? assaultSpawn(team)
+            : home
             ? (aiJob === "hunt" ? awayFrom(home.x, home.y, 860) : around(home.x, home.y, 240))
             : state.mode === "domination"
               ? awayFrom(WORLD.w / 2, WORLD.h / 2, 400)
@@ -1121,10 +1351,11 @@
     tank.health = tank.maxHealth;
     if (tank.mothership) tank.r = 82;
     if (tank.closer) tank.r = 46;
+    if (tank.dominator) tank.r = tank.mainBase ? 78 : 64;
   }
 
   function skipToLevelCap(tank) {
-    if (!tank || !tank.alive || tank.mothership || tank.closer) return false;
+    if (!tank || !tank.alive || tank.mothership || tank.closer || tank.dominator) return false;
     if (tank.level >= LEVEL_CAP) return false;
     tank.score = Math.max(tank.score, xpForLevel(LEVEL_CAP));
     applyLevel(tank);
@@ -1224,6 +1455,9 @@
     state.doms = [];
     state.domHold = null;
     state.domHoldT = 0;
+    state.assaultBlue = null;
+    state.assaultHold = false;
+    state.assaultWinAt = 0;
     state.autoFire = false;
     state.autoSpin = false;
     state.time = 0;
@@ -1248,6 +1482,7 @@
     state.closeAt = 0;
     state.closersSpawned = false;
     if (state.mode === "maze") buildMaze();
+    if (state.mode === "assault") buildAssaultArena();
     if (state.mode === "domination") spawnDoms();
     populateWorld();
     const team = pickStartTeam(state.mode);
@@ -1262,7 +1497,9 @@
       score: xpForLevel(LEVEL_CAP),
       pos: (state.mode === "tdm" || state.mode === "4tdm") && team
         ? spawnInBase(team)
-        : home
+        : state.mode === "assault" && team
+          ? assaultSpawn(team)
+          : home
           ? around(home.x, home.y, 220)
           : awayFrom(WORLD.w / 2, WORLD.h / 2, 700),
     });
@@ -1286,6 +1523,7 @@
     if (els.pause) els.pause.classList.add("hidden");
     if (els.spectateBar) els.spectateBar.classList.add("hidden");
     clearNotes();
+    if (state.mode === "assault") welcomeSpawnNotes();
     els.hud.classList.remove("hidden");
     const ws = document.getElementById("workshop");
     if (ws) ws.classList.add("hidden");
@@ -1312,6 +1550,10 @@
 
   function killTank(tank, killer, cause) {
     if (!tank || tank.deadHandled) return;
+    if (tank.dominator) {
+      wreckDominator(tank, killer && killer.owner ? killer.owner : killer);
+      return;
+    }
     tank.deadHandled = true;
     tank.alive = false;
     clearOwnedShots(tank);
@@ -1367,7 +1609,9 @@
           color: colorFor({ team }),
           pos: (state.mode === "tdm" || state.mode === "4tdm") && team
             ? spawnInBase(team)
-            : state.mode === "protect" && mothershipOf(team)
+            : state.mode === "assault" && team
+              ? assaultSpawn(team)
+              : state.mode === "protect" && mothershipOf(team)
               ? around(mothershipOf(team).x, mothershipOf(team).y, 220)
               : awayFrom(WORLD.w / 2, WORLD.h / 2, 900),
         });
@@ -1375,6 +1619,8 @@
         bot.aiHunt = Math.random() < 0.58 ? "mid" : "roam";
         if (state.mode === "protect") {
           bot.aiJob = Math.random() < 0.48 ? "hunt" : Math.random() < 0.28 ? "defend" : "roam";
+        } else if (state.mode === "assault") {
+          bot.aiJob = team === "green" ? (Math.random() < 0.55 ? "defend" : "roam") : (Math.random() < 0.38 ? "hunt" : "roam");
         }
         autoUpgradeBot(bot);
         bot.health = bot.maxHealth;
@@ -1525,9 +1771,11 @@
     const home = team ? mothershipOf(team) : null;
     const pos = (state.mode === "tdm" || state.mode === "4tdm") && team
       ? spawnInBase(team)
-      : home
-        ? around(home.x, home.y, 220)
-        : awayFrom(WORLD.w / 2, WORLD.h / 2, 700);
+      : state.mode === "assault" && team
+        ? assaultSpawn(team)
+        : home
+          ? around(home.x, home.y, 220)
+          : awayFrom(WORLD.w / 2, WORLD.h / 2, 700);
     const player = createTank({
       name: state.spawnName,
       team,
@@ -1553,13 +1801,14 @@
     state.classDismissed = false;
     els.death.classList.add("hidden");
     if (els.spectateBar) els.spectateBar.classList.add("hidden");
+    if (state.mode === "assault") welcomeSpawnNotes();
     try { renderStats(); } catch (err) {}
     try { renderClassPanel(); } catch (err) {}
     return true;
   }
 
   function spectateList() {
-    return state.tanks.filter((t) => t.alive && !t.closer);
+    return state.tanks.filter((t) => t.alive && !t.closer && !t.dominator);
   }
 
   function spectateFree() {
@@ -1721,7 +1970,7 @@
   }
 
   function applyRecoil(tank, gun, kind, st, width, ang) {
-    if (!tank || tank.closer || tank.mothership) return;
+    if (!tank || tank.closer || tank.mothership || tank.dominator) return;
     if (gun.type === "deco") return;
     let rec = gun.recoil;
     if (rec == null) {
@@ -1766,6 +2015,7 @@
     let br = (7.2 * st.bulletSize * sizeMul) * (0.85 + tank.r / 40);
     if (tank.mothership && kind !== "drone" && kind !== "swarm") br = 8.2 * st.bulletSize * sizeMul;
     if (tank.closer) br = 26;
+    if (kind === "heal") br = Math.max(8, br * 0.92);
     let orbit = rand(0, TAU);
     if (kind === "drone" || kind === "swarm") orbit = countOwned(kind, tank) * 2.39996;
     state.bullets.push({
@@ -1777,7 +2027,7 @@
       health: st.bulletPen * (kind === "trap" ? 2.7 : kind === "drone" ? 2.2 : 1),
       damage: st.bulletDamage * (gs.damage || (kind === "trap" ? 0.9 : kind === "swarm" ? 0.55 : 1)),
       life: lifeBase * (gs.life || 1),
-      color: tank.color,
+      color: kind === "heal" ? "#f14e54" : tank.color,
       owner: tank,
       kind,
       angle: ang,
@@ -1788,6 +2038,7 @@
   }
 
   function wantsFire(tank) {
+    if (tank.dominator) return !tank.destroyed;
     if (tank.mothership) return true;
     if (tank.spawnProtect > 0 && tank.ai) return false;
     if (tank.ai) {
@@ -2066,11 +2317,28 @@
 
   function updateAI(tank, dt) {
     tank.aiT -= dt;
-    if (tank.spawnProtect > 0 && !tank.closer && !tank.mothership) {
+    if (tank.spawnProtect > 0 && !tank.closer && !tank.mothership && !tank.dominator) {
       tank.vx *= 0.15;
       tank.vy *= 0.15;
       tank.aiState = "spawn";
       tank.aiTarget = null;
+      return;
+    }
+    if (tank.dominator) {
+      tank.vx = 0;
+      tank.vy = 0;
+      if (tank.homeX != null) { tank.x = tank.homeX; tank.y = tank.homeY; }
+      if (tank.destroyed) return;
+      const prey = nearestSeen(tank, state.tanks, 980, (t) => isEnemyTank(tank, t) && !t.dominator);
+      if (tank.mainBase) {
+        const ally = nearest(tank, state.tanks, 460, (t) => t.alive && sameTeam(tank, t) && !t.dominator && t.health < t.maxHealth * 0.98);
+        if (ally) tank.angle = Math.atan2(ally.y - tank.y, ally.x - tank.x);
+        else if (prey) tank.angle = Math.atan2(prey.y - tank.y, prey.x - tank.x);
+      } else if (prey) tank.angle = aimAt(tank, prey, tankStats(tank));
+      tank.aiState = prey ? "attack" : "defend";
+      tank.aiTarget = prey;
+      updateTurrets(tank, dt);
+      shoot(tank, dt);
       return;
     }
     const player = state.player;
@@ -2146,7 +2414,7 @@
     const defending = state.mode === "protect" && ownMoth && tank.aiJob === "defend";
     const huntingMoth = state.mode === "protect" && foeMoth && tank.aiJob === "hunt";
     const ram = isRammer(tank);
-    const maze = state.mode === "maze";
+    const maze = state.mode === "maze" || state.mode === "assault";
     const fightRange = maze ? (ram ? 520 : 640) : (ram ? 820 : 980);
     const seeRange = maze ? 1100 : (state.mode === "tag" || state.mode === "protect" ? 2200 : 1800);
     let enemy = hunting
@@ -2207,6 +2475,30 @@
       }
     }
 
+    if (state.mode === "assault" && tank.team && tank.aiState !== "flee" && tank.aiState !== "attack") {
+      if (tank.team === "green") {
+        const wreck = nearest(tank, state.tanks, 2800, (t) => t.dominator && t.destroyed);
+        const keep = nearest(tank, state.tanks, 2800, (t) => t.dominator && !t.destroyed);
+        const goal = wreck && (tank.aiJob === "defend" || !keep || dist2(tank, wreck) < dist2(tank, keep)) ? wreck : keep;
+        if (goal) {
+          tank.aiState = "wander";
+          tank.roamX = goal.x;
+          tank.roamY = goal.y;
+          tank.aiT = 3;
+        }
+      } else {
+        const main = healerDominator();
+        const any = nearest(tank, state.tanks, 99999, (t) => t.dominator && !t.destroyed);
+        const goal = tank.aiJob === "hunt" && main && !main.destroyed ? main : any;
+        if (goal) {
+          tank.aiState = "wander";
+          tank.roamX = goal.x;
+          tank.roamY = goal.y;
+          tank.aiT = 3;
+        }
+      }
+    }
+
     const st = tankStats(tank);
     tank.aiTarget = tank.aiState === "attack" ? enemy : tank.aiState === "farm" ? shape : tank.aiState === "defend" ? (enemy || ownMoth) : tank.aiState === "seek" ? heard : null;
 
@@ -2230,8 +2522,8 @@
         const ny = (enemy.y - tank.y) / dist;
         const sx = -ny * (tank.strafeDir || 1);
         const sy = nx * (tank.strafeDir || 1);
-        const prefer = ram ? 42 : (enemy.mothership ? 150 : 310);
-        if (ram) {
+        const prefer = ram ? 42 : (enemy.mothership || enemy.dominator ? 150 : 310);
+        if (ram || enemy.dominator) {
           tx = enemy.x;
           ty = enemy.y;
         } else if (dist > prefer + 50) {
@@ -2365,6 +2657,7 @@
     if (ent.kind === "triangle") return 90;
     if (ent.kind === "crasher") return 55;
     if (ent.kind === "square") return 70;
+    if (ent.dominator) return 80000;
     return ent.r * ent.r;
   }
 
@@ -2400,6 +2693,7 @@
 
   function damage(target, amount, src) {
     if (!target.alive) return;
+    if (target.dominator && target.destroyed) return;
     if (target.closer && src && (src.closer || (src.owner && src.owner.closer))) return;
     if (tryTagHit(target, src)) return;
     if (target.spawnProtect > 0 && !(src && src.closer)) return;
@@ -2410,6 +2704,10 @@
     if (target.type === "tank") target.bodyHitT = 0.08;
     if (target === state.player) shake = Math.max(shake, Math.min(10, amount * 0.25));
     if (target.health <= 0) {
+      if (target.dominator) {
+        wreckDominator(target, src && src.owner ? src.owner : src);
+        return;
+      }
       target.alive = false;
       burst(target.x, target.y, target.color, target.kind === "alpha" ? 36 : 12, 180);
       if (target.kind === "alpha") state.alphaRespawnAt = state.time + rand(60, 120);
@@ -2484,6 +2782,7 @@
     if (state.mode === "protect") checkProtectClose();
     if (state.mode === "ffa" && !state.closing && state.time >= FFA_CLOSE_AT) beginArenaClose();
     updateDoms(dt);
+    updateAssault(dt);
     if (state.closing && !state.closersSpawned && state.time >= state.closeAt) spawnArenaClosers();
     updateRespawnUi();
     if (!state.spectating) updatePlayer(dt);
@@ -2504,6 +2803,11 @@
       }
       if (tank.closer) cap = tankStats(tank).moveSpeed * SPEED_CAP * 1.35;
       if (spd > cap) { tank.vx *= cap / spd; tank.vy *= cap / spd; }
+      if (tank.dominator) {
+        tank.vx = 0;
+        tank.vy = 0;
+        if (tank.homeX != null) { tank.x = tank.homeX; tank.y = tank.homeY; }
+      }
       tank.x += tank.vx * dt;
       tank.y += tank.vy * dt;
       tank.x = clamp(tank.x, tank.r, WORLD.w - tank.r);
@@ -2512,7 +2816,9 @@
       tank.bodyHitT = Math.max(0, tank.bodyHitT - dt);
       if (tank.spawnProtect > 0) tank.spawnProtect = Math.max(0, tank.spawnProtect - dt);
       const invading = tank.team && zoneAt(tank.x, tank.y) && zoneAt(tank.x, tank.y) !== tank.team;
-      if (invading) {
+      if (tank.dominator && tank.destroyed) {
+        tank.health = 0;
+      } else if (invading) {
         tank.health -= tank.maxHealth * 0.32 * dt;
         tank.bodyHitT = 0.08;
         if (tank === state.player) shake = Math.max(shake, 4);
@@ -2687,7 +2993,7 @@
     for (const bullet of state.bullets) {
       if (!bullet.alive) continue;
       for (const s of state.shapes) {
-        if (!s.alive || !bullet.alive) continue;
+        if (!s.alive || !bullet.alive || bullet.kind === "heal") continue;
         const dx = s.x - bullet.x;
         const dy = s.y - bullet.y;
         if (dx * dx + dy * dy < (s.r + bullet.r) ** 2) {
@@ -2702,17 +3008,24 @@
         }
       }
       for (const tank of state.tanks) {
-        if (!tank.alive || tank === bullet.owner || sameTeam(tank, bullet.owner)) continue;
+        if (!tank.alive || tank === bullet.owner) continue;
+        if (tank.dominator && tank.destroyed) continue;
         const dx = tank.x - bullet.x;
         const dy = tank.y - bullet.y;
-        if (dx * dx + dy * dy < (tank.r + bullet.r) ** 2) {
-          tank.vx += bullet.vx * 0.01;
-          tank.vy += bullet.vy * 0.01;
-          damage(tank, bullet.damage, bullet.owner);
-          if (!(bullet.owner && bullet.owner.closer)) {
-            bullet.health -= bullet.kind === "trap" || bullet.kind === "drone" ? 0.45 : 1.2;
-            if (bullet.health <= 0) bullet.alive = false;
-          }
+        if (dx * dx + dy * dy >= (tank.r + bullet.r) ** 2) continue;
+        if (bullet.kind === "heal") {
+          if (tank.dominator || !sameTeam(tank, bullet.owner)) continue;
+          tank.health = Math.min(tank.maxHealth, tank.health + 18);
+          bullet.alive = false;
+          continue;
+        }
+        if (sameTeam(tank, bullet.owner)) continue;
+        tank.vx += bullet.vx * 0.01;
+        tank.vy += bullet.vy * 0.01;
+        damage(tank, bullet.damage, bullet.owner);
+        if (!(bullet.owner && bullet.owner.closer)) {
+          bullet.health -= bullet.kind === "trap" || bullet.kind === "drone" ? 0.45 : 1.2;
+          if (bullet.health <= 0) bullet.alive = false;
         }
       }
     }
@@ -2762,7 +3075,7 @@
     if (els.serverTotal) {
       let sum = 0;
       for (const t of state.tanks) {
-        if (t.alive && !t.closer) sum += t.score || 0;
+        if (t.alive && !t.closer && !t.dominator) sum += t.score || 0;
       }
       els.serverTotal.textContent = `Total ${formatScore(sum)}`;
     }
@@ -2773,7 +3086,7 @@
     const nxt = xpForLevel(next);
     const pct = p.level >= LEVEL_CAP ? 100 : ((p.score - cur) / Math.max(1, nxt - cur)) * 100;
     const def = getDef(p);
-    const ranked = state.tanks.filter((t) => t.alive && !t.closer && !t.mothership).sort((a, b) => b.score - a.score).slice(0, 10);
+    const ranked = state.tanks.filter((t) => t.alive && !t.closer && !t.mothership && !t.dominator).sort((a, b) => b.score - a.score).slice(0, 10);
     const top = Math.max(1, ranked[0] ? ranked[0].score : 1);
     const free = skillPointsFor(p.level) - spentPoints(p);
     if (els.xpFill) els.xpFill.style.width = `${clamp(pct, 0, 100)}%`;
@@ -2801,6 +3114,15 @@
       } else if (state.mode === "domination" && state.domHold) {
         const left = Math.max(0, DOM_HOLD - (state.time - state.domHoldT));
         els.closeTimer.textContent = `${TEAMS[state.domHold].name} hold ${left.toFixed(0)}s`;
+      } else if (state.mode === "assault") {
+        const live = assaultLiveCount();
+        const total = assaultDoms().length;
+        const need = assaultNeed();
+        if (state.assaultHold) {
+          els.closeTimer.textContent = `Green win ${formatClock(state.assaultWinAt - state.time)} · ${live}/${total}`;
+        } else {
+          els.closeTimer.textContent = `Hold ${live}/${need} to win`;
+        }
       } else els.closeTimer.textContent = "";
     }
     if (els.arenaMode && state.mode === "manhunt") {
@@ -2834,6 +3156,14 @@
       const b = state.doms.filter((d) => d.team === "blue").length;
       const r = state.doms.filter((d) => d.team === "red").length;
       els.arenaMode.textContent = state.closing ? "Arena closing" : `Domination · Blue ${b} – ${r} Red`;
+    }
+    if (els.arenaMode && state.mode === "assault") {
+      const live = assaultLiveCount();
+      const total = assaultDoms().length;
+      const side = state.player && state.player.team ? TEAMS[state.player.team].name : "Assault";
+      els.arenaMode.textContent = state.closing
+        ? "Arena closing"
+        : `Assault · ${side} · Green ${live}/${total}`;
     }
     if (els.skillPoints) els.skillPoints.textContent = state.spectating ? "" : (free > 0 ? `x${free}` : "");
     const teamRows = teamBoardRows();
@@ -2871,6 +3201,14 @@
         const pts = state.doms.filter((d) => d.team === id).length;
         const sum = state.tanks.filter((t) => t.alive && t.team === id && !t.closer).reduce((n, t) => n + t.score, 0);
         rows.push({ color: TEAMS[id].color, label: `${TEAMS[id].name} — ${pts} pts · ${formatScore(sum)}`, sort: pts * 1e12 + sum });
+      }
+    } else if (state.mode === "assault") {
+      const live = assaultLiveCount();
+      const total = Math.max(1, assaultDoms().length);
+      for (const id of ["green", "blue"]) {
+        const sum = state.tanks.filter((t) => t.alive && t.team === id && !t.closer && !t.dominator).reduce((n, t) => n + t.score, 0);
+        const extra = id === "green" ? `${live}/${total} doms` : `${total - live} down`;
+        rows.push({ color: TEAMS[id].color, label: `${TEAMS[id].name} — ${extra} · ${formatScore(sum)}`, sort: id === "green" ? live * 1e12 + sum : (total - live) * 1e12 + sum });
       }
     } else {
       return null;
@@ -3055,7 +3393,8 @@
   }
 
   function drawHealth(c, ent, yOff) {
-    if (ent.health >= ent.maxHealth * 0.995) return;
+    const repairing = !!(ent.dominator && ent.destroyed && (ent.repair || 0) > 0);
+    if (!repairing && ent.health >= ent.maxHealth * 0.995) return;
     const w = ent.r * 2.2;
     const h = 5;
     const x = ent.x - w / 2;
@@ -3063,8 +3402,8 @@
     c.fillStyle = "#333";
     roundRect(c, x - 1, y - 1, w + 2, h + 2, 2);
     c.fill();
-    const pct = clamp(ent.health / ent.maxHealth, 0, 1);
-    c.fillStyle = pct < 0.3 ? "#e85d5d" : "#8dff6e";
+    const pct = repairing ? clamp(ent.repair, 0, 1) : clamp(ent.health / ent.maxHealth, 0, 1);
+    c.fillStyle = repairing ? "#f2e863" : (pct < 0.3 ? "#e85d5d" : "#8dff6e");
     roundRect(c, x, y, w * pct, h, 2);
     c.fill();
   }
@@ -3120,10 +3459,28 @@
       c.stroke();
     }
     if (!opts.hideName) {
-      const label = tank === state.hunted ? tank.name + "  HUNTED" : tank.name;
-      const baseY = tank.y - tank.r - 5;
-      drawOutlinedText(c, formatScore(tank.score || 0), tank.x, baseY, "bold 10px Ubuntu, Segoe UI, sans-serif", "#fff", 3.2);
-      drawOutlinedText(c, label, tank.x, baseY - 12, "bold 13px Ubuntu, Segoe UI, sans-serif", "#fff", 3.6);
+      if (tank.dominator) {
+        const label = tank.destroyed ? (tank.mainBase ? "Healer wreck" : "Dominator wreck") : tank.name;
+        drawOutlinedText(c, label, tank.x, tank.y - tank.r - 8, "bold 13px Ubuntu, Segoe UI, sans-serif", "#fff", 3.6);
+      } else {
+        const label = tank === state.hunted ? tank.name + "  HUNTED" : tank.name;
+        const baseY = tank.y - tank.r - 5;
+        drawOutlinedText(c, formatScore(tank.score || 0), tank.x, baseY, "bold 10px Ubuntu, Segoe UI, sans-serif", "#fff", 3.2);
+        drawOutlinedText(c, label, tank.x, baseY - 12, "bold 13px Ubuntu, Segoe UI, sans-serif", "#fff", 3.6);
+      }
+    }
+    if (tank.mainBase && !tank.destroyed) {
+      c.save();
+      c.strokeStyle = "#f14e54";
+      c.lineWidth = 7;
+      c.lineCap = "round";
+      c.beginPath();
+      c.moveTo(tank.x - tank.r * 0.34, tank.y);
+      c.lineTo(tank.x + tank.r * 0.34, tank.y);
+      c.moveTo(tank.x, tank.y - tank.r * 0.34);
+      c.lineTo(tank.x, tank.y + tank.r * 0.34);
+      c.stroke();
+      c.restore();
     }
     if (tank === state.hunted) {
       c.beginPath();
@@ -3349,14 +3706,25 @@
       mctx.fillStyle = d.team && TEAMS[d.team] ? TEAMS[d.team].color : "#777";
       mctx.fill();
     }
+    for (const t of assaultDoms()) {
+      const sz = t.mainBase ? 10 : 7;
+      mctx.fillStyle = t.destroyed ? "#777" : TEAMS.green.color;
+      mctx.fillRect(mapX(t.x) - sz / 2, mapY(t.y) - sz / 2, sz, sz);
+    }
+    if (state.mode === "assault" && state.assaultBlue) {
+      mctx.fillStyle = TEAMS.blue.color;
+      mctx.globalAlpha = 0.45;
+      mctx.fillRect(mapX(state.assaultBlue.x) - 5, mapY(state.assaultBlue.y) - 5, 10, 10);
+      mctx.globalAlpha = 1;
+    }
     const p = cameraFocus();
     const watching = state.spectating;
     for (const t of state.tanks) {
-      if (!t.alive || t.closer) continue;
+      if (!t.alive || t.closer || t.dominator) continue;
       const self = t === p;
       const ally = !!(p && t.team && p.team && t.team === p.team);
       const boss = !!t.mothership;
-      if (!watching && !self && !ally && !boss) continue;
+      if (!watching && !self && !ally && !boss && state.mode !== "assault") continue;
       mctx.fillStyle = t.color;
       mctx.beginPath();
       mctx.arc(mapX(t.x), mapY(t.y), boss ? 6 : self ? 4 : 3, 0, TAU);
@@ -3505,6 +3873,7 @@
     protect: "Two motherships roam · random team · start at 45 · [N] skip to 45 · [H] to take control",
     maze: "FFA inside generated walls · start at 45",
     domination: "Capture 4 points · random team · start at 45",
+    assault: "Blue attacks Green · maze or open · 4–8 dominators · start at 45 · Green wins in 10:00 if they hold 3/4",
     sandbox: "Level 45 · pick any tank",
   };
 
@@ -3523,6 +3892,7 @@
     else if (menuMode === "protect") startGame(name, { mode: "protect" });
     else if (menuMode === "maze") startGame(name, { mode: "maze" });
     else if (menuMode === "domination") startGame(name, { mode: "domination" });
+    else if (menuMode === "assault") startGame(name, { mode: "assault" });
     else startGame(name, { mode: "ffa" });
   }
 
