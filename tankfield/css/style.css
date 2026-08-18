@@ -491,6 +491,13 @@ kbd {
   opacity: 0.9;
 }
 
+#server-total {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  opacity: 0.82;
+}
+
 #minimap {
   display: block;
   background: rgba(200, 200, 200, 0.55);

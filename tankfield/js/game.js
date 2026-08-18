@@ -108,6 +108,7 @@
     fps: document.getElementById("fps-label"),
     arenaMode: document.getElementById("arena-mode"),
     closeTimer: document.getElementById("close-timer"),
+    serverTotal: document.getElementById("server-total"),
     skipUpgrade: document.getElementById("skip-upgrade"),
     showClasses: document.getElementById("show-classes"),
     deathWait: document.getElementById("death-wait"),
@@ -2623,6 +2624,13 @@
   }
 
   function updateHud() {
+    if (els.serverTotal) {
+      let sum = 0;
+      for (const t of state.tanks) {
+        if (t.alive && !t.closer) sum += t.score || 0;
+      }
+      els.serverTotal.textContent = `Total ${formatScore(sum)}`;
+    }
     const p = state.spectating && state.spectateTarget && state.spectateTarget.alive ? state.spectateTarget : state.player;
     if (!p) return;
     const next = Math.min(LEVEL_CAP, p.level + (p.level < LEVEL_CAP ? 1 : 0));
