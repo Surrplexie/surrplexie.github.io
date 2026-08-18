@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const WORLD = { w: 4600, h: 4600 };
+  const WORLD = { w: 11500, h: 11500 };
   const TAU = Math.PI * 2;
   const STAT_MAX = 7;
   const LEVEL_CAP = 45;
@@ -619,8 +619,8 @@
   }
 
   function buildMaze() {
-    const cols = irand(8, 12);
-    const rows = irand(8, 12);
+    const cols = irand(18, 26);
+    const rows = irand(18, 26);
     const thick = irand(50, 64);
     const pad = irand(48, 90);
     const cellW = (WORLD.w - pad * 2) / cols;
@@ -676,7 +676,7 @@
   }
 
   function spawnDoms() {
-    const inset = 980;
+    const inset = 2450;
     state.doms = [
       { x: inset, y: inset, r: 118, team: null, progress: 0 },
       { x: WORLD.w - inset, y: inset, r: 118, team: null, progress: 0 },
@@ -864,7 +864,7 @@
     const p = pos || (kind === "alpha"
       ? { x: WORLD.w / 2, y: WORLD.h / 2 }
       : kind === "pentagon" || kind === "crasher"
-        ? { x: WORLD.w / 2 + rand(-420, 420), y: WORLD.h / 2 + rand(-420, 420) }
+        ? { x: WORLD.w / 2 + rand(-560, 560), y: WORLD.h / 2 + rand(-560, 560) }
         : randomInWorld(80));
     return {
       type: "shape", kind, sides: t.sides, x: p.x, y: p.y, vx: 0, vy: 0,
@@ -938,7 +938,7 @@
 
   function populateWorld() {
     state.shapes = [];
-    for (let i = 0; i < 90; i++) state.shapes.push(createShape("square"));
+    for (let i = 0; i < 220; i++) state.shapes.push(createShape("square"));
     const starterTris = irand(1, 3);
     for (let i = 0; i < starterTris; i++) state.shapes.push(createShape("triangle"));
     state.shapes.push(createShape("pentagon"));
@@ -1035,7 +1035,7 @@
     };
   }
 
-  function sidePos(side, pad = 360) {
+  function sidePos(side, pad = 720) {
     if (side === 0) return { x: pad, y: WORLD.h * 0.5 };
     if (side === 1) return { x: WORLD.w - pad, y: WORLD.h * 0.5 };
     if (side === 2) return { x: WORLD.w * 0.5, y: pad };
@@ -1089,8 +1089,8 @@
       });
       m.homeX = pos.x;
       m.homeY = pos.y;
-      m.roamX = clamp(pos.x + rand(-700, 700), 420, WORLD.w - 420);
-      m.roamY = clamp(pos.y + rand(-700, 700), 420, WORLD.h - 420);
+      m.roamX = clamp(pos.x + rand(-1400, 1400), 520, WORLD.w - 520);
+      m.roamY = clamp(pos.y + rand(-1400, 1400), 520, WORLD.h - 520);
       m.meetT = 0;
       m.aiT = rand(3, 7);
       maxOutTank(m);
@@ -1784,7 +1784,7 @@
   function maintainShapes() {
     const counts = { square: 0, triangle: 0, pentagon: 0, alpha: 0, crasher: 0 };
     for (const s of state.shapes) if (s.alive) counts[s.kind]++;
-    const want = { square: 90 };
+    const want = { square: 220 };
     for (const kind of Object.keys(want)) {
       while (counts[kind] < want[kind]) {
         state.shapes.push(createShape(kind));
@@ -1792,7 +1792,7 @@
       }
     }
     if (state.time >= state.pentagonAt) {
-      if (counts.pentagon < 6) {
+      if (counts.pentagon < 10) {
         state.shapes.push(createShape("pentagon"));
         counts.pentagon++;
       }
@@ -1800,14 +1800,14 @@
     }
     if (state.time >= state.triangleAt) {
       const n = irand(1, 5);
-      for (let i = 0; i < n && counts.triangle < 12; i++) {
+      for (let i = 0; i < n && counts.triangle < 22; i++) {
         state.shapes.push(createShape("triangle"));
         counts.triangle++;
       }
       state.triangleAt = state.time + rand(60, 180);
     }
     if (state.time >= (state.crasherAt || 0)) {
-      if (counts.crasher < 4) {
+      if (counts.crasher < 7) {
         state.shapes.push(createShape("crasher"));
         counts.crasher++;
       }
@@ -3152,7 +3152,7 @@
     if (state.mode !== "protect" && state.mode !== "maze") {
       ctx.fillStyle = "rgba(118, 141, 252, 0.08)";
       ctx.beginPath();
-      ctx.arc(WORLD.w / 2, WORLD.h / 2, 520, 0, TAU);
+      ctx.arc(WORLD.w / 2, WORLD.h / 2, 700, 0, TAU);
       ctx.fill();
     }
 
