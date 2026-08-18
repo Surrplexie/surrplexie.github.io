@@ -1541,17 +1541,13 @@
 
   function botCountFor(mode) {
     if (mode === "sandbox") return 0;
-    if (mode === "maze") return 16;
-    if (mode === "siege") return 12;
-    if (mode === "assault") return 18;
-    if (mode === "onehp" || mode === "4tdm") return 20;
-    return 18;
+    return 20;
   }
 
   function botTeamsFor(mode, mine) {
     if (mode === "tdm" && mine) {
       const other = mine === "blue" ? "red" : "blue";
-      return Array(8).fill(mine).concat(Array(10).fill(other));
+      return Array(9).fill(mine).concat(Array(11).fill(other));
     }
     if (mode === "4tdm" && mine) {
       const teams = Array(5).fill(mine);
@@ -1563,22 +1559,22 @@
     }
     if (mode === "domination" && mine) {
       const other = mine === "blue" ? "red" : "blue";
-      return Array(8).fill(mine).concat(Array(10).fill(other));
+      return Array(9).fill(mine).concat(Array(11).fill(other));
     }
     if (mode === "assault" && mine) {
       const other = mine === "blue" ? "green" : "blue";
-      return Array(8).fill(mine).concat(Array(10).fill(other));
+      return Array(9).fill(mine).concat(Array(11).fill(other));
     }
     if (mode === "tag" && mine) {
       const other = mine === "green" ? "red" : "green";
-      return Array(8).fill(mine).concat(Array(10).fill(other));
+      return Array(9).fill(mine).concat(Array(11).fill(other));
     }
     if (mode === "protect") {
       const own = mine || "green";
       const other = own === "red" ? "green" : "red";
-      return Array(8).fill(own).concat(Array(10).fill(other));
+      return Array(9).fill(own).concat(Array(11).fill(other));
     }
-    if (mode === "siege") return Array(12).fill("blue");
+    if (mode === "siege") return Array(20).fill("blue");
     return [];
   }
 
