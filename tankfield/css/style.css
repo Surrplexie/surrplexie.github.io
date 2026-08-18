@@ -804,6 +804,55 @@ kbd {
   display: none !important;
 }
 
+#notes {
+  position: fixed;
+  left: 50%;
+  top: 16px;
+  transform: translateX(-50%);
+  z-index: 9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+  max-width: min(720px, calc(100vw - 24px));
+}
+
+#spectate-bar:not(.hidden) ~ #notes {
+  top: 58px;
+}
+
+.note {
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: rgba(88, 88, 88, 0.88);
+  border: 1.5px solid #333;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  text-shadow:
+    -1px -1px 0 #000,
+     1px -1px 0 #000,
+    -1px  1px 0 #000,
+     1px  1px 0 #000;
+  animation: note-in 0.16s ease-out;
+}
+
+.note.out {
+  animation: note-out 0.4s ease-in forwards;
+}
+
+@keyframes note-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes note-out {
+  to { opacity: 0; transform: translateY(-6px); }
+}
+
 #spectate-bar button {
   border: 0;
   border-radius: 6px;

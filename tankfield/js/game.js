@@ -124,6 +124,7 @@
     spectateFreeBtn: document.getElementById("spectate-free"),
     spectateAgain: document.getElementById("spectate-again"),
     spectateMenu: document.getElementById("spectate-menu"),
+    notes: document.getElementById("notes"),
   };
 
   const keys = new Set();
@@ -873,6 +874,36 @@
     state.floaters.push({ x, y, text, life: 0.8 });
   }
 
+  function note(text, ms) {
+    const box = els.notes;
+    if (!box || !text) return;
+    const row = document.createElement("div");
+    row.className = "note";
+    row.textContent = text;
+    box.appendChild(row);
+    while (box.children.length > 4) box.firstElementChild.remove();
+    const life = clamp(ms == null ? 4000 : ms, 3000, 5000);
+    window.setTimeout(() => {
+      row.classList.add("out");
+      window.setTimeout(() => row.remove(), 420);
+    }, life);
+  }
+
+  function clearNotes() {
+    if (els.notes) els.notes.innerHTML = "";
+  }
+
+  function killNote(victim) {
+    const cls = (getDef(victim) && getDef(victim).name) || "Tank";
+    if (victim.mothership) {
+      const team = victim.team && TEAMS[victim.team] ? TEAMS[victim.team].name : "";
+      return team ? `You killed the ${team} mothership.` : "You killed a mothership.";
+    }
+    const raw = String(victim.name || "").trim();
+    if (!raw || /^unnamed/i.test(raw)) return `You killed an unnamed ${cls}.`;
+    return `You killed ${raw}'s ${cls}.`;
+  }
+
   function populateWorld() {
     state.shapes = [];
     for (let i = 0; i < 90; i++) state.shapes.push(createShape("square"));
@@ -1061,6 +1092,7 @@
       body.ai = false;
       state.player = body;
       floater(body.x, body.y - 18, "Left mothership");
+      note("You left the mothership.");
       try { renderStats(); } catch (err) {}
       try { renderClassPanel(); } catch (err) {}
       return;
@@ -1072,6 +1104,7 @@
     m.ai = false;
     state.player = m;
     floater(m.x, m.y - m.r - 8, "Mothership");
+    note("You are now controlling the mothership.");
     try { renderStats(); } catch (err) {}
     try { renderClassPanel(); } catch (err) {}
   }
@@ -1149,6 +1182,7 @@
     els.death.classList.add("hidden");
     if (els.pause) els.pause.classList.add("hidden");
     if (els.spectateBar) els.spectateBar.classList.add("hidden");
+    clearNotes();
     els.hud.classList.remove("hidden");
     const ws = document.getElementById("workshop");
     if (ws) ws.classList.add("hidden");
@@ -1187,6 +1221,7 @@
       state.lastKiller = credited;
       credited.kills = (credited.kills || 0) + 1;
       if (huntedBonus) floater(tank.x, tank.y - 24, "Hunted down");
+      if (credited === state.player && !state.spectating) note(killNote(tank));
     }
     if (tank === state.player) {
       if (tank.mothership) {
@@ -1197,6 +1232,7 @@
           state.player = body;
           shake = 10;
           floater(body.x, body.y - 18, "Mothership down");
+          note("Your mothership was destroyed.", 5000);
         } else {
           shake = 14;
           showDeath(tank);
@@ -1480,6 +1516,7 @@
     state.camera.zoom = 1;
     if (els.pause) els.pause.classList.add("hidden");
     if (els.spectateBar) els.spectateBar.classList.add("hidden");
+    clearNotes();
     els.death.classList.add("hidden");
     els.hud.classList.add("hidden");
     els.start.classList.remove("hidden");
@@ -1705,6 +1742,7 @@
     }
     burst(target.x, target.y, next.color, 14, 200);
     floater(target.x, target.y - 18, next.name);
+    if (target === state.player) note(`You were tagged. You are now ${next.name}.`);
     if (by.alive) giveScore(by, 35, target.x, target.y);
     checkTagVictory();
     return true;
@@ -1716,6 +1754,7 @@
     state.closeAt = state.time + 2.2;
     const p = state.player;
     if (p && p.alive) floater(p.x, p.y - 28, "Arena closing");
+    note("The arena is closing.", 5000);
   }
 
   function checkTagVictory() {
@@ -1841,6 +1880,7 @@
       if (next) {
         applyLevel(next);
         floater(next.x, next.y - 18, "HUNTED");
+        if (next === state.player) note("You are now the hunted.", 5000);
       }
     }
   }
@@ -2689,6 +2729,10 @@
     applyLevel(p);
     state.classDismissed = false;
     renderClassPanel();
+    if (p === state.player || p === state.pilotTank) {
+      const def = getDef(p);
+      if (def && def.name) note(`You have upgraded to ${def.name}.`);
+    }
   }
 
   function tryUpgrade(key, dump) {
@@ -2801,6 +2845,19 @@
     c.restore();
   }
 
+  function drawOutlinedText(c, text, x, y, font, fill, strokeW) {
+    c.font = font;
+    c.textAlign = "center";
+    c.textBaseline = "bottom";
+    c.lineJoin = "round";
+    c.miterLimit = 2;
+    c.lineWidth = strokeW;
+    c.strokeStyle = "#111";
+    c.fillStyle = fill;
+    c.strokeText(text, x, y);
+    c.fillText(text, x, y);
+  }
+
   function drawTank(c, tank, opts = {}) {
     const def = tank.customDef || TankCatalog.get(tank.classId);
     const guns = def.guns || [];
@@ -2825,11 +2882,10 @@
       c.stroke();
     }
     if (!opts.hideName) {
-      c.fillStyle = tank === state.hunted ? "#c9a227" : "#3a3a3a";
-      c.font = "bold 13px Segoe UI, sans-serif";
-      c.textAlign = "center";
-      c.textBaseline = "bottom";
-      c.fillText(tank === state.hunted ? tank.name + "  HUNTED" : tank.name, tank.x, tank.y - tank.r - 6);
+      const label = tank === state.hunted ? tank.name + "  HUNTED" : tank.name;
+      const baseY = tank.y - tank.r - 5;
+      drawOutlinedText(c, formatScore(tank.score || 0), tank.x, baseY, "bold 10px Ubuntu, Segoe UI, sans-serif", "#fff", 3.2);
+      drawOutlinedText(c, label, tank.x, baseY - 12, "bold 13px Ubuntu, Segoe UI, sans-serif", "#fff", 3.6);
     }
     if (tank === state.hunted) {
       c.beginPath();
