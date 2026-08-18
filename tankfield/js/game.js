@@ -1781,7 +1781,7 @@
     const nBots = teams.length || botCountFor(state.mode);
     for (let i = 0; i < nBots; i++) {
       const team = teams[i] || null;
-      const score = startScore();
+      const score = xpForLevel(LEVEL_CAP);
       const aiJob = state.mode === "protect"
         ? (Math.random() < 0.48 ? "hunt" : Math.random() < 0.28 ? "defend" : "roam")
         : state.mode === "assault"
@@ -2170,7 +2170,7 @@
         const bot = createTank({
           name: tank.name,
           ai: true,
-          score: kept,
+          score: Math.max(xpForLevel(LEVEL_CAP), kept),
           classId: "basic",
           team,
           color: colorFor({ team }),
@@ -4762,7 +4762,7 @@
     domination: "Capture 4 points · random team · start at 45",
     assault: "Blue attacks Green · smaller maze · capture zones · start at 45 · Green wins in 10:00 if they hold 3/4",
     siege: "Blue defends sanctuaries · waves of bosses · start at 45 · restore fallen sanctuaries by destroying them",
-    growth: "FFA · grow past 45 to 1000 · start at 1 · [N] skip to 45 · arena closers after 4 hours",
+    growth: "FFA · grow past 45 to 1000 · start at 1 · bots start at 45 · [N] skip to 45 · arena closers after 4 hours",
     onehp: "Everyone for themselves · 1 HP · no shields · health stats do nothing · 20 bots · medium map · start at 45",
     sandbox: "Level 45 · pick any tank",
   };
