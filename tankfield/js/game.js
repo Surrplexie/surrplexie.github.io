@@ -57,7 +57,7 @@
     purple: { id: "purple", name: "Purple", color: "#be7ff5" },
   };
   const BASE_W = 560;
-  const FFA_CLOSE_AT = 300;
+  const FFA_CLOSE_AT = 4 * 60 * 60;
   const DOM_HOLD = 8;
   const TEAM4 = ["blue", "red", "green", "purple"];
 
@@ -2791,10 +2791,13 @@
     if (els.closeTimer) {
       if (state.closing) els.closeTimer.textContent = "Arena closing";
       else if (state.mode === "ffa") {
-        const left = Math.max(0, FFA_CLOSE_AT - state.time);
-        const m = Math.floor(left / 60);
-        const s = String(Math.floor(left % 60)).padStart(2, "0");
-        els.closeTimer.textContent = `Closer ${m}:${s}`;
+        const left = Math.max(0, Math.floor(FFA_CLOSE_AT - state.time));
+        const h = Math.floor(left / 3600);
+        const m = Math.floor((left % 3600) / 60);
+        const s = String(left % 60).padStart(2, "0");
+        els.closeTimer.textContent = h > 0
+          ? `Closer ${h}:${String(m).padStart(2, "0")}:${s}`
+          : `Closer ${m}:${s}`;
       } else if (state.mode === "domination" && state.domHold) {
         const left = Math.max(0, DOM_HOLD - (state.time - state.domHoldT));
         els.closeTimer.textContent = `${TEAMS[state.domHold].name} hold ${left.toFixed(0)}s`;
@@ -3494,7 +3497,7 @@
   let menuMode = "ffa";
   let menuTeam = "blue";
   const MODE_HINT = {
-    ffa: "Everyone for themselves · start at 45 · arena closers after 5 minutes",
+    ffa: "Everyone for themselves · start at 45 · arena closers after 4 hours",
     tdm: "Red vs blue · random team · start at 45",
     "4tdm": "Four bases · random team · start at 45",
     manhunt: "Everyone hunts #1 · start at 45 · hunted gets a small boost",
