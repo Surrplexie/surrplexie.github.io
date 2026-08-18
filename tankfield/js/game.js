@@ -741,11 +741,10 @@
     })[mode] || "FFA";
   }
 
-  function pickStartTeam(mode, opts) {
-    const t = opts.team;
-    if (mode === "tdm" || mode === "domination") return t === "red" ? "red" : "blue";
-    if (mode === "4tdm") return TEAM4.includes(t) ? t : "blue";
-    if (mode === "tag" || mode === "protect") return t === "red" ? "red" : "green";
+  function pickStartTeam(mode) {
+    if (mode === "tdm" || mode === "domination") return Math.random() < 0.5 ? "red" : "blue";
+    if (mode === "4tdm") return TEAM4[irand(0, TEAM4.length - 1)];
+    if (mode === "tag" || mode === "protect") return Math.random() < 0.5 ? "red" : "green";
     return null;
   }
 
@@ -792,6 +791,7 @@
       strafeDir: Math.random() < 0.5 ? 1 : -1,
       aiFocus: "gun",
       aiTarget: null,
+      aiJob: null,
     };
     applyLevel(tank);
     tank.health = tank.maxHealth;
@@ -869,6 +869,10 @@
     for (let i = 0; i < nBots; i++) {
       const team = teams[i] || null;
       const score = state.mode === "protect" ? xpForLevel(LEVEL_CAP) : irand(0, 2200);
+      const aiJob = state.mode === "protect"
+        ? (Math.random() < 0.48 ? "hunt" : Math.random() < 0.28 ? "defend" : "roam")
+        : null;
+      const home = state.mode === "protect" ? mothershipOf(team) : null;
       const bot = createTank({
         name: names[i % names.length],
         ai: true,
@@ -878,13 +882,14 @@
         color: colorFor({ team }),
         pos: (state.mode === "tdm" || state.mode === "4tdm") && team
           ? spawnInBase(team)
-          : state.mode === "protect" && mothershipOf(team)
-            ? around(mothershipOf(team).x, mothershipOf(team).y, 220)
+          : home
+            ? (aiJob === "hunt" ? awayFrom(home.x, home.y, 860) : around(home.x, home.y, 240))
             : state.mode === "domination"
               ? awayFrom(WORLD.w / 2, WORLD.h / 2, 400)
               : awayFrom(WORLD.w / 2, WORLD.h / 2, 500),
       });
       bot.aiFocus = ["gun", "gun", "farm", "ram"][irand(0, 3)];
+      bot.aiJob = aiJob;
       autoUpgradeBot(bot);
       bot.health = bot.maxHealth;
       bot.spawnProtect = 4;
@@ -1085,7 +1090,7 @@
     if (state.mode === "maze") buildMaze();
     if (state.mode === "domination") spawnDoms();
     populateWorld();
-    const team = pickStartTeam(state.mode, opts);
+    const team = pickStartTeam(state.mode);
     if (state.mode === "protect") spawnMotherships();
     const home = team ? mothershipOf(team) : null;
     const player = createTank({
@@ -1227,6 +1232,9 @@
               : awayFrom(WORLD.w / 2, WORLD.h / 2, 900),
         });
         bot.aiFocus = tank.aiFocus || ["gun", "gun", "farm", "ram"][irand(0, 3)];
+        if (state.mode === "protect") {
+          bot.aiJob = Math.random() < 0.48 ? "hunt" : Math.random() < 0.28 ? "defend" : "roam";
+        }
         autoUpgradeBot(bot);
         bot.health = bot.maxHealth;
         bot.spawnProtect = 8;
@@ -1772,15 +1780,17 @@
     const huntedSelf = state.mode === "manhunt" && mark === tank;
     const ownMoth = mothershipOf(tank.team);
     const foeMoth = state.tanks.find((t) => t.mothership && t.alive && t.team && t.team !== tank.team) || null;
-    const defending = state.mode === "protect" && ownMoth;
-    const assaulting = state.mode === "protect" && foeMoth;
+    if (state.mode === "protect" && !tank.aiJob) {
+      tank.aiJob = Math.random() < 0.48 ? "hunt" : Math.random() < 0.28 ? "defend" : "roam";
+    }
+    const defending = state.mode === "protect" && ownMoth && tank.aiJob === "defend";
+    const huntingMoth = state.mode === "protect" && foeMoth && tank.aiJob === "hunt";
     const ram = isRammer(tank);
     const fightRange = ram ? 520 : 460;
     let enemy = hunting
       ? nearestSeen(tank, state.tanks, 780, (t) => isEnemyTank(tank, t))
-      : assaulting
-        ? (nearestSeen(tank, state.tanks, 420, (t) => isEnemyTank(tank, t) && !t.mothership)
-          || (foeMoth && dist2(tank, foeMoth) < 700 * 700 ? foeMoth : null))
+      : huntingMoth
+        ? (nearestSeen(tank, state.tanks, 360, (t) => isEnemyTank(tank, t) && !t.mothership) || foeMoth)
         : nearestSeen(tank, state.tanks, state.mode === "tag" || state.mode === "protect" ? 1400 : 780, (t) => isEnemyTank(tank, t));
     if (hunting && mark && canSee(tank, mark)) {
       const melee = nearestSeen(tank, state.tanks, 340, (t) => isEnemyTank(tank, t) && t !== mark);
@@ -1796,15 +1806,15 @@
     if (closerNear) tank.aiState = "flee";
     else if (invading || ((state.mode === "tdm" || state.mode === "4tdm") && tank.team && low)) tank.aiState = "home";
     else if (huntedSelf && hunterNear && dist2(tank, hunterNear) < 480 * 480) tank.aiState = "flee";
-    else if (low && enemy && state.mode !== "tag" && !assaulting) tank.aiState = "flee";
-    else if ((hunting && mark && enemy === mark) || (state.mode === "tag" && enemy) || (assaulting && enemy && !enemy.mothership)) tank.aiState = "attack";
+    else if (low && enemy && state.mode !== "tag" && !huntingMoth) tank.aiState = "flee";
+    else if ((hunting && mark && enemy === mark) || (state.mode === "tag" && enemy) || (huntingMoth && foeMoth)) tank.aiState = "attack";
     else if (defending && enemy && dist2(tank, enemy) < 520 * 520) tank.aiState = "attack";
     else if (defending) tank.aiState = "defend";
     else if (enemy && dist2(tank, enemy) < fightRange * fightRange) tank.aiState = "attack";
     else if (shape) tank.aiState = "farm";
     else tank.aiState = "wander";
 
-    if (player && player.alive && isEnemyTank(tank, player) && canSee(tank, player) && tank.aiState !== "flee" && tank.aiState !== "home" && !assaulting) {
+    if (player && player.alive && isEnemyTank(tank, player) && canSee(tank, player) && tank.aiState !== "flee" && tank.aiState !== "home" && !(huntingMoth && dist2(tank, player) > 380 * 380)) {
       const pd = dist2(tank, player);
       if (pd < (ram ? 560 : 440) * (ram ? 560 : 440) && (hpPct > 0.38 || pd < 220 * 220)) {
         tank.aiState = "attack";
@@ -1853,7 +1863,7 @@
         const ny = (enemy.y - tank.y) / dist;
         const sx = -ny * (tank.strafeDir || 1);
         const sy = nx * (tank.strafeDir || 1);
-        const prefer = ram ? 42 : 310;
+        const prefer = ram ? 42 : (enemy.mothership ? 150 : 310);
         if (ram) {
           tx = enemy.x;
           ty = enemy.y;
@@ -2972,13 +2982,13 @@
   let menuTeam = "blue";
   const MODE_HINT = {
     ffa: "Everyone for themselves · arena closers after 5 minutes",
-    tdm: "Red vs blue · bases protect your team",
-    "4tdm": "Four bases · blue, red, green, purple",
+    tdm: "Red vs blue · random team · bases protect your team",
+    "4tdm": "Four bases · random team",
     manhunt: "Everyone hunts #1 · hunted gets a small boost · hunters can still fight each other",
-    tag: "Shoot to convert · last team standing closes the arena",
-    protect: "Two motherships roam the map · defend yours · everyone starts at 45 · [N] skip to 45 · [H] to take control",
+    tag: "Shoot to convert · random team · last team standing closes the arena",
+    protect: "Two motherships roam · random team · some bots hunt the rival ship · [N] skip to 45 · [H] to take control",
     maze: "FFA inside generated walls",
-    domination: "Capture 4 points · hold 3 to close the arena",
+    domination: "Capture 4 points · random team · hold 3 to close the arena",
     sandbox: "Level 45 · pick any tank",
   };
 
@@ -2990,13 +3000,13 @@
     const name = (els.name && els.name.value.trim()) || "Unnamed Tank";
     saveName(name);
     if (menuMode === "sandbox") startGame(name, { sandbox: true, classId: "basic" });
-    else if (menuMode === "tdm") startGame(name, { mode: "tdm", team: menuTeam === "red" ? "red" : "blue" });
-    else if (menuMode === "4tdm") startGame(name, { mode: "4tdm", team: TEAM4.includes(menuTeam) ? menuTeam : "blue" });
+    else if (menuMode === "tdm") startGame(name, { mode: "tdm" });
+    else if (menuMode === "4tdm") startGame(name, { mode: "4tdm" });
     else if (menuMode === "manhunt") startGame(name, { mode: "manhunt" });
-    else if (menuMode === "tag") startGame(name, { mode: "tag", team: menuTeam === "red" ? "red" : "green" });
-    else if (menuMode === "protect") startGame(name, { mode: "protect", team: menuTeam === "red" ? "red" : "green" });
+    else if (menuMode === "tag") startGame(name, { mode: "tag" });
+    else if (menuMode === "protect") startGame(name, { mode: "protect" });
     else if (menuMode === "maze") startGame(name, { mode: "maze" });
-    else if (menuMode === "domination") startGame(name, { mode: "domination", team: menuTeam === "red" ? "red" : "blue" });
+    else if (menuMode === "domination") startGame(name, { mode: "domination" });
     else startGame(name, { mode: "ffa" });
   }
 
@@ -3008,27 +3018,7 @@
     menuMode = mode;
     document.querySelectorAll(".server-row").forEach((b) => b.classList.toggle("active", b.dataset.mode === mode));
     const row = document.getElementById("team-row");
-    const pickTeam = menuMode === "tdm" || menuMode === "4tdm" || menuMode === "tag" || menuMode === "protect" || menuMode === "domination";
-    if (row) {
-      row.classList.toggle("hidden", !pickTeam);
-      row.classList.toggle("teams-4", menuMode === "4tdm");
-    }
-    const blue = document.getElementById("chip-blue");
-    const green = document.getElementById("chip-green");
-    const red = document.getElementById("chip-red");
-    const purple = document.getElementById("chip-purple");
-    const four = menuMode === "4tdm";
-    const gp = menuMode === "tag" || menuMode === "protect";
-    if (blue) blue.classList.toggle("hidden", gp);
-    if (green) green.classList.toggle("hidden", !gp && !four);
-    if (red) red.classList.toggle("hidden", false);
-    if (purple) purple.classList.toggle("hidden", !four);
-    if (gp && menuTeam !== "red") menuTeam = "green";
-    if ((menuMode === "tdm" || menuMode === "domination") && menuTeam !== "red") menuTeam = "blue";
-    if (four && !TEAM4.includes(menuTeam)) menuTeam = "blue";
-    document.querySelectorAll(".team-chip").forEach((b) => {
-      b.classList.toggle("selected", b.dataset.team === menuTeam && !b.classList.contains("hidden"));
-    });
+    if (row) row.classList.add("hidden");
     const hint = document.getElementById("mode-hint");
     if (hint) hint.textContent = MODE_HINT[menuMode] || "";
   }
