@@ -1165,6 +1165,19 @@
     needLevel: 45,
   });
 
+  def("assault_guard", {
+    name: "Trapper",
+    desc: "Healer-zone guard with stronger lingering traps",
+    guns: [0, 120, 240].flatMap((a) => G.trap(a)),
+    health: 1.28,
+    reload: 1.22,
+    bulletDamage: 1.28,
+    bulletPen: 1.15,
+    bodyDamage: 1.15,
+    upgrades: [],
+    needLevel: 45,
+  });
+
   def("dom_heal", {
     name: "Healer",
     desc: "Main spawn dominator that fires healing shells",
@@ -1186,7 +1199,7 @@
 
   const skipAuto = new Set([
     "auto3", "auto5", "auto8", "auto2", "autosmasher", "autogunner", "autosniper", "engineer",
-    "mothership", "arena_closer", "dom_gun", "dom_heal",
+    "mothership", "arena_closer", "dom_gun", "dom_heal", "assault_guard",
   ]);
   for (const id of Object.keys(tanks)) {
     const t = tanks[id];
