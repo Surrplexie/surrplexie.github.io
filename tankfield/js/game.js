@@ -326,8 +326,8 @@
       maxDrones: def.maxDrones || 0,
     };
     if (tank && tank.mothership) {
-      out.maxHealth = Math.max(14000, out.maxHealth);
-      out.regen = Math.max(28, out.regen);
+      out.maxHealth = Math.max(24000, out.maxHealth);
+      out.regen = Math.max(48, out.regen);
       out.fov = Math.max(out.fov, 1.45);
       out.maxDrones = Math.max(out.maxDrones, 28);
     }
@@ -998,6 +998,10 @@
       });
       m.homeX = pos.x;
       m.homeY = pos.y;
+      m.roamX = clamp(pos.x + rand(-700, 700), 420, WORLD.w - 420);
+      m.roamY = clamp(pos.y + rand(-700, 700), 420, WORLD.h - 420);
+      m.meetT = 0;
+      m.aiT = rand(3, 7);
       maxOutTank(m);
       m.x = pos.x;
       m.y = pos.y;
@@ -1721,16 +1725,44 @@
       return;
     }
     if (tank.mothership) {
-      const prey = nearest(tank, state.tanks, 2800, (t) => isEnemyTank(tank, t));
-      tank.aiState = "attack";
-      if (prey) {
-        tank.angle = Math.atan2(prey.y - tank.y, prey.x - tank.x);
-        const st = tankStats(tank);
-        tank.vx += Math.cos(tank.angle) * st.moveSpeed * 62 * dt;
-        tank.vy += Math.sin(tank.angle) * st.moveSpeed * 62 * dt;
-      } else {
-        tank.angle += 0.42 * dt;
+      const st = tankStats(tank);
+      const foe = state.tanks.find((t) => t.mothership && t.alive && t !== tank) || null;
+      const prey = nearest(tank, state.tanks, 640, (t) => isEnemyTank(tank, t) && !t.mothership);
+      tank.meetT = (tank.meetT || 0) - dt;
+      if (tank.aiT <= 0 || tank.roamX == null) {
+        tank.aiT = rand(5, 11);
+        tank.roamX = rand(420, WORLD.w - 420);
+        tank.roamY = rand(420, WORLD.h - 420);
+        tank.wanderA = rand(0, TAU);
+        if (Math.random() < 0.2) tank.meetT = rand(2.8, 6);
       }
+      let tx = tank.roamX;
+      let ty = tank.roamY;
+      if (foe && tank.meetT <= 0) {
+        const dx = tank.x - foe.x;
+        const dy = tank.y - foe.y;
+        const d = Math.hypot(dx, dy) || 1;
+        const keep = 1080;
+        if (d < keep) {
+          const push = (keep - d) / keep;
+          tx = tank.x + (dx / d) * (260 + push * 420) + Math.cos(tank.wanderA || 0) * 90;
+          ty = tank.y + (dy / d) * (260 + push * 420) + Math.sin(tank.wanderA || 0) * 90;
+        }
+      }
+      if ((tx - tank.x) ** 2 + (ty - tank.y) ** 2 < 160 * 160) tank.aiT = 0;
+      const ang = Math.atan2(ty - tank.y, tx - tank.x);
+      tank.vx += Math.cos(ang) * st.moveSpeed * 38 * dt;
+      tank.vy += Math.sin(ang) * st.moveSpeed * 38 * dt;
+      if (prey) tank.angle = aimAt(tank, prey, st);
+      else if (foe && dist2(tank, foe) < 560 * 560) tank.angle = aimAt(tank, foe, st);
+      else {
+        let diff = ang - tank.angle;
+        while (diff > Math.PI) diff -= TAU;
+        while (diff < -Math.PI) diff += TAU;
+        tank.angle += diff * Math.min(1, dt * 2.2);
+      }
+      tank.aiState = prey ? "attack" : "wander";
+      tank.aiTarget = prey || (foe && dist2(tank, foe) < 560 * 560 ? foe : null);
       updateTurrets(tank, dt);
       shoot(tank, dt);
       return;
@@ -1747,7 +1779,8 @@
     let enemy = hunting
       ? nearestSeen(tank, state.tanks, 780, (t) => isEnemyTank(tank, t))
       : assaulting
-        ? (nearestSeen(tank, state.tanks, 380, (t) => isEnemyTank(tank, t) && !t.mothership) || (foeMoth && canSee(tank, foeMoth) ? foeMoth : null))
+        ? (nearestSeen(tank, state.tanks, 420, (t) => isEnemyTank(tank, t) && !t.mothership)
+          || (foeMoth && dist2(tank, foeMoth) < 700 * 700 ? foeMoth : null))
         : nearestSeen(tank, state.tanks, state.mode === "tag" || state.mode === "protect" ? 1400 : 780, (t) => isEnemyTank(tank, t));
     if (hunting && mark && canSee(tank, mark)) {
       const melee = nearestSeen(tank, state.tanks, 340, (t) => isEnemyTank(tank, t) && t !== mark);
@@ -1764,7 +1797,7 @@
     else if (invading || ((state.mode === "tdm" || state.mode === "4tdm") && tank.team && low)) tank.aiState = "home";
     else if (huntedSelf && hunterNear && dist2(tank, hunterNear) < 480 * 480) tank.aiState = "flee";
     else if (low && enemy && state.mode !== "tag" && !assaulting) tank.aiState = "flee";
-    else if ((hunting && mark && enemy === mark) || (state.mode === "tag" && enemy) || (assaulting && enemy)) tank.aiState = "attack";
+    else if ((hunting && mark && enemy === mark) || (state.mode === "tag" && enemy) || (assaulting && enemy && !enemy.mothership)) tank.aiState = "attack";
     else if (defending && enemy && dist2(tank, enemy) < 520 * 520) tank.aiState = "attack";
     else if (defending) tank.aiState = "defend";
     else if (enemy && dist2(tank, enemy) < fightRange * fightRange) tank.aiState = "attack";
@@ -2943,7 +2976,7 @@
     "4tdm": "Four bases · blue, red, green, purple",
     manhunt: "Everyone hunts #1 · hunted gets a small boost · hunters can still fight each other",
     tag: "Shoot to convert · last team standing closes the arena",
-    protect: "Two motherships · defend yours · everyone starts at 45 · [N] skip to 45 · [H] to take control",
+    protect: "Two motherships roam the map · defend yours · everyone starts at 45 · [N] skip to 45 · [H] to take control",
     maze: "FFA inside generated walls",
     domination: "Capture 4 points · hold 3 to close the arena",
     sandbox: "Level 45 · pick any tank",
