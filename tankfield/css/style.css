@@ -430,6 +430,10 @@ kbd {
   color: #fff;
 }
 
+#leader-list li.team-tot + li:not(.team-tot) {
+  margin-top: 6px;
+}
+
 #leader-list .lb-fill {
   position: absolute;
   inset: 0 auto 0 0;

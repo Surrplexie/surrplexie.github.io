@@ -2598,15 +2598,14 @@
     }
     if (els.skillPoints) els.skillPoints.textContent = state.spectating ? "" : (free > 0 ? `x${free}` : "");
     const teamRows = teamBoardRows();
-    if (teamRows) {
-      els.leaders.innerHTML = teamRows.map((r) =>
+    const playerRows = ranked.map((t) =>
+      `<li class="${t === state.player ? "you" : ""} ${t === state.hunted ? "hunted" : ""}"><div class="lb-fill" style="width:${clamp((t.score / top) * 100, 8, 100)}%"></div><span><i class="lb-dot" style="background:${t.color}"></i>${escapeHtml(t.name)}${t === state.hunted ? " · hunted" : ""} — ${escapeHtml(getDef(t).name)} — ${formatScore(t.score)}</span></li>`
+    ).join("");
+    els.leaders.innerHTML = (teamRows
+      ? teamRows.map((r) =>
         `<li class="team-tot" style="background:${r.color}"><span>${escapeHtml(r.label)}</span></li>`
-      ).join("");
-    } else {
-      els.leaders.innerHTML = ranked.map((t) =>
-        `<li class="${t === state.player ? "you" : ""} ${t === state.hunted ? "hunted" : ""}"><div class="lb-fill" style="width:${clamp((t.score / top) * 100, 8, 100)}%"></div><span><i class="lb-dot" style="background:${t.color}"></i>${escapeHtml(t.name)}${t === state.hunted ? " · hunted" : ""} — ${escapeHtml(getDef(t).name)} — ${formatScore(t.score)}</span></li>`
-      ).join("");
-    }
+      ).join("")
+      : "") + playerRows;
   }
 
   function teamBoardRows() {
