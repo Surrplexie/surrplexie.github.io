@@ -388,6 +388,8 @@
     if (state.mode === "onehp" && tank && !tank.closer && !tank.mothership && !tank.dominator) {
       out.maxHealth = 1;
       out.regen = 0;
+      out.maxShield = 0;
+      out.shieldRegen = 0;
     }
     return out;
   }
@@ -1422,8 +1424,9 @@
   function autoUpgradeBot(bot) {
     applyLevel(bot);
     const rammerIds = new Set(["smasher", "landmine", "spike", "autosmasher"]);
+    const dead = state.mode === "onehp" ? ["maxHealth", "regen", "shieldCap", "shieldRegen"] : [];
     const focus = state.mode === "onehp"
-      ? ["shieldCap", "shieldRegen", "reload", "bulletDamage", "bulletSpeed", "moveSpeed"]
+      ? ["reload", "bulletDamage", "bulletSpeed", "bulletPen", "moveSpeed", "bodyDamage"]
       : bot.aiFocus === "ram"
       ? ["maxHealth", "bodyDamage", "moveSpeed", "regen", "bulletDamage"]
       : bot.aiFocus === "farm"
@@ -1439,7 +1442,7 @@
         bot.stats[key]++;
         left--;
       } else if (!focus.some((k) => bot.stats[k] < STAT_MAX)) {
-        const any = STATS.find((s) => bot.stats[s.key] < STAT_MAX);
+        const any = STATS.find((s) => bot.stats[s.key] < STAT_MAX && !dead.includes(s.key));
         if (!any) break;
         bot.stats[any.key]++;
         left--;
@@ -1671,7 +1674,7 @@
     if (state.mode === "assault") welcomeSpawnNotes();
     if (state.mode === "onehp") {
       welcomeSpawnNotes();
-      note("Everyone has 1 HP. Health stats do nothing. Build shield.");
+      note("Everyone has 1 HP. Health and shield stats do nothing.");
     }
     els.hud.classList.remove("hidden");
     const ws = document.getElementById("workshop");
@@ -1966,7 +1969,7 @@
     if (state.mode === "assault") welcomeSpawnNotes();
     if (state.mode === "onehp") {
       welcomeSpawnNotes();
-      note("Everyone has 1 HP. Health stats do nothing. Build shield.");
+      note("Everyone has 1 HP. Health and shield stats do nothing.");
     }
     try { renderStats(); } catch (err) {}
     try { renderClassPanel(); } catch (err) {}
@@ -4183,7 +4186,7 @@
     maze: "FFA inside generated walls · start at 45",
     domination: "Capture 4 points · random team · start at 45",
     assault: "Blue attacks Green · smaller maze · capture zones · start at 45 · Green wins in 10:00 if they hold 3/4",
-    onehp: "Everyone for themselves · 1 HP · shields still work · 20 bots · medium map · start at 45",
+    onehp: "Everyone for themselves · 1 HP · no shields · health stats do nothing · 20 bots · medium map · start at 45",
     sandbox: "Level 45 · pick any tank",
   };
 
