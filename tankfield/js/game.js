@@ -1488,6 +1488,7 @@
     state.tanks.push(player);
     state.camera.x = player.x;
     state.camera.y = player.y;
+    state.camera.zoom = 1;
     state.classDismissed = false;
     els.death.classList.add("hidden");
     if (els.spectateBar) els.spectateBar.classList.add("hidden");
@@ -1696,11 +1697,11 @@
     }
     const kind = gun.type === "auto" ? "bullet" : gun.type;
     const gs = gun.stats || {};
-    const speedMul = gs.speed || (kind === "trap" ? 0.45 : kind === "drone" || kind === "swarm" ? 0.7 : kind === "missile" ? 0.55 : 1);
+    const speedMul = gs.speed || (kind === "trap" ? 0.5 : kind === "drone" || kind === "swarm" ? 0.7 : kind === "missile" ? 0.55 : 1);
     const speed = st.bulletSpeed * 58 * speedMul;
     applyRecoil(tank, gun, kind, st, W, ang);
-    const sizeMul = gun.size || gs.size || (kind === "swarm" ? 0.55 : kind === "trap" ? 1.15 : 1);
-    const lifeBase = kind === "trap" ? 9 : kind === "drone" || kind === "swarm" ? 999 : kind === "missile" ? 2.4 : 1.55 + st.fov * 0.15;
+    const sizeMul = gun.size || gs.size || (kind === "swarm" ? 0.55 : kind === "trap" ? 1.32 : 1);
+    const lifeBase = kind === "trap" ? 13 : kind === "drone" || kind === "swarm" ? 999 : kind === "missile" ? 2.4 : 1.55 + st.fov * 0.15;
     let br = (7.2 * st.bulletSize * sizeMul) * (0.85 + tank.r / 40);
     if (tank.mothership && kind !== "drone" && kind !== "swarm") br = 8.2 * st.bulletSize * sizeMul;
     if (tank.closer) br = 26;
@@ -1712,8 +1713,8 @@
       vx: Math.cos(ang) * speed + tank.vx * 0.15,
       vy: Math.sin(ang) * speed + tank.vy * 0.15,
       r: br,
-      health: st.bulletPen * (kind === "trap" ? 3.2 : kind === "drone" ? 2.2 : 1),
-      damage: st.bulletDamage * (gs.damage || (kind === "swarm" ? 0.55 : 1)),
+      health: st.bulletPen * (kind === "trap" ? 4.6 : kind === "drone" ? 2.2 : 1),
+      damage: st.bulletDamage * (gs.damage || (kind === "trap" ? 1.22 : kind === "swarm" ? 0.55 : 1)),
       life: lifeBase * (gs.life || 1),
       color: tank.color,
       owner: tank,
