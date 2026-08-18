@@ -550,7 +550,7 @@ kbd {
 #stats-panel {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .stat-row {

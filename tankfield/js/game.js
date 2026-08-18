@@ -73,6 +73,8 @@
     { key: "bulletDamage", name: "Bullet Damage", color: "#84d46c" },
     { key: "reload", name: "Reload", color: "#6cd4c5" },
     { key: "moveSpeed", name: "Movement", color: "#6cb6d4" },
+    { key: "shieldRegen", name: "Shield Regen", color: "#4ea4ff" },
+    { key: "shieldCap", name: "Shield Capacity", color: "#7ec8e3" },
   ];
 
   const BOT_NAMES = [
@@ -347,7 +349,13 @@
       fov: (def.fov || 1) * (m.fov || 1),
       bulletSize: (def.bulletSize || 1) * (m.size || 1),
       maxDrones: def.maxDrones || 0,
+      maxShield: 0,
+      shieldRegen: 0,
     };
+    if (!(tank && (tank.closer || tank.mothership || tank.dominator))) {
+      out.maxShield = (s.shieldCap || 0) * 24;
+      out.shieldRegen = (s.shieldRegen || 0) * 1.55;
+    }
     if ((def.reload || 1) <= 0.55) {
       out.reload = Math.max(0.16, (0.42 - s.reload * 0.022) * (def.reload || 1) / (m.reload || 1) * 1.26);
       const maxed = Math.min(1, (s.bulletDamage + s.bulletPen + s.bulletSpeed) / 21);
@@ -1209,6 +1217,7 @@
       stats: {
         regen: 0, maxHealth: 0, bodyDamage: 0, bulletSpeed: 0,
         bulletPen: 0, bulletDamage: 0, reload: 0, moveSpeed: 0,
+        shieldRegen: 0, shieldCap: 0,
       },
       score: opts.score || 0,
       level: 1,
@@ -1239,6 +1248,8 @@
     };
     applyLevel(tank);
     tank.health = tank.maxHealth;
+    tank.shield = tank.maxShield || 0;
+    tank.shield = tank.maxShield || 0;
     return tank;
   }
 
@@ -1253,9 +1264,16 @@
     if (tank.dominator) tank.r = tank.mainBase ? 78 : 64;
     const st = tankStats(tank);
     const ratio = tank.maxHealth > 0 ? tank.health / tank.maxHealth : 1;
+    const oldShield = tank.maxShield || 0;
     tank.maxHealth = st.maxHealth;
+    tank.maxShield = st.maxShield || 0;
     if (gained) tank.health = tank.maxHealth;
     else tank.health = clamp(ratio * tank.maxHealth, 0, tank.maxHealth);
+    if (tank.shield == null || gained) tank.shield = tank.maxShield;
+    else {
+      if (tank.maxShield > oldShield) tank.shield += tank.maxShield - oldShield;
+      tank.shield = clamp(tank.shield, 0, tank.maxShield);
+    }
     return gained;
   }
 
@@ -1395,6 +1413,7 @@
       bot.aiJob = aiJob;
       autoUpgradeBot(bot);
       bot.health = bot.maxHealth;
+      bot.shield = bot.maxShield || 0;
       bot.spawnProtect = 4;
       state.tanks.push(bot);
     }
@@ -1403,7 +1422,9 @@
   function autoUpgradeBot(bot) {
     applyLevel(bot);
     const rammerIds = new Set(["smasher", "landmine", "spike", "autosmasher"]);
-    const focus = bot.aiFocus === "ram"
+    const focus = state.mode === "onehp"
+      ? ["shieldCap", "shieldRegen", "reload", "bulletDamage", "bulletSpeed", "moveSpeed"]
+      : bot.aiFocus === "ram"
       ? ["maxHealth", "bodyDamage", "moveSpeed", "regen", "bulletDamage"]
       : bot.aiFocus === "farm"
         ? ["reload", "bulletSpeed", "bulletPen", "bulletDamage", "moveSpeed"]
@@ -1469,6 +1490,7 @@
     for (const st of STATS) tank.stats[st.key] = STAT_MAX;
     applyLevel(tank);
     tank.health = tank.maxHealth;
+    tank.shield = tank.maxShield || 0;
     if (tank.mothership) tank.r = 82;
     if (tank.closer) tank.r = 46;
     if (tank.dominator) tank.r = tank.mainBase ? 78 : 64;
@@ -1480,6 +1502,7 @@
     tank.score = Math.max(tank.score, xpForLevel(LEVEL_CAP));
     applyLevel(tank);
     tank.health = tank.maxHealth;
+    tank.shield = tank.maxShield || 0;
     state.classDismissed = false;
     try { renderStats(); } catch (err) {}
     try { renderClassPanel(); } catch (err) {}
@@ -1628,6 +1651,7 @@
     player.spawnProtect = 30;
     if (opts.maxStats) maxOutTank(player);
     player.health = player.maxHealth;
+    player.shield = player.maxShield || 0;
     state.classDismissed = false;
     state.player = player;
     state.pilotTank = player;
@@ -1647,7 +1671,7 @@
     if (state.mode === "assault") welcomeSpawnNotes();
     if (state.mode === "onehp") {
       welcomeSpawnNotes();
-      note("Everyone has 1 HP. One hit kills.");
+      note("Everyone has 1 HP. Health stats do nothing. Build shield.");
     }
     els.hud.classList.remove("hidden");
     const ws = document.getElementById("workshop");
@@ -1758,6 +1782,7 @@
           applyLevel(bot);
         }
         bot.health = bot.maxHealth;
+        bot.shield = bot.maxShield || 0;
         bot.spawnProtect = 8;
         state.tanks.push(bot);
       }, 1800);
@@ -1925,6 +1950,7 @@
     player.spawnProtect = 8;
     if (opts.maxStats) maxOutTank(player);
     player.health = player.maxHealth;
+    player.shield = player.maxShield || 0;
     state.spectating = false;
     state.spectateTarget = null;
     state.ghost = null;
@@ -1940,7 +1966,7 @@
     if (state.mode === "assault") welcomeSpawnNotes();
     if (state.mode === "onehp") {
       welcomeSpawnNotes();
-      note("Everyone has 1 HP. One hit kills.");
+      note("Everyone has 1 HP. Health stats do nothing. Build shield.");
     }
     try { renderStats(); } catch (err) {}
     try { renderClassPanel(); } catch (err) {}
@@ -2391,6 +2417,7 @@
     for (const st of STATS) tank.stats[st.key] = STAT_MAX;
     applyLevel(tank);
     tank.health = tank.maxHealth;
+    tank.shield = tank.maxShield || 0;
     tank.r = 46;
     tank.spawnProtect = 0;
     tank.ai = false;
@@ -2607,7 +2634,8 @@
     }
     const closerNear = nearest(tank, state.tanks, 980, (t) => t.closer);
     const shape = bestFarm(tank, maze ? 520 : (ram ? 640 : 1100));
-    const hpPct = tank.maxHealth > 0 ? tank.health / tank.maxHealth : 1;
+    const pool = tank.maxHealth + (tank.maxShield || 0);
+    const hpPct = pool > 0 ? (tank.health + (tank.shield || 0)) / pool : 1;
     const low = hpPct < (ram ? 0.16 : 0.22);
     const zone = zoneAt(tank.x, tank.y);
     const invading = !!(tank.team && zone && zone !== tank.team);
@@ -2884,9 +2912,16 @@
     if (tryTagHit(target, src)) return;
     if (target.spawnProtect > 0 && !(src && src.closer)) return;
     if (src && src.spawnProtect > 0 && !src.closer) return;
-    const taken = Math.min(amount, Math.max(0, target.health));
+    let left = amount;
+    if (target.type === "tank" && (target.shield || 0) > 0) {
+      const soak = Math.min(target.shield, left);
+      target.shield -= soak;
+      left -= soak;
+      target.shieldDelay = 2.8;
+    }
+    const taken = (amount - left) + Math.min(left, Math.max(0, target.health));
     if (taken > 0) creditDamage(target, taken, src);
-    target.health -= amount;
+    if (left > 0) target.health -= left;
     if (target.type === "tank") target.bodyHitT = 0.08;
     if (target === state.player) shake = Math.max(shake, Math.min(10, amount * 0.25));
     if (target.health <= 0) {
@@ -3005,12 +3040,23 @@
       if (tank.dominator && tank.destroyed) {
         tank.health = 0;
       } else if (invading) {
-        tank.health -= tank.maxHealth * 0.32 * dt;
+        let burn = (tank.maxHealth + (tank.maxShield || 0)) * 0.32 * dt;
+        if ((tank.shield || 0) > 0) {
+          const soak = Math.min(tank.shield, burn);
+          tank.shield -= soak;
+          burn -= soak;
+          tank.shieldDelay = 1.2;
+        }
+        if (burn > 0) tank.health -= burn;
         tank.bodyHitT = 0.08;
         if (tank === state.player) shake = Math.max(shake, 4);
         if (tank.health <= 0) killTank(tank, null, `the ${zoneAt(tank.x, tank.y)} base`);
       } else {
         tank.health = Math.min(tank.maxHealth, tank.health + st.regen * dt);
+        tank.shieldDelay = Math.max(0, (tank.shieldDelay || 0) - dt);
+        if ((tank.maxShield || 0) > 0 && tank.shieldDelay <= 0) {
+          tank.shield = Math.min(tank.maxShield, (tank.shield || 0) + st.shieldRegen * dt);
+        }
       }
       const fadeId = getDef(tank).id;
       if (FADE_TANKS.has(fadeId) && spd < 25) tank.fade = Math.max(0.08, tank.fade - dt * 0.7);
@@ -3442,7 +3488,7 @@
           <div class="stat-fill" style="width:${(v / STAT_MAX) * 100}%"></div>
           <div class="stat-name">${st.name}</div>
         </div>
-        <div class="stat-key">[${i + 1}]</div>
+        <div class="stat-key">[${i === 9 ? 0 : i + 1}]</div>
       </div>`;
     }).join("");
     els.stats.querySelectorAll(".stat-row").forEach((row) => {
@@ -3597,20 +3643,38 @@
     c.restore();
   }
 
+  function drawBar(c, x, y, w, h, pct, track, fill) {
+    c.fillStyle = "#333";
+    roundRect(c, x - 1, y - 1, w + 2, h + 2, 2);
+    c.fill();
+    c.fillStyle = track;
+    roundRect(c, x, y, w, h, 2);
+    c.fill();
+    if (pct > 0.002) {
+      c.fillStyle = fill;
+      roundRect(c, x, y, w * clamp(pct, 0, 1), h, 2);
+      c.fill();
+    }
+  }
+
   function drawHealth(c, ent, yOff) {
     const repairing = !!(ent.dominator && ent.destroyed && (ent.repair || 0) > 0);
-    if (!repairing && ent.health >= ent.maxHealth * 0.995) return;
+    const maxSh = ent.maxShield || 0;
+    const sh = Math.max(0, ent.shield || 0);
+    const hpFull = !repairing && ent.maxHealth > 0 && ent.health >= ent.maxHealth * 0.995;
+    const shFull = maxSh <= 0.5 || sh >= maxSh * 0.995;
+    if (hpFull && shFull) return;
     const w = ent.r * 2.2;
     const h = 5;
     const x = ent.x - w / 2;
     const y = ent.y + (yOff || ent.r + 8);
-    c.fillStyle = "#333";
-    roundRect(c, x - 1, y - 1, w + 2, h + 2, 2);
-    c.fill();
-    const pct = repairing ? clamp(ent.repair, 0, 1) : clamp(ent.health / ent.maxHealth, 0, 1);
-    c.fillStyle = repairing ? "#f2e863" : (pct < 0.3 ? "#e85d5d" : "#8dff6e");
-    roundRect(c, x, y, w * pct, h, 2);
-    c.fill();
+    const hpPct = repairing ? clamp(ent.repair, 0, 1) : (ent.maxHealth > 0 ? clamp(ent.health / ent.maxHealth, 0, 1) : 1);
+    if (maxSh > 0.5) {
+      drawBar(c, x, y, w, h, sh / maxSh, "#1f4f7a", "#4ea4ff");
+      drawBar(c, x, y + 7, w, h, hpPct, repairing ? "#6a5a18" : "#3a7a32", repairing ? "#f2e863" : "#9dff5a");
+    } else {
+      drawBar(c, x, y, w, h, hpPct, repairing ? "#6a5a18" : "#3a7a32", repairing ? "#f2e863" : (hpPct < 0.3 ? "#e85d5d" : "#9dff5a"));
+    }
   }
 
   function drawGhost(c, g) {
@@ -4082,7 +4146,8 @@
       }
     }
     const n = parseInt(e.key, 10);
-    if (running && !state.paused && n >= 1 && n <= 8) tryUpgrade(STATS[n - 1].key, keys.has("m"));
+    if (running && !state.paused && n >= 1 && n <= 9) tryUpgrade(STATS[n - 1].key, keys.has("m"));
+    if (running && !state.paused && e.key === "0") tryUpgrade(STATS[9].key, keys.has("m"));
   });
   window.addEventListener("keyup", (e) => {
     keys.delete(e.key.toLowerCase());
@@ -4113,7 +4178,7 @@
     maze: "FFA inside generated walls · start at 45",
     domination: "Capture 4 points · random team · start at 45",
     assault: "Blue attacks Green · smaller maze · capture zones · start at 45 · Green wins in 10:00 if they hold 3/4",
-    onehp: "Everyone for themselves · 1 HP · 20 bots · medium map · start at 45",
+    onehp: "Everyone for themselves · 1 HP · shields still work · 20 bots · medium map · start at 45",
     sandbox: "Level 45 · pick any tank",
   };
 
