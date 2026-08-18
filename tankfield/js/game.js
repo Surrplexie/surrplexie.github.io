@@ -348,7 +348,15 @@
       bulletSize: (def.bulletSize || 1) * (m.size || 1),
       maxDrones: def.maxDrones || 0,
     };
-    if ((def.reload || 1) <= 0.55) out.reload = Math.max(0.12, out.reload * 1.34);
+    if ((def.reload || 1) <= 0.55) {
+      out.reload = Math.max(0.14, 0.42 * (def.reload || 1) / (m.reload || 1) * 1.16);
+      const maxed = Math.min(1, (s.bulletDamage + s.bulletPen + s.bulletSpeed) / 21);
+      const n = 1 - 0.14 * maxed;
+      out.bulletDamage *= n;
+      out.bulletPen *= n;
+      out.bulletSpeed *= 1 - 0.06 * maxed;
+      out.bulletSize *= 1 - 0.08 * maxed;
+    }
     if (tank && tank.dominator && !tank.destroyed) {
       out.regen = Math.max(out.regen, 12);
       out.maxHealth = Math.max(out.maxHealth, tank.mainBase ? 7600 : 6400);
