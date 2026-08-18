@@ -170,8 +170,8 @@
     name: "Trapper",
     desc: "Drops lingering traps",
     guns: G.trap(),
-    reload: 1.32,
-    bulletDamage: 1.28,
+    reload: 1.55,
+    bulletDamage: 1.05,
     upgrades: ["tritrapper", "megatrapper", "gunnertrapper", "overtrapper"],
     needLevel: 30,
   });
