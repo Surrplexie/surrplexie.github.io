@@ -292,6 +292,17 @@
     return total;
   }
 
+  function startScore() {
+    return xpForLevel(LEVEL_CAP);
+  }
+
+  function carryScore(score) {
+    const base = startScore();
+    const n = Math.max(0, Math.floor(Number(score) || 0));
+    if (n <= base) return base;
+    return Math.max(base, Math.floor(n * 0.25));
+  }
+
   function levelFromScore(score) {
     let level = 1;
     while (level < LEVEL_CAP && score >= xpForLevel(level + 1)) level++;
@@ -1237,7 +1248,7 @@
     clearOwnedShots(tank);
     burst(tank.x, tank.y, tank.color, 18, 220);
     const huntedBonus = state.mode === "manhunt" && tank === state.hunted ? Math.max(80, Math.floor(tank.score * 0.2)) : 0;
-    const pool = Math.max(20, Math.floor(tank.score * 0.45) + 20) + huntedBonus;
+    const pool = Math.max(20, Math.floor(tank.score * 0.9)) + huntedBonus;
     const payout = applyKillScore(tank, pool, killer, tank.x, tank.y);
     const credited = payout.killer;
     tank.killedBy = cause || (credited ? credited.name : killer ? killer.name : "a polygon");
@@ -1274,13 +1285,14 @@
       checkProtectClose();
     } else if (!tank.closer && !state.closing) {
       const team = tank.team;
+      const kept = carryScore(tank.score);
+      const focus = tank.aiFocus;
       setTimeout(() => {
         if (!running || state.closing) return;
-        const score = xpForLevel(LEVEL_CAP);
         const bot = createTank({
           name: tank.name,
           ai: true,
-          score,
+          score: kept,
           classId: "basic",
           team,
           color: colorFor({ team }),
@@ -1290,7 +1302,7 @@
               ? around(mothershipOf(team).x, mothershipOf(team).y, 220)
               : awayFrom(WORLD.w / 2, WORLD.h / 2, 900),
         });
-        bot.aiFocus = tank.aiFocus || ["gun", "gun", "farm", "ram"][irand(0, 3)];
+        bot.aiFocus = focus || ["gun", "gun", "farm", "ram"][irand(0, 3)];
         if (state.mode === "protect") {
           bot.aiJob = Math.random() < 0.48 ? "hunt" : Math.random() < 0.28 ? "defend" : "roam";
         }
@@ -1452,7 +1464,7 @@
       color: state.mode === "sandbox" ? (state.selectedColor || colorFor({ team, player: true })) : colorFor({ team, player: true }),
       classId: state.mode === "sandbox" ? (opts.classId || "basic") : "basic",
       customDef: state.mode === "sandbox" ? (opts.customDef || null) : null,
-      score: xpForLevel(LEVEL_CAP),
+      score: carryScore(prev && prev.score),
       pos,
     });
     player.ai = false;
@@ -1706,13 +1718,16 @@
 
   function wantsFire(tank) {
     if (tank.mothership) return true;
+    if (tank.spawnProtect > 0 && tank.ai) return false;
     if (tank.ai) {
       if (isRammer(tank)) return false;
       if (tank.aiState !== "attack" && tank.aiState !== "farm" && tank.aiState !== "defend") return false;
       const t = tank.aiTarget;
       return !t || canSee(tank, t);
     }
-    return mouse.down || state.autoFire || keys.has(" ");
+    const manual = mouse.down || keys.has(" ");
+    if (tank.spawnProtect > 0) return manual;
+    return manual || state.autoFire;
   }
 
   function breakSpawnProtect(tank) {
@@ -1731,6 +1746,7 @@
       tank.gunCd[i] -= dt;
       if (gun.type === "deco") continue;
       const autoGun = gun.type === "auto";
+      if (tank.spawnProtect > 0 && autoGun) continue;
       if (!autoGun && !fire) continue;
       if (autoGun && !nearestSeen(tank, [...state.tanks, ...state.shapes], 520, (o) => o !== tank && o.alive && (o.type !== "tank" || isEnemyTank(tank, o)))) continue;
       if (tank.gunCd[i] > 0) continue;
@@ -1978,6 +1994,13 @@
 
   function updateAI(tank, dt) {
     tank.aiT -= dt;
+    if (tank.spawnProtect > 0 && !tank.closer && !tank.mothership) {
+      tank.vx *= 0.15;
+      tank.vy *= 0.15;
+      tank.aiState = "spawn";
+      tank.aiTarget = null;
+      return;
+    }
     const player = state.player;
     if (tank.closer) {
       const prey = nearest(tank, state.tanks, 99999, (t) => t.alive && !t.closer);
@@ -2293,7 +2316,8 @@
     const ox = Math.cos(b.orbit) * spread;
     const oy = Math.sin(b.orbit) * spread;
     if (!owner.ai) {
-      if (mouse.down || mouse.right || state.autoFire) {
+      const manual = mouse.down || mouse.right;
+      if (manual || (state.autoFire && !(owner.spawnProtect > 0))) {
         const aim = screenToWorld(mouse.x, mouse.y);
         return { x: aim.x + ox, y: aim.y + oy };
       }
