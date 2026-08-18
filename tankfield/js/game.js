@@ -434,6 +434,43 @@
     return false;
   }
 
+  function segHitsAabb(x1, y1, x2, y2, minX, minY, maxX, maxY) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    let t0 = 0;
+    let t1 = 1;
+    const clip = (p, q) => {
+      if (p === 0) return q >= 0;
+      const r = q / p;
+      if (p < 0) {
+        if (r > t1) return false;
+        if (r > t0) t0 = r;
+      } else {
+        if (r < t0) return false;
+        if (r < t1) t1 = r;
+      }
+      return true;
+    };
+    return clip(-dx, x1 - minX) && clip(dx, maxX - x1) && clip(-dy, y1 - minY) && clip(dy, maxY - y1) && t0 < t1;
+  }
+
+  function canSee(a, b) {
+    if (!a || !b) return false;
+    if (!state.walls.length) return true;
+    const x1 = a.x;
+    const y1 = a.y;
+    const x2 = b.x;
+    const y2 = b.y;
+    for (const w of state.walls) {
+      if (segHitsAabb(x1, y1, x2, y2, w.x - 1, w.y - 1, w.x + w.w + 1, w.y + w.h + 1)) return false;
+    }
+    return true;
+  }
+
+  function nearestSeen(from, list, maxDist, pred) {
+    return nearest(from, list, maxDist, (o) => (!pred || pred(o)) && canSee(from, o));
+  }
+
   function pushOutWalls(ent) {
     if (!state.walls.length) return false;
     let hit = false;
@@ -473,17 +510,19 @@
   }
 
   function buildMaze() {
-    const cols = 10;
-    const rows = 10;
-    const thick = 54;
-    const pad = 70;
+    const cols = irand(8, 12);
+    const rows = irand(8, 12);
+    const thick = irand(50, 64);
+    const pad = irand(48, 90);
     const cellW = (WORLD.w - pad * 2) / cols;
     const cellH = (WORLD.h - pad * 2) / rows;
     const east = Array.from({ length: rows }, () => Array(cols).fill(true));
     const south = Array.from({ length: rows }, () => Array(cols).fill(true));
     const seen = Array.from({ length: rows }, () => Array(cols).fill(false));
-    const stack = [[0, 0]];
-    seen[0][0] = true;
+    const sr = irand(0, rows - 1);
+    const sc = irand(0, cols - 1);
+    const stack = [[sr, sc]];
+    seen[sr][sc] = true;
     while (stack.length) {
       const [r, c] = stack[stack.length - 1];
       const opts = [];
@@ -503,22 +542,24 @@
       seen[nr][nc] = true;
       stack.push([nr, nc]);
     }
-    for (let i = 0; i < 22; i++) {
+    const extra = irand(Math.floor(cols * rows * 0.12), Math.floor(cols * rows * 0.34));
+    for (let i = 0; i < extra; i++) {
       if (Math.random() < 0.5) east[irand(0, rows - 1)][irand(0, cols - 2)] = false;
       else south[irand(0, rows - 2)][irand(0, cols - 1)] = false;
     }
     const walls = [];
     const x0 = pad;
     const y0 = pad;
+    const join = Math.ceil(thick * 0.5);
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const x = x0 + c * cellW;
         const y = y0 + r * cellH;
         if (c < cols - 1 && east[r][c]) {
-          walls.push({ x: x + cellW - thick / 2, y: y + 8, w: thick, h: cellH - 16 });
+          walls.push({ x: x + cellW - thick / 2, y: y - join, w: thick, h: cellH + join * 2 });
         }
         if (r < rows - 1 && south[r][c]) {
-          walls.push({ x: x + 8, y: y + cellH - thick / 2, w: cellW - 16, h: thick });
+          walls.push({ x: x - join, y: y + cellH - thick / 2, w: cellW + join * 2, h: thick });
         }
       }
     }
@@ -1364,7 +1405,7 @@
       if (gun.type === "deco") continue;
       const autoGun = gun.type === "auto";
       if (!autoGun && !fire) continue;
-      if (autoGun && !nearest(tank, [...state.tanks, ...state.shapes], 520, (o) => o !== tank && o.alive && (o.type !== "tank" || isEnemyTank(tank, o)))) continue;
+      if (autoGun && !nearestSeen(tank, [...state.tanks, ...state.shapes], 520, (o) => o !== tank && o.alive && (o.type !== "tank" || isEnemyTank(tank, o)))) continue;
       if (tank.gunCd[i] > 0) continue;
       if ((gun.type === "drone" || gun.type === "swarm") && countOwned(gun.type, tank) >= Math.max(1, st.maxDrones)) continue;
       tank.gunCd[i] = st.reload * (0.65 + (gun.pos[6] || 0));
@@ -1375,7 +1416,7 @@
 
   function updateTurrets(tank, dt) {
     const guns = getDef(tank).guns || [];
-    const target = nearest(tank, state.tanks.concat(state.shapes), 640, (o) => o !== tank && o.alive && (o.type !== "tank" || isEnemyTank(tank, o)));
+    const target = nearestSeen(tank, state.tanks.concat(state.shapes), 640, (o) => o !== tank && o.alive && (o.type !== "tank" || isEnemyTank(tank, o)));
     if (!tank.turretAim) tank.turretAim = [];
     for (let i = 0; i < guns.length; i++) {
       const gun = guns[i];
@@ -1592,21 +1633,21 @@
     const defending = state.mode === "protect" && ownMoth;
     const assaulting = state.mode === "protect" && foeMoth;
     let enemy = hunting
-      ? mark
+      ? (canSee(tank, mark) ? mark : null)
       : assaulting
-        ? (nearest(tank, state.tanks, 380, (t) => isEnemyTank(tank, t) && !t.mothership) || foeMoth)
-        : nearest(tank, state.tanks, state.mode === "tag" || state.mode === "protect" ? 1400 : 720, (t) => isEnemyTank(tank, t));
+        ? (nearestSeen(tank, state.tanks, 380, (t) => isEnemyTank(tank, t) && !t.mothership) || (foeMoth && canSee(tank, foeMoth) ? foeMoth : null))
+        : nearestSeen(tank, state.tanks, state.mode === "tag" || state.mode === "protect" ? 1400 : 720, (t) => isEnemyTank(tank, t));
     const closerNear = nearest(tank, state.tanks, 980, (t) => t.closer);
-    const shape = nearest(tank, state.shapes, 900, (s) => s.kind !== "alpha" || tank.level >= 20);
+    const shape = nearestSeen(tank, state.shapes, 900, (s) => s.kind !== "alpha" || tank.level >= 20);
     const low = tank.health < tank.maxHealth * 0.34;
     const zone = zoneAt(tank.x, tank.y);
     const invading = !!(tank.team && zone && zone !== tank.team);
-    const hunterNear = huntedSelf ? nearest(tank, state.tanks, 640, (t) => t !== tank) : null;
+    const hunterNear = huntedSelf ? nearestSeen(tank, state.tanks, 640, (t) => t !== tank) : null;
     if (closerNear) tank.aiState = "flee";
     else if (invading || ((state.mode === "tdm" || state.mode === "4tdm") && tank.team && low)) tank.aiState = "home";
     else if (huntedSelf && hunterNear && dist2(tank, hunterNear) < 480 * 480) tank.aiState = "flee";
     else if (low && enemy && state.mode !== "tag" && !assaulting) tank.aiState = "flee";
-    else if (hunting || (state.mode === "tag" && enemy) || assaulting) tank.aiState = "attack";
+    else if ((hunting && enemy) || (state.mode === "tag" && enemy) || (assaulting && enemy)) tank.aiState = "attack";
     else if (defending && enemy && dist2(tank, enemy) < 520 * 520) tank.aiState = "attack";
     else if (defending) tank.aiState = "defend";
     else if (enemy && dist2(tank, enemy) < 380 * 380) tank.aiState = "attack";
@@ -1630,7 +1671,7 @@
         tx = enemy.x;
         ty = enemy.y;
       }
-      tank.angle = Math.atan2(enemy.y - tank.y, enemy.x - tank.x);
+      tank.angle = Math.atan2(enemy.y - tank.y, enemy.x - tank.x) + (Math.random() - 0.5) * 0.1;
     } else if (tank.aiState === "defend" && ownMoth) {
       const a = (tank.wanderA || 0) + state.time * 0.55;
       tx = ownMoth.x + Math.cos(a) * 250;
@@ -1645,7 +1686,7 @@
       tx = shape.x; ty = shape.y;
       tank.angle = Math.atan2(ty - tank.y, tx - tank.x);
     } else if (tank.aiT <= 0) {
-      tank.aiT = rand(1.2, 3);
+      tank.aiT = rand(0.6, 2.2);
       tank.wanderA = rand(0, TAU);
     }
     if (tank.aiState === "wander") {
@@ -1653,7 +1694,7 @@
       ty = tank.y + Math.sin(tank.wanderA || 0) * 200;
       tank.angle = tank.wanderA || tank.angle;
     }
-    if (!hunting && !huntedSelf && !assaulting && tank.aiState !== "flee" && player && player.alive && isEnemyTank(tank, player) && dist2(tank, player) < 520 * 520 && Math.random() < 0.4 && tank.aiState !== "home") {
+    if (!hunting && !huntedSelf && !assaulting && tank.aiState !== "flee" && player && player.alive && isEnemyTank(tank, player) && dist2(tank, player) < 520 * 520 && canSee(tank, player) && Math.random() < 0.4 && tank.aiState !== "home") {
       tank.aiState = "attack";
       tank.angle = Math.atan2(player.y - tank.y, player.x - tank.x);
       tx = player.x; ty = player.y;
@@ -1782,7 +1823,7 @@
         y: owner.y + Math.sin(state.time * 1.7 + b.orbit) * 80,
       };
     }
-    const prey = nearest(owner, state.tanks.concat(state.shapes), 700, (o) => o !== owner && (o.type !== "tank" || isEnemyTank(owner, o)));
+    const prey = nearestSeen(owner, state.tanks.concat(state.shapes), 700, (o) => o !== owner && (o.type !== "tank" || isEnemyTank(owner, o)));
     if (prey) return { x: prey.x + ox, y: prey.y + oy };
     return {
       x: owner.x + Math.cos(state.time * 1.7 + b.orbit) * 80,
@@ -1877,7 +1918,7 @@
         s.vx *= Math.pow(0.0004, dt);
         s.vy *= Math.pow(0.0004, dt);
       } else if (s.kind === "crasher") {
-        const prey = nearest(s, state.tanks, 980, (t) => !t.spawnProtect && !zoneAt(t.x, t.y));
+        const prey = nearestSeen(s, state.tanks, 980, (t) => !t.spawnProtect && !zoneAt(t.x, t.y));
         const tankCruise = BASE_MOVE * 62 / -Math.log(0.0008);
         const spd = tankCruise * 1.1;
         if (prey) {
@@ -2522,10 +2563,10 @@
     }
     for (const w of state.walls) {
       ctx.fillStyle = "#9a9a9a";
-      ctx.strokeStyle = "#6e6e6e";
-      ctx.lineWidth = 4;
+      ctx.strokeStyle = "#7a7a7a";
+      ctx.lineWidth = 2;
       ctx.fillRect(w.x, w.y, w.w, w.h);
-      ctx.strokeRect(w.x, w.y, w.w, w.h);
+      ctx.strokeRect(w.x + 1, w.y + 1, Math.max(0, w.w - 2), Math.max(0, w.h - 2));
     }
     for (const d of state.doms) {
       const col = d.team && TEAMS[d.team] ? TEAMS[d.team].color : "#888888";
