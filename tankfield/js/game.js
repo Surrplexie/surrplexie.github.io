@@ -4305,7 +4305,7 @@
     });
   }
 
-  const CLASS_KEYS = ["y", "u", "i", "h", "j", "k", "n", "m"];
+  const CLASS_KEYS = ["y", "u", "i", "h", "j", "k", "n"];
   const CLASS_TILES = ["#a8d8ea", "#c5e1a5", "#f8bbd0", "#ffe082", "#d1c4e9", "#ffccbc", "#b2dfdb", "#f0f4c3"];
 
   function renderClassPanel() {
