@@ -2200,7 +2200,7 @@
       const kept = carryScore(tank.score);
       const focus = tank.aiFocus;
       setTimeout(() => {
-        if (!running || state.closing) return;
+        if (!running || state.closing || royaleLocked()) return;
         const bot = createTank({
           name: tank.name,
           ai: true,
@@ -2384,6 +2384,72 @@
     state.royaleRestartAt = state.time + 5;
   }
 
+  function scatterRoyalePoint(placed) {
+    let p = randomInWorld(240);
+    for (let i = 0; i < 22; i++) {
+      const tryP = randomInWorld(240);
+      const far = placed.every((q) => (tryP.x - q.x) ** 2 + (tryP.y - q.y) ** 2 > 360 * 360);
+      if (far) {
+        p = tryP;
+        break;
+      }
+    }
+    placed.push(p);
+    return p;
+  }
+
+  function reviveRoyaleBot(old) {
+    const bot = createTank({
+      name: old.name,
+      ai: true,
+      score: Math.max(xpForLevel(LEVEL_CAP), carryScore(old.score)),
+      classId: "basic",
+      team: old.team,
+      color: colorFor({ team: old.team }),
+      pos: randomInWorld(240),
+    });
+    bot.aiFocus = old.aiFocus || ["gun", "gun", "farm", "ram"][irand(0, 3)];
+    bot.aiHunt = Math.random() < 0.58 ? "mid" : "roam";
+    autoUpgradeBot(bot);
+    bot.health = bot.maxHealth;
+    bot.shield = bot.maxShield || 0;
+    bot.spawnProtect = 5;
+    state.tanks.push(bot);
+    return bot;
+  }
+
+  function beginRoyaleStorm() {
+    if (!(state.player && state.player.alive)) {
+      state.respawnAt = 0;
+      respawnPlayer(true);
+    }
+    const deadBots = state.tanks.filter((t) =>
+      t.ai && !t.alive && !t.closer && !t.dominator && !t.boss && !t.fodder && !t.mothership
+    );
+    for (const dead of deadBots) reviveRoyaleBot(dead);
+    const placed = [];
+    for (const tank of royaleContestants()) {
+      const p = scatterRoyalePoint(placed);
+      tank.x = p.x;
+      tank.y = p.y;
+      tank.vx = 0;
+      tank.vy = 0;
+      tank.spawnProtect = Math.max(tank.spawnProtect || 0, 5);
+    }
+    if (state.player && state.player.alive) {
+      state.spectating = false;
+      state.spectateTarget = null;
+      state.ghost = null;
+      state.camera.x = state.player.x;
+      state.camera.y = state.player.y;
+      els.death.classList.add("hidden");
+      if (els.spectateBar) els.spectateBar.classList.add("hidden");
+    }
+    note("The storm is closing. Everyone has been scattered. No respawns.", 5000);
+    try { renderStats(); } catch (err) {}
+    try { renderClassPanel(); } catch (err) {}
+  }
+
   function canRespawn() {
     if (royaleLocked()) return false;
     if (state.mode === "siege" && !liveSanctuaries().length) return false;
@@ -2428,8 +2494,9 @@
     els.death.classList.remove("hidden");
   }
 
-  function respawnPlayer() {
-    if (!canRespawn()) return false;
+  function respawnPlayer(force) {
+    if (!force && !canRespawn()) return false;
+    if (state.player && state.player.alive) return false;
     const opts = state.playOpts || {};
     const prev = state.player;
     const team = prev && prev.team ? prev.team : pickStartTeam(state.mode);
@@ -2477,7 +2544,7 @@
       welcomeSpawnNotes();
       note("Everyone has 1 HP. Health and shield stats do nothing.");
     }
-    if (state.mode === "royale") {
+    if (state.mode === "royale" && !force) {
       welcomeSpawnNotes();
       note("Prep is still going. The storm has not started yet.");
     }
@@ -3864,10 +3931,10 @@
     refreshHunted();
     if (state.mode === "tag") checkTagVictory();
     if (state.mode === "protect") checkProtectClose();
-    if (state.mode === "royale") checkRoyale();
     if (state.mode === "royale" && state.time >= ROYALE_PREP && state.time - dt < ROYALE_PREP) {
-      note("The storm is closing. No respawns.", 5000);
+      beginRoyaleStorm();
     }
+    if (state.mode === "royale") checkRoyale();
     if ((state.mode === "ffa" || state.mode === "onehp" || state.mode === "growth") && !state.closing && state.time >= FFA_CLOSE_AT) beginArenaClose();
     updateDoms(dt);
     updateAssault(dt);
@@ -4854,20 +4921,21 @@
     if (state.mode === "royale") {
       const cx = WORLD.w / 2;
       const cy = WORLD.h / 2;
-      const rr = royaleRadius();
-      ctx.save();
+      const rr = Math.max(8, royaleRadius());
+      const stormOn = royaleLocked() && rr < royaleMaxR() - 2;
+      if (stormOn) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, 0, WORLD.w, WORLD.h);
+        ctx.arc(cx, cy, rr, 0, TAU);
+        ctx.fillStyle = "rgba(210, 64, 42, 0.2)";
+        ctx.fill("evenodd");
+        ctx.restore();
+      }
       ctx.beginPath();
-      ctx.rect(-40, -40, WORLD.w + 80, WORLD.h + 80);
-      ctx.arc(cx, cy, Math.max(8, rr), 0, TAU, true);
-      ctx.fillStyle = "rgba(210, 64, 42, 0.18)";
-      ctx.fill("evenodd");
-      ctx.restore();
-      ctx.beginPath();
-      ctx.arc(cx, cy, Math.max(8, rr), 0, TAU);
-      ctx.fillStyle = "rgba(255, 122, 58, 0.08)";
-      ctx.fill();
-      ctx.strokeStyle = royaleLocked() ? "rgba(232, 72, 48, 0.78)" : "rgba(255, 140, 64, 0.45)";
-      ctx.lineWidth = 10;
+      ctx.arc(cx, cy, rr, 0, TAU);
+      ctx.strokeStyle = stormOn ? "rgba(232, 72, 48, 0.85)" : "rgba(255, 140, 64, 0.4)";
+      ctx.lineWidth = stormOn ? 10 : 6;
       ctx.stroke();
     } else if (state.mode !== "protect" && state.mode !== "maze") {
       ctx.fillStyle = "rgba(118, 141, 252, 0.08)";
@@ -5026,10 +5094,16 @@
     }
     if (state.mode === "royale") {
       const rr = (royaleRadius() / WORLD.w) * s;
+      const stormOn = royaleLocked() && royaleRadius() < royaleMaxR() - 2;
+      if (stormOn) {
+        mctx.beginPath();
+        mctx.rect(0, 0, s, s);
+        mctx.arc(s / 2, s / 2, Math.max(3, rr), 0, TAU);
+        mctx.fillStyle = "rgba(210, 64, 42, 0.32)";
+        mctx.fill("evenodd");
+      }
       mctx.beginPath();
       mctx.arc(s / 2, s / 2, Math.max(3, rr), 0, TAU);
-      mctx.fillStyle = "rgba(255, 122, 58, 0.16)";
-      mctx.fill();
       mctx.strokeStyle = "rgba(232, 72, 48, 0.9)";
       mctx.lineWidth = 2;
       mctx.stroke();
