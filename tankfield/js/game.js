@@ -196,7 +196,7 @@
     ghost: null,
     lastKiller: null,
     royaleRestartAt: 0,
-    respawnAt: 0;
+    respawnAt: 0,
     walls: [],
     maze: null,
     doms: [],
