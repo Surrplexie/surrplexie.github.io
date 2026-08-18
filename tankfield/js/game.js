@@ -74,6 +74,10 @@
   };
   const BASE_W = 560;
   const FFA_CLOSE_AT = 4 * 60 * 60;
+  const ROYALE_PREP = 60;
+  const ROYALE_SHRINK = 165;
+  const ROYALE_END_R = 150;
+  const ROYALE_BURN = 0.04;
   const DOM_HOLD = 8;
   const ASSAULT_WIN = 10 * 60;
   const TEAM4 = ["blue", "red", "green", "purple"];
@@ -191,7 +195,8 @@
     spectateTarget: null,
     ghost: null,
     lastKiller: null,
-    respawnAt: 0,
+    royaleRestartAt: 0,
+    respawnAt: 0;
     walls: [],
     maze: null,
     doms: [],
@@ -944,7 +949,7 @@
       const s = irand(8000, 9000);
       WORLD.w = s;
       WORLD.h = s;
-    } else if (mode === "onehp") {
+    } else if (mode === "onehp" || mode === "royale") {
       WORLD.w = 8200;
       WORLD.h = 8200;
     } else {
@@ -1592,6 +1597,7 @@
       siege: "Siege",
       growth: "Growth",
       onehp: "1 HP",
+      royale: "Battle Royale",
       sandbox: "Sandbox",
     })[mode] || "FFA";
   }
@@ -1781,14 +1787,15 @@
 
   function populateWorld() {
     state.shapes = [];
-    const squares = state.mode === "growth" ? 320 : 220;
-    const pentas = state.mode === "growth" ? 12 : 6;
-    const tris = state.mode === "growth" ? irand(4, 8) : irand(1, 3);
+    const smallOnly = state.mode === "royale";
+    const squares = smallOnly ? 160 : state.mode === "growth" ? 320 : 220;
+    const pentas = smallOnly ? 0 : state.mode === "growth" ? 12 : 6;
+    const tris = smallOnly ? irand(6, 10) : state.mode === "growth" ? irand(4, 8) : irand(1, 3);
     for (let i = 0; i < squares; i++) state.shapes.push(createShape("square"));
     for (let i = 0; i < tris; i++) state.shapes.push(createShape("triangle"));
     for (let i = 0; i < pentas; i++) state.shapes.push(createShape("pentagon", nestPos()));
-    if (state.mode !== "protect" && state.mode !== "maze" && state.mode !== "assault" && state.mode !== "siege") state.shapes.push(createShape("alpha"));
-    for (let i = 0; i < 2; i++) state.shapes.push(createShape("crasher"));
+    if (!smallOnly && state.mode !== "protect" && state.mode !== "maze" && state.mode !== "assault" && state.mode !== "siege") state.shapes.push(createShape("alpha"));
+    if (!smallOnly) for (let i = 0; i < 2; i++) state.shapes.push(createShape("crasher"));
   }
 
   function spawnBots() {
@@ -1820,6 +1827,8 @@
             ? assaultSpawn(team)
             : state.mode === "siege"
               ? siegeSpawn()
+            : state.mode === "royale"
+              ? randomInWorld(180)
             : home
             ? (aiJob === "hunt" ? awayFrom(home.x, home.y, 860) : around(home.x, home.y, 240))
             : state.mode === "domination"
@@ -2032,6 +2041,7 @@
     state.ghost = null;
     state.camera.zoom = 1;
     state.lastKiller = null;
+    state.royaleRestartAt = 0;
     state.respawnAt = 0;
     state.alphaRespawnAt = 0;
     state.pentagonAt = rand(6, 12);
@@ -2066,6 +2076,8 @@
           ? assaultSpawn(team)
           : state.mode === "siege"
             ? siegeSpawn()
+          : state.mode === "royale"
+            ? randomInWorld(180)
           : home
           ? around(home.x, home.y, 220)
           : awayFrom(WORLD.w / 2, WORLD.h / 2, 700),
@@ -2104,6 +2116,11 @@
     if (state.mode === "onehp") {
       welcomeSpawnNotes();
       note("Everyone has 1 HP. Health and shield stats do nothing.");
+    }
+    if (state.mode === "royale") {
+      welcomeSpawnNotes();
+      note("You have 1 minute to farm and upgrade before the storm closes in.");
+      note("After that, there are no respawns. Last tank standing wins.");
     }
     els.hud.classList.remove("hidden");
     const ws = document.getElementById("workshop");
@@ -2178,7 +2195,7 @@
       }
       floater(tank.x, tank.y - tank.r - 8, `${TEAMS[tank.team] ? TEAMS[tank.team].name : ""} mothership down`);
       checkProtectClose();
-    } else if (!tank.closer && !tank.boss && !tank.fodder && !state.closing) {
+    } else if (!tank.closer && !tank.boss && !tank.fodder && !state.closing && !royaleLocked()) {
       const team = tank.team;
       const kept = carryScore(tank.score);
       const focus = tank.aiFocus;
@@ -2197,6 +2214,8 @@
               ? assaultSpawn(team)
               : state.mode === "siege"
                 ? siegeSpawn()
+              : state.mode === "royale"
+                ? randomInWorld(180)
               : state.mode === "protect" && mothershipOf(team)
               ? around(mothershipOf(team).x, mothershipOf(team).y, 220)
               : awayFrom(WORLD.w / 2, WORLD.h / 2, 900),
@@ -2323,7 +2342,50 @@
     return Math.max(0, (state.respawnAt || 0) - state.time);
   }
 
+  function royaleMaxR() {
+    return Math.hypot(WORLD.w, WORLD.h) * 0.5;
+  }
+
+  function royaleRadius() {
+    if (state.mode !== "royale") return royaleMaxR();
+    if (state.time < ROYALE_PREP) return royaleMaxR();
+    const t = clamp((state.time - ROYALE_PREP) / ROYALE_SHRINK, 0, 1);
+    return lerp(royaleMaxR(), ROYALE_END_R, t);
+  }
+
+  function royaleLocked() {
+    return state.mode === "royale" && state.time >= ROYALE_PREP;
+  }
+
+  function royaleInside(ent, extra = 0) {
+    if (!ent) return true;
+    const dx = ent.x - WORLD.w / 2;
+    const dy = ent.y - WORLD.h / 2;
+    return Math.hypot(dx, dy) <= royaleRadius() + extra;
+  }
+
+  function royaleContestants() {
+    return state.tanks.filter((t) => t.alive && !t.closer && !t.dominator && !t.boss && !t.fodder && !t.mothership);
+  }
+
+  function checkRoyale() {
+    if (state.mode !== "royale" || state.royaleRestartAt) return;
+    const living = royaleContestants();
+    if (state.time < 1.2 || living.length > 1) return;
+    const winner = living[0];
+    if (winner) {
+      note(`${winner.name} wins the round!`, 5000);
+      if (winner === state.player) note("You won. Next round starts shortly.", 5000);
+      else note("Next round starts shortly.", 5000);
+      floater(winner.x, winner.y - winner.r - 18, "Winner");
+    } else {
+      note("No tanks remain. Next round starts shortly.", 5000);
+    }
+    state.royaleRestartAt = state.time + 5;
+  }
+
   function canRespawn() {
+    if (royaleLocked()) return false;
     if (state.mode === "siege" && !liveSanctuaries().length) return false;
     return running && !arenaLocked() && respawnWait() <= 0 && !(state.player && state.player.alive);
   }
@@ -2335,7 +2397,7 @@
     const wait = respawnWait();
     const ready = canRespawn();
     const secs = Math.ceil(wait);
-    const label = lock ? "Arena closing" : wait > 0 ? `Respawn (${secs})` : "Respawn";
+    const label = lock ? "Arena closing" : royaleLocked() ? "Next round" : wait > 0 ? `Respawn (${secs})` : "Respawn";
     if (els.again) {
       els.again.disabled = !ready;
       els.again.textContent = label;
@@ -2346,6 +2408,7 @@
     }
     if (els.deathWait) {
       if (lock) els.deathWait.textContent = "Arena closers have spawned. This server is closing.";
+      else if (royaleLocked()) els.deathWait.textContent = "No respawns after the storm starts. Next round begins when one tank remains.";
       else if (state.mode === "siege" && !liveSanctuaries().length) els.deathWait.textContent = "All sanctuaries are destroyed. You cannot respawn.";
       else if (wait > 0) els.deathWait.textContent = `(you may respawn in ${secs} second${secs === 1 ? "" : "s"})`;
       else els.deathWait.textContent = "(you may respawn)";
@@ -2377,6 +2440,8 @@
         ? assaultSpawn(team)
         : state.mode === "siege"
           ? siegeSpawn()
+        : state.mode === "royale"
+          ? randomInWorld(180)
         : home
           ? around(home.x, home.y, 220)
           : awayFrom(WORLD.w / 2, WORLD.h / 2, 700);
@@ -2411,6 +2476,10 @@
     if (state.mode === "onehp") {
       welcomeSpawnNotes();
       note("Everyone has 1 HP. Health and shield stats do nothing.");
+    }
+    if (state.mode === "royale") {
+      welcomeSpawnNotes();
+      note("Prep is still going. The storm has not started yet.");
     }
     try { renderStats(); } catch (err) {}
     try { renderClassPanel(); } catch (err) {}
@@ -2991,14 +3060,16 @@
   function maintainShapes() {
     const counts = { square: 0, triangle: 0, pentagon: 0, alpha: 0, crasher: 0 };
     for (const s of state.shapes) if (s.alive) counts[s.kind]++;
-    const want = { square: state.mode === "growth" ? 320 : 220 };
+    const want = state.mode === "royale"
+      ? { square: 160, triangle: 8 }
+      : { square: state.mode === "growth" ? 320 : 220 };
     for (const kind of Object.keys(want)) {
       while (counts[kind] < want[kind]) {
         state.shapes.push(createShape(kind));
         counts[kind]++;
       }
     }
-    if (state.time >= state.pentagonAt) {
+    if (state.mode !== "royale" && state.time >= state.pentagonAt) {
       const n = irand(2, 5);
       const pCap = state.mode === "growth" ? 40 : 24;
       for (let i = 0; i < n && counts.pentagon < pCap; i++) {
@@ -3007,7 +3078,7 @@
       }
       state.pentagonAt = state.time + rand(7, 16);
     }
-    if (state.time >= state.triangleAt) {
+    if (state.mode !== "royale" && state.time >= state.triangleAt) {
       const n = irand(1, 5);
       for (let i = 0; i < n && counts.triangle < 22; i++) {
         state.shapes.push(createShape("triangle"));
@@ -3015,14 +3086,14 @@
       }
       state.triangleAt = state.time + rand(60, 180);
     }
-    if (state.time >= (state.crasherAt || 0)) {
+    if (state.mode !== "royale" && state.time >= (state.crasherAt || 0)) {
       if (counts.crasher < 7) {
         state.shapes.push(createShape("crasher"));
         counts.crasher++;
       }
       state.crasherAt = state.time + rand(60, 120);
     }
-    if (counts.alpha < 1 && state.mode !== "protect" && state.mode !== "maze" && state.mode !== "assault" && state.mode !== "siege" && state.alphaRespawnAt > 0 && state.time >= state.alphaRespawnAt) {
+    if (counts.alpha < 1 && state.mode !== "protect" && state.mode !== "maze" && state.mode !== "assault" && state.mode !== "siege" && state.mode !== "royale" && state.alphaRespawnAt > 0 && state.time >= state.alphaRespawnAt) {
       state.shapes.push(createShape("alpha"));
       state.alphaRespawnAt = 0;
     }
@@ -3387,6 +3458,7 @@
       if (!melee) enemy = mark;
     }
     const closerNear = nearest(tank, state.tanks, 980, (t) => t.closer);
+    const stormOut = state.mode === "royale" && royaleLocked() && !royaleInside(tank, -24);
     const shape = bestFarm(tank, maze ? 520 : (ram ? 640 : 1100));
     const healer = getDef(tank).healer;
     const healAlly = healer && tank.team
@@ -3399,6 +3471,7 @@
     const invading = !!(tank.team && zone && zone !== tank.team);
     const hunterNear = huntedSelf ? nearestSeen(tank, state.tanks, 640, (t) => t !== tank) : null;
     if (closerNear) tank.aiState = "flee";
+    else if (stormOut) tank.aiState = "storm";
     else if (invading || ((state.mode === "tdm" || state.mode === "4tdm") && tank.team && low)) tank.aiState = "home";
     else if (huntedSelf && hunterNear && dist2(tank, hunterNear) < 480 * 480) tank.aiState = "flee";
     else if (low && enemy && state.mode !== "tag" && !huntingMoth) tank.aiState = "flee";
@@ -3412,7 +3485,7 @@
     else if (shape && dist2(tank, shape) < (maze ? 280 : 420) * (maze ? 280 : 420) && (!maze || canSee(tank, shape))) tank.aiState = "farm";
     else tank.aiState = "wander";
 
-    if (player && player.alive && isEnemyTank(tank, player) && tank.aiState !== "flee" && tank.aiState !== "home" && tank.aiState !== "heal" && !(huntingMoth && dist2(tank, player) > 520 * 520)) {
+    if (player && player.alive && isEnemyTank(tank, player) && tank.aiState !== "flee" && tank.aiState !== "storm" && tank.aiState !== "home" && tank.aiState !== "heal" && !(huntingMoth && dist2(tank, player) > 520 * 520)) {
       const pd = dist2(tank, player);
       const seen = canSee(tank, player);
       if (pd < (ram ? 900 : 760) * (ram ? 900 : 760) && (hpPct > 0.28 || pd < 260 * 260) && (seen || (!maze && pd < 500 * 500))) {
@@ -3494,6 +3567,12 @@
       tx = steered.x;
       ty = steered.y;
       if (enemy) tank.angle = aimAt(tank, enemy, st);
+    } else if (tank.aiState === "storm") {
+      const steered = steerAround(tank, WORLD.w / 2, WORLD.h / 2);
+      tx = steered.x;
+      ty = steered.y;
+      if (enemy && canSee(tank, enemy)) tank.angle = aimAt(tank, enemy, st);
+      else tank.angle = Math.atan2(ty - tank.y, tx - tank.x);
     } else if (tank.aiState === "attack" && enemy) {
       const ez = zoneAt(enemy.x, enemy.y);
       if (ez && ez === enemy.team) {
@@ -3565,18 +3644,18 @@
         tank.roamX = p.x;
         tank.roamY = p.y;
       } else if (tank.aiHunt === "mid" || Math.random() < 0.42) {
-        const mid = nestPos(1100);
+        const mid = state.mode === "royale" ? nestPos(Math.max(180, royaleRadius() * 0.55)) : nestPos(1100);
         tank.roamX = mid.x;
         tank.roamY = mid.y;
       } else {
-        const p = randomInWorld(180);
+        const p = state.mode === "royale" ? nestPos(Math.max(220, royaleRadius() * 0.72)) : randomInWorld(180);
         tank.roamX = p.x;
         tank.roamY = p.y;
       }
     }
     if (tank.aiState === "wander") {
       if (tank.roamX == null || tank.roamY == null) {
-        const mid = maze ? randomOpenNear(tank, 180, 520) : nestPos(900);
+        const mid = maze ? randomOpenNear(tank, 180, 520) : (state.mode === "royale" ? nestPos(Math.max(180, royaleRadius() * 0.6)) : nestPos(900));
         tank.roamX = mid.x;
         tank.roamY = mid.y;
       }
@@ -3776,11 +3855,19 @@
   }
 
   function update(dt) {
+    if (state.mode === "royale" && state.royaleRestartAt && state.time >= state.royaleRestartAt) {
+      startGame(state.spawnName, state.playOpts || { mode: "royale" });
+      return;
+    }
     state.time += dt;
     shake = Math.max(0, shake - dt * 18);
     refreshHunted();
     if (state.mode === "tag") checkTagVictory();
     if (state.mode === "protect") checkProtectClose();
+    if (state.mode === "royale") checkRoyale();
+    if (state.mode === "royale" && state.time >= ROYALE_PREP && state.time - dt < ROYALE_PREP) {
+      note("The storm is closing. No respawns.", 5000);
+    }
     if ((state.mode === "ffa" || state.mode === "onehp" || state.mode === "growth") && !state.closing && state.time >= FFA_CLOSE_AT) beginArenaClose();
     updateDoms(dt);
     updateAssault(dt);
@@ -3818,10 +3905,11 @@
       tank.bodyHitT = Math.max(0, tank.bodyHitT - dt);
       if (tank.spawnProtect > 0) tank.spawnProtect = Math.max(0, tank.spawnProtect - dt);
       const invading = tank.team && zoneAt(tank.x, tank.y) && zoneAt(tank.x, tank.y) !== tank.team;
+      const inStorm = state.mode === "royale" && royaleLocked() && !royaleInside(tank);
       if (tank.dominator && tank.destroyed) {
         tank.health = 0;
-      } else if (invading) {
-        let burn = (tank.maxHealth + (tank.maxShield || 0)) * 0.32 * dt;
+      } else if (invading || inStorm) {
+        let burn = (tank.maxHealth + (tank.maxShield || 0)) * (inStorm ? ROYALE_BURN : 0.32) * dt;
         if ((tank.shield || 0) > 0) {
           const soak = Math.min(tank.shield, burn);
           tank.shield -= soak;
@@ -3830,8 +3918,8 @@
         }
         if (burn > 0) tank.health -= burn;
         tank.bodyHitT = 0.08;
-        if (tank === state.player) shake = Math.max(shake, 4);
-        if (tank.health <= 0) killTank(tank, null, `the ${zoneAt(tank.x, tank.y)} base`);
+        if (tank === state.player) shake = Math.max(shake, inStorm ? 3 : 4);
+        if (tank.health <= 0) killTank(tank, null, inStorm ? "the storm" : `the ${zoneAt(tank.x, tank.y)} base`);
       } else {
         tank.health = Math.min(tank.maxHealth, tank.health + st.regen * dt);
         tank.shieldDelay = Math.max(0, (tank.shieldDelay || 0) - dt);
@@ -3876,6 +3964,10 @@
       s.y += s.vy * dt;
       s.x = clamp(s.x, s.r, WORLD.w - s.r);
       s.y = clamp(s.y, s.r, WORLD.h - s.r);
+      if (state.mode === "royale" && royaleLocked() && !royaleInside(s)) {
+        s.health -= s.maxHealth * 0.35 * dt;
+        if (s.health <= 0) s.alive = false;
+      }
       if (pushOutWalls(s) && s.kind === "crasher") {
         s.vx *= 0.4;
         s.vy *= 0.4;
@@ -4076,6 +4168,7 @@
     state.floaters = state.floaters.filter((f) => f.life > 0);
     refreshHunted();
     if (state.mode === "tag") checkTagVictory();
+    if (state.mode === "royale") checkRoyale();
     maintainShapes();
 
     const p = cameraFocus();
@@ -4181,6 +4274,11 @@
           const wait = Math.max(0, (state.siegeNextAt || 0) - state.time);
           els.closeTimer.textContent = `Next wave ${wait.toFixed(0)}s · ${live}/${all} sancs`;
         }
+      } else if (state.mode === "royale") {
+        const alive = royaleContestants().length;
+        if (state.royaleRestartAt) els.closeTimer.textContent = `Next round ${Math.max(0, state.royaleRestartAt - state.time).toFixed(0)}s`;
+        else if (!royaleLocked()) els.closeTimer.textContent = `Storm in ${formatClock(ROYALE_PREP - state.time)} · ${alive} left`;
+        else els.closeTimer.textContent = `Storm · ${alive} left`;
       } else els.closeTimer.textContent = "";
     }
     if (els.arenaMode && state.mode === "manhunt") {
@@ -4234,6 +4332,12 @@
     }
     if (els.arenaMode && state.mode === "growth") {
       els.arenaMode.textContent = state.closing ? "Arena closing" : "Growth · cap 1000 · [N] lv45";
+    }
+    if (els.arenaMode && state.mode === "royale") {
+      const alive = royaleContestants().length;
+      els.arenaMode.textContent = state.royaleRestartAt
+        ? "Battle Royale · next round"
+        : (!royaleLocked() ? `Battle Royale · prep · ${alive} left` : `Battle Royale · ${alive} left`);
     }
     if (els.skillPoints) els.skillPoints.textContent = state.spectating ? "" : (free > 0 ? `x${free}` : "");
     const teamRows = teamBoardRows();
@@ -4747,7 +4851,25 @@
         ctx.stroke();
       }
     }
-    if (state.mode !== "protect" && state.mode !== "maze") {
+    if (state.mode === "royale") {
+      const cx = WORLD.w / 2;
+      const cy = WORLD.h / 2;
+      const rr = royaleRadius();
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(-40, -40, WORLD.w + 80, WORLD.h + 80);
+      ctx.arc(cx, cy, Math.max(8, rr), 0, TAU, true);
+      ctx.fillStyle = "rgba(210, 64, 42, 0.18)";
+      ctx.fill("evenodd");
+      ctx.restore();
+      ctx.beginPath();
+      ctx.arc(cx, cy, Math.max(8, rr), 0, TAU);
+      ctx.fillStyle = "rgba(255, 122, 58, 0.08)";
+      ctx.fill();
+      ctx.strokeStyle = royaleLocked() ? "rgba(232, 72, 48, 0.78)" : "rgba(255, 140, 64, 0.45)";
+      ctx.lineWidth = 10;
+      ctx.stroke();
+    } else if (state.mode !== "protect" && state.mode !== "maze") {
       ctx.fillStyle = "rgba(118, 141, 252, 0.08)";
       ctx.beginPath();
       ctx.arc(WORLD.w / 2, WORLD.h / 2, 700, 0, TAU);
@@ -4901,6 +5023,16 @@
       mctx.globalAlpha = 0.45;
       mctx.fillRect(mapX(state.assaultBlue.x) - 4, mapY(state.assaultBlue.y) - 4, 8, 8);
       mctx.globalAlpha = 1;
+    }
+    if (state.mode === "royale") {
+      const rr = (royaleRadius() / WORLD.w) * s;
+      mctx.beginPath();
+      mctx.arc(s / 2, s / 2, Math.max(3, rr), 0, TAU);
+      mctx.fillStyle = "rgba(255, 122, 58, 0.16)";
+      mctx.fill();
+      mctx.strokeStyle = "rgba(232, 72, 48, 0.9)";
+      mctx.lineWidth = 2;
+      mctx.stroke();
     }
     const p = cameraFocus();
     const watching = state.spectating;
@@ -5076,6 +5208,7 @@
     siege: "Blue defends sanctuaries · waves of bosses · start at 45 · restore fallen sanctuaries by destroying them",
     growth: "FFA · grow past 45 to 1000 · start at 1 · bots start at 45 · [N] skip to 45 · arena closers after 4 hours",
     onehp: "Everyone for themselves · 1 HP · no shields · health stats do nothing · 20 bots · medium map · start at 45",
+    royale: "1 min prep · then a shrinking storm · no respawns after · last tank wins · small shapes · mid map · start at 45",
     sandbox: "Level 45 · pick any tank",
   };
 
@@ -5098,6 +5231,7 @@
     else if (menuMode === "siege") startGame(name, { mode: "siege" });
     else if (menuMode === "growth") startGame(name, { mode: "growth" });
     else if (menuMode === "onehp") startGame(name, { mode: "onehp" });
+    else if (menuMode === "royale") startGame(name, { mode: "royale" });
     else startGame(name, { mode: "ffa" });
   }
 
