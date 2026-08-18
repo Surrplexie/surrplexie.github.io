@@ -1,9 +1,11 @@
 title: "Kai Morgan"
+author: "Kai Morgan"
 description: "Kai Morgan — IT student pursuing help desk, desktop support, and internship roles. Certifications, hands-on labs, and professional contact."
 footer_text: "© Kai Morgan (Surrplexie) | Built on GitHub Pages"
 url: "https://surrplexie.github.io"
 baseurl: ""
 og_image: "/images/og-card.png"
+og_image_alt: "Kai Morgan — IT Support and Help Desk. Entry-level help desk, desktop support, and internship candidate."
 
 plugins:
   - jekyll-sitemap
@@ -25,3 +27,4 @@ exclude:
   - Gemfile.lock
   - images/README.md
   - scripts/
+  - Docs/

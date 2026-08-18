@@ -163,3 +163,13 @@ Dev logs rules; REM-1, REM-2 any of these terms are the new 'updates' like "Upd
 - **Secondary:** Discord, Instagram, X, YouTube, Twitch, TikTok, Reddit, Pinterest, and Snapchat moved into a closed **Elsewhere** `<details>` block with a note that those are not hiring contacts.
 - Restored missing `.linkedin` brand color; added `:focus-visible` on tiles and the Elsewhere summary; gated hover motion behind `prefers-reduced-motion`.
 - Nav long label and homepage aside link now **Contact** (URL remains `/socials/`). Heading dropped the terminal `> Get In Touch` prefix.
+
+---
+
+## REM-16
+
+**P1 high-impact leftovers** — security policy, hide internal docs, finish share metadata.
+
+- Replaced template **`SECURITY.md`** with a static-site policy: in/out of scope, email reports to Proton Mail, no public issues, acknowledge within 7 days.
+- Added **`Docs/`** to `_config.yml` `exclude` so remediation logs are not published as GitHub Pages HTML (sitemap exclusion from REM-14 kept).
+- Layout: `author` meta, `og:locale`, `og:image:alt` / `twitter:image:alt` from `og_image_alt` in `_config.yml`. Per-page descriptions, Open Graph, GitHub tile styles, and Contact-page copy were already in place from REM-13 / REM-15.

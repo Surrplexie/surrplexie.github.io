@@ -1,21 +1,27 @@
 # Security Policy
 
-## Supported Versions
+This repository hosts a personal static website on GitHub Pages. There is no application backend, user database, or production customer data in this project.
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+## Scope
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+**In scope**
 
-## Reporting a Vulnerability
+- This GitHub Pages site and the files in this repository
 
-Use this section to tell people how to report a vulnerability.
+**Out of scope**
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+- Employers, schools, or other organizations
+- Third-party services and social accounts linked from the contact page
+- Vulnerabilities in software mentioned in labs or write-ups (report those to the vendor)
+
+## Reporting a vulnerability
+
+Email **kaibmorgan1@protonmail.com** with:
+
+- The affected URL or file
+- A short description of the issue
+- How to reproduce it (no exploit payloads or proof-of-concept attack code)
+
+Please do not open a public GitHub issue for security reports.
+
+I will acknowledge reports within **7 days** when possible. If the report is accepted, I will fix it in this repository. If it is declined, I will say why.
