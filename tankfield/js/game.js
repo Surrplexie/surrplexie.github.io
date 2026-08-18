@@ -2581,6 +2581,24 @@
     return n;
   }
 
+  function destroyOldest(kind, owner) {
+    let oldest = null;
+    for (const b of state.bullets) {
+      if (!b.alive || b.owner !== owner || b.kind !== kind) continue;
+      if (!oldest || b.age > oldest.age) oldest = b;
+    }
+    if (oldest) oldest.alive = false;
+  }
+
+  function flockKind(kind) {
+    return kind === "drone" || kind === "swarm" || kind === "minion";
+  }
+
+  function capKind(type) {
+    if (type === "minion" || type === "pillbox" || type === "drone" || type === "swarm") return type;
+    return null;
+  }
+
   function gunShootSettings(tank, gun) {
     const def = getDef(tank);
     const m = modsOf(def);
@@ -2637,8 +2655,12 @@
       out.HEALTH *= proj.HEALTH || 1;
       out.DAMAGE *= proj.DAMAGE || 1;
       out.RANGE *= (proj.RANGE || 90) / 90;
+      out.SPEED *= proj.SPEED == null ? 1 : proj.SPEED;
+      out.accel = (proj.ACCEL || 0) * 1.5 * ARRAS_TICK;
+      out.damp = proj.DAMP || 0;
     }
     out.HEALTH *= 7.3;
+    if (kind === "heal") out.DAMAGE = Math.abs(out.DAMAGE);
     return out;
   }
 
@@ -2659,17 +2681,28 @@
     }
     const kind = gun.type === "auto" ? "bullet" : gun.type;
     const gs = gun.stats || {};
-    const kindMul = gs.speed || (kind === "trap" ? 0.45 : kind === "drone" || kind === "swarm" ? 0.7 : kind === "missile" ? 0.55 : 1);
-    const speed = Math.max(40, (shoot.launch || 4) * 70 * kindMul);
+    const speed = Math.max(40, (shoot.launch || 4) * 70);
     applyRecoil(tank, gun, kind, shoot, W, ang);
     const sizeMul = gun.size || gs.size || shoot.size || 1;
-    const lifeBase = kind === "trap" ? 8 * shoot.RANGE : kind === "drone" || kind === "swarm" ? 999 : kind === "missile" ? 2.4 : Math.max(0.45, 1.55 * shoot.RANGE);
+    let lifeBase = Math.max(0.45, 1.55 * shoot.RANGE);
+    if (kind === "drone" || kind === "minion") lifeBase = 999;
+    else if (kind === "swarm") lifeBase = Math.max(2.4, (shoot.RANGE || 2.5) * 3.2);
+    else if (kind === "trap" || kind === "pillbox") lifeBase = Math.max(6, (shoot.RANGE || 5) * 3);
+    else if (kind === "missile") lifeBase = 2.4;
     let br = (7.2 * sizeMul) * (0.85 + tank.r / 40);
-    if (tank.mothership && kind !== "drone" && kind !== "swarm") br = 8.2 * sizeMul;
+    if (tank.mothership && kind !== "drone" && kind !== "swarm" && kind !== "minion") br = 8.2 * sizeMul;
     if (tank.closer) br = 26;
     if (kind === "heal") br = Math.max(3.1, br * 0.36);
+    if (kind === "minion") br = Math.max(10, tank.r * 0.55);
+    if (kind === "pillbox") br = Math.max(8, 9 * sizeMul);
     let orbit = rand(0, TAU);
-    if (kind === "drone" || kind === "swarm") orbit = countOwned(kind, tank) * 2.39996;
+    if (flockKind(kind)) orbit = countOwned(kind, tank) * 2.39996;
+    let motion = "coast";
+    if (kind === "drone" || kind === "minion") motion = "chase";
+    else if (kind === "swarm") motion = "swarm";
+    else if (kind === "trap" || kind === "pillbox") motion = "glide";
+    const sides = gun.shape || (kind === "swarm" ? 3 : kind === "drone" ? 3 : kind === "trap" || kind === "pillbox" ? 4 : 0);
+    const topSpeed = (kind === "trap" || kind === "pillbox") ? 0 : Math.max(50, (shoot.SPEED || 1) * 70);
     state.bullets.push({
       x: tank.x + ox,
       y: tank.y + oy,
@@ -2677,7 +2710,7 @@
       vy: Math.sin(ang) * speed + tank.vy * 0.15,
       r: br,
       health: Math.max(0.2, shoot.HEALTH),
-      damage: Math.max(0.2, shoot.DAMAGE * (gs.damage || (kind === "heal" ? 0 : 1))),
+      damage: Math.max(0.2, Math.abs(shoot.DAMAGE) * (gs.damage || 1)),
       pen: shoot.PENETRATION || 1,
       life: lifeBase * (gs.life || 1),
       color: kind === "heal" ? "#8abc3f" : tank.color,
@@ -2687,7 +2720,176 @@
       orbit,
       age: 0,
       alive: true,
+      motion,
+      topSpeed,
+      accel: shoot.accel || 0,
+      damp: shoot.damp || 0,
+      sides,
+      necro: !!(gun.necro || (getDef(tank) && getDef(tank).necro)),
+      healer: kind === "heal",
+      gunCd: kind === "minion" || kind === "pillbox" ? 0.4 : 0,
+      turretAim: ang,
     });
+  }
+
+  function tryNecro(owner, shape, template) {
+    if (!owner || !owner.alive || !shape || !shape.alive || shape.kind !== "square") return false;
+    if (!(template && template.necro) && !getDef(owner).necro) return false;
+    const cap = Math.max(1, tankStats(owner).maxDrones || 0);
+    if (countOwned("drone", owner) >= cap) return false;
+    shape.alive = false;
+    let stats = null;
+    if (template) {
+      stats = {
+        health: template.health,
+        damage: template.damage,
+        pen: template.pen,
+        r: Math.max(template.r, shape.r * 0.82),
+        topSpeed: template.topSpeed,
+        accel: template.accel,
+      };
+    } else {
+      const gun = (getDef(owner).guns || []).find((g) => g.necro) || (getDef(owner).guns || []).find((g) => g.type === "drone");
+      if (!gun) return false;
+      const shoot = gunShootSettings(owner, gun);
+      stats = {
+        health: Math.max(0.2, shoot.HEALTH),
+        damage: Math.max(0.2, Math.abs(shoot.DAMAGE)),
+        pen: shoot.PENETRATION || 1,
+        r: Math.max(shape.r * 0.82, 8),
+        topSpeed: Math.max(50, (shoot.SPEED || 1) * 70),
+        accel: shoot.accel || 3.825,
+      };
+    }
+    state.bullets.push({
+      x: shape.x,
+      y: shape.y,
+      vx: shape.vx,
+      vy: shape.vy,
+      r: stats.r,
+      health: stats.health,
+      damage: stats.damage,
+      pen: stats.pen,
+      life: 999,
+      color: owner.color,
+      owner,
+      kind: "drone",
+      angle: Math.atan2(shape.vy, shape.vx) || 0,
+      orbit: countOwned("drone", owner) * 2.39996,
+      age: 0,
+      alive: true,
+      motion: "chase",
+      topSpeed: stats.topSpeed,
+      accel: stats.accel,
+      damp: 0,
+      sides: 4,
+      necro: true,
+      healer: false,
+      gunCd: 0,
+      turretAim: 0,
+    });
+    burst(shape.x, shape.y, owner.color, 7, 80);
+    return true;
+  }
+
+  function fireFromMinion(b, dt) {
+    if (!b.owner || (b.kind !== "minion" && b.kind !== "pillbox")) return;
+    b.gunCd = (b.gunCd || 0) - dt;
+    const owner = b.owner;
+    const reach = b.kind === "pillbox" ? 420 : 380;
+    const prey = nearestSeen(b, state.tanks.concat(state.shapes), reach, (o) => {
+      if (!o.alive || o === owner) return false;
+      if (o.type === "tank") return isEnemyTank(owner, o);
+      return o.type === "shape";
+    });
+    if (prey) {
+      const want = Math.atan2(prey.y - b.y, prey.x - b.x);
+      let cur = b.turretAim == null ? b.angle : b.turretAim;
+      let diff = want - cur;
+      while (diff > Math.PI) diff -= TAU;
+      while (diff < -Math.PI) diff += TAU;
+      b.turretAim = cur + diff * Math.min(1, dt * 8);
+    }
+    if (b.gunCd > 0 || !prey) return;
+    const g = TankCatalog.g;
+    const layers = b.kind === "pillbox" ? [g.basic, g.minionGun, g.autoTurret] : [g.basic, g.minionGun];
+    const fakeGun = {
+      pos: [18, 8, 1, 0, 0, 0, 0],
+      type: "bullet",
+      shoot: TankCatalog.combineStats(layers),
+      hasStack: true,
+      calculator: "default",
+      stats: {},
+    };
+    const shoot = gunShootSettings(owner, fakeGun);
+    const ang = b.turretAim == null ? b.angle : b.turretAim;
+    const speed = Math.max(40, (shoot.launch || 4) * 70);
+    const sizeMul = shoot.size || 1;
+    b.gunCd = Math.max(0.12, (shoot.reload * (shoot.rld || 1) / ARRAS_TICK));
+    state.bullets.push({
+      x: b.x + Math.cos(ang) * (b.r + 6),
+      y: b.y + Math.sin(ang) * (b.r + 6),
+      vx: Math.cos(ang) * speed,
+      vy: Math.sin(ang) * speed,
+      r: Math.max(3.4, (5.2 * sizeMul) * (0.85 + (owner.r || 22) / 40)),
+      health: Math.max(0.2, shoot.HEALTH),
+      damage: Math.max(0.2, shoot.DAMAGE),
+      pen: shoot.PENETRATION || 1,
+      life: Math.max(0.45, 1.55 * shoot.RANGE),
+      color: owner.color || b.color,
+      owner,
+      kind: "bullet",
+      angle: ang,
+      orbit: 0,
+      age: 0,
+      alive: true,
+      motion: "coast",
+      topSpeed: Math.max(50, (shoot.SPEED || 1) * 70),
+      accel: 0,
+      damp: 0,
+      sides: 0,
+      necro: false,
+      healer: false,
+      gunCd: 0,
+      turretAim: ang,
+    });
+  }
+
+  function steerChase(b, dt) {
+    const t = droneTarget(b);
+    if (!t) return;
+    const dx = t.x - b.x;
+    const dy = t.y - b.y;
+    const dist = Math.hypot(dx, dy) || 1;
+    b.angle = Math.atan2(dy, dx);
+    if (b.kind === "drone" && dist <= b.r * 2) return;
+    const spd = b.topSpeed || 220;
+    const tickK = Math.min(0.95, Math.max(0.02, (b.accel || 3.825) / ARRAS_TICK));
+    const k = 1 - Math.pow(1 - tickK, ARRAS_TICK * dt);
+    b.vx += ((dx / dist) * spd - b.vx) * k;
+    b.vy += ((dy / dist) * spd - b.vy) * k;
+  }
+
+  function steerSwarm(b, dt) {
+    const t = droneTarget(b);
+    if (!t) return;
+    const dx = t.x - b.x;
+    const dy = t.y - b.y;
+    const dist = Math.hypot(dx, dy) || 1;
+    b.angle = Math.atan2(dy, dx);
+    const spd = b.topSpeed || 280;
+    const turning = Math.max(5, 8 / Math.max(0.15, b.accel || 3));
+    const k = 1 - Math.pow(1 - 1 / turning, ARRAS_TICK * 1.5 * dt);
+    b.vx += ((dx / dist) * spd - b.vx) * k;
+    b.vy += ((dy / dist) * spd - b.vy) * k;
+  }
+
+  function steerGlide(b, dt) {
+    const damp = b.damp || 0.05;
+    const keep = Math.pow(1 / (1 + damp), ARRAS_TICK * dt);
+    b.vx *= keep;
+    b.vy *= keep;
+    b.angle += dt * 0.4;
   }
 
   function wantsFire(tank) {
@@ -2701,7 +2903,7 @@
     if (tank.spawnProtect > 0 && tank.ai) return false;
     if (tank.ai) {
       if (isRammer(tank)) return false;
-      if (tank.aiState !== "attack" && tank.aiState !== "farm" && tank.aiState !== "defend") return false;
+      if (tank.aiState !== "attack" && tank.aiState !== "farm" && tank.aiState !== "defend" && tank.aiState !== "heal") return false;
       const t = tank.aiTarget;
       return !t || canSee(tank, t);
     }
@@ -2730,7 +2932,14 @@
       if (!autoGun && !fire) continue;
       if (autoGun && !nearestSeen(tank, [...state.tanks, ...state.shapes], 520, (o) => o !== tank && o.alive && (o.type !== "tank" || isEnemyTank(tank, o)))) continue;
       if (tank.gunCd[i] > 0) continue;
-      if ((gun.type === "drone" || gun.type === "swarm") && countOwned(gun.type, tank) >= Math.max(1, st.maxDrones)) continue;
+      const cap = capKind(gun.type);
+      if (cap) {
+        const limit = Math.max(1, st.maxDrones);
+        if (countOwned(cap, tank) >= limit) {
+          if (cap === "pillbox") destroyOldest(cap, tank);
+          else continue;
+        }
+      }
       const fired = gunShootSettings(tank, gun);
       tank.gunCd[i] = Math.max(0.05, (fired.reload * (fired.rld || 1) / ARRAS_TICK) * (0.15 + (gun.pos[6] || 0) + 0.85));
       if (!autoGun) breakSpawnProtect(tank);
@@ -3161,6 +3370,10 @@
     }
     const closerNear = nearest(tank, state.tanks, 980, (t) => t.closer);
     const shape = bestFarm(tank, maze ? 520 : (ram ? 640 : 1100));
+    const healer = getDef(tank).healer;
+    const healAlly = healer && tank.team
+      ? nearestSeen(tank, state.tanks, 760, (t) => t.alive && t !== tank && sameTeam(tank, t) && !t.dominator && t.health < t.maxHealth * 0.92)
+      : null;
     const pool = tank.maxHealth + (tank.maxShield || 0);
     const hpPct = pool > 0 ? (tank.health + (tank.shield || 0)) / pool : 1;
     const low = hpPct < (ram ? 0.16 : 0.22);
@@ -3174,13 +3387,14 @@
     else if ((hunting && mark && enemy === mark) || (state.mode === "tag" && enemy) || (huntingMoth && foeMoth)) tank.aiState = "attack";
     else if (defending && enemy && dist2(tank, enemy) < 720 * 720) tank.aiState = "attack";
     else if (defending) tank.aiState = "defend";
+    else if (healAlly && (!enemy || dist2(tank, healAlly) < dist2(tank, enemy) || healAlly.health < healAlly.maxHealth * 0.55)) tank.aiState = "heal";
     else if (maze && enemy) tank.aiState = "attack";
     else if (enemy && dist2(tank, enemy) < fightRange * fightRange) tank.aiState = "attack";
     else if (heard && dist2(tank, heard) < 2600 * 2600) tank.aiState = "seek";
     else if (shape && dist2(tank, shape) < (maze ? 280 : 420) * (maze ? 280 : 420) && (!maze || canSee(tank, shape))) tank.aiState = "farm";
     else tank.aiState = "wander";
 
-    if (player && player.alive && isEnemyTank(tank, player) && tank.aiState !== "flee" && tank.aiState !== "home" && !(huntingMoth && dist2(tank, player) > 520 * 520)) {
+    if (player && player.alive && isEnemyTank(tank, player) && tank.aiState !== "flee" && tank.aiState !== "home" && tank.aiState !== "heal" && !(huntingMoth && dist2(tank, player) > 520 * 520)) {
       const pd = dist2(tank, player);
       const seen = canSee(tank, player);
       if (pd < (ram ? 900 : 760) * (ram ? 900 : 760) && (hpPct > 0.28 || pd < 260 * 260) && (seen || (!maze && pd < 500 * 500))) {
@@ -3189,7 +3403,7 @@
       }
     }
 
-    if (state.mode === "domination" && tank.team && tank.aiState !== "flee" && tank.aiState !== "attack" && tank.aiState !== "home") {
+    if (state.mode === "domination" && tank.team && tank.aiState !== "flee" && tank.aiState !== "attack" && tank.aiState !== "home" && tank.aiState !== "heal") {
       let claim = null;
       let claimD = Infinity;
       for (const d of state.doms) {
@@ -3208,7 +3422,7 @@
       }
     }
 
-    if (state.mode === "assault" && tank.team && tank.aiState !== "flee" && tank.aiState !== "attack") {
+    if (state.mode === "assault" && tank.team && tank.aiState !== "flee" && tank.aiState !== "attack" && tank.aiState !== "heal") {
       if (tank.team === "green") {
         const wreck = nearest(tank, state.tanks, 2800, (t) => t.dominator && t.destroyed);
         const keep = nearest(tank, state.tanks, 2800, (t) => t.dominator && !t.destroyed && t.team === "green");
@@ -3236,7 +3450,7 @@
       }
     }
 
-    if (state.mode === "siege" && tank.team === "blue" && tank.aiState !== "flee" && tank.aiState !== "attack") {
+    if (state.mode === "siege" && tank.team === "blue" && tank.aiState !== "flee" && tank.aiState !== "attack" && tank.aiState !== "heal") {
       const foe = nearest(tank, state.tanks, 99999, (t) => t.alive && (t.boss || t.fodder || (t.sanctuary && t.sancFallen)));
       const home = nearest(tank, state.tanks, 99999, (t) => t.sanctuary && t.team === "blue" && !t.sancFallen);
       const goal = tank.aiJob === "defend"
@@ -3252,7 +3466,7 @@
     }
 
     const st = tankStats(tank);
-    tank.aiTarget = tank.aiState === "attack" ? enemy : tank.aiState === "farm" ? shape : tank.aiState === "defend" ? (enemy || ownMoth) : tank.aiState === "seek" ? heard : null;
+    tank.aiTarget = tank.aiState === "heal" ? healAlly : tank.aiState === "attack" ? enemy : tank.aiState === "farm" ? shape : tank.aiState === "defend" ? (enemy || ownMoth) : tank.aiState === "seek" ? heard : null;
 
     let tx = tank.x;
     let ty = tank.y;
@@ -3310,6 +3524,12 @@
       ty = steered.y;
       if (enemy && canSee(tank, enemy)) tank.angle = aimAt(tank, enemy, st);
       else tank.angle = Math.atan2(from.y - tank.y, from.x - tank.x);
+    } else if (tank.aiState === "heal" && healAlly) {
+      const hold = holdPoint(tank, healAlly, Math.max(70, healAlly.r + 48));
+      const steered = steerAround(tank, hold.x, hold.y);
+      tx = steered.x;
+      ty = steered.y;
+      tank.angle = Math.atan2(healAlly.y - tank.y, healAlly.x - tank.x);
     } else if (tank.aiState === "farm" && shape) {
       const steered = steerAround(tank, shape.x, shape.y);
       tx = steered.x;
@@ -3509,7 +3729,7 @@
   function separateFlocks() {
     const flock = [];
     for (const b of state.bullets) {
-      if (b.alive && (b.kind === "drone" || b.kind === "swarm")) flock.push(b);
+      if (b.alive && flockKind(b.kind)) flock.push(b);
     }
     for (let i = 0; i < flock.length; i++) {
       const a = flock[i];
@@ -3651,27 +3871,22 @@
     for (const b of state.bullets) {
       if (!b.alive) continue;
       b.age += dt;
-      if (b.owner && !b.owner.alive && (b.kind === "trap" || b.kind === "drone" || b.kind === "swarm" || b.kind === "missile")) {
+      const persist = b.kind === "trap" || b.kind === "pillbox";
+      if (b.owner && !b.owner.alive && !persist && (flockKind(b.kind) || b.kind === "drone" || b.kind === "missile")) {
         b.alive = false;
         continue;
       }
-      if (b.kind === "drone" || b.kind === "swarm") {
+      if (b.motion === "chase" || b.kind === "drone" || b.kind === "minion") {
+        if (!persist && (!b.owner || !b.owner.alive) && flockKind(b.kind)) { b.alive = false; continue; }
+        steerChase(b, dt);
+        if (b.kind === "drone" || b.kind === "minion") b.life = 10;
+        fireFromMinion(b, dt);
+      } else if (b.motion === "swarm" || b.kind === "swarm") {
         if (!b.owner || !b.owner.alive) { b.alive = false; continue; }
-        const t = droneTarget(b);
-        if (t) {
-          const a = Math.atan2(t.y - b.y, t.x - b.x);
-          const spd = b.kind === "swarm" ? 280 : 220;
-          b.vx = lerp(b.vx, Math.cos(a) * spd, 0.14);
-          b.vy = lerp(b.vy, Math.sin(a) * spd, 0.14);
-          b.angle = a;
-        }
-        b.life = 10;
-      } else if (b.kind === "trap") {
-        if (b.age > 0.35) {
-          b.vx *= Math.pow(0.0001, dt);
-          b.vy *= Math.pow(0.0001, dt);
-        }
-        b.angle += dt * 0.4;
+        steerSwarm(b, dt);
+      } else if (b.motion === "glide" || b.kind === "trap" || b.kind === "pillbox") {
+        steerGlide(b, dt);
+        fireFromMinion(b, dt);
       } else if (b.kind === "heal") {
         b.angle += dt * 5.6;
       } else if (b.kind === "missile") {
@@ -3684,7 +3899,18 @@
       b.life -= dt;
       b.x += b.vx * dt;
       b.y += b.vy * dt;
-      if (b.life <= 0 || b.x < 0 || b.y < 0 || b.x > WORLD.w || b.y > WORLD.h) b.alive = false;
+      if (persist) {
+        b.x = clamp(b.x, b.r, WORLD.w - b.r);
+        b.y = clamp(b.y, b.r, WORLD.h - b.r);
+        if (b.life <= 0) b.alive = false;
+        else if (hitsWall(b.x, b.y, b.r)) {
+          b.alive = false;
+          burst(b.x, b.y, b.color, 3, 60);
+        } else if (b.owner && b.owner.team) {
+          const z = zoneAt(b.x, b.y);
+          if (z && z !== b.owner.team) b.alive = false;
+        }
+      } else if (b.life <= 0 || b.x < 0 || b.y < 0 || b.x > WORLD.w || b.y > WORLD.h) b.alive = false;
       else if (hitsWall(b.x, b.y, b.r)) {
         b.alive = false;
         burst(b.x, b.y, b.color, 3, 60);
@@ -3712,6 +3938,10 @@
       for (const s of state.shapes) {
         if (!s.alive) continue;
         if (collideCircles(a, s, 0.5) && a.bodyHitT <= 0) {
+          if (tryNecro(a, s, null)) {
+            a.bodyHitT = 0.12;
+            continue;
+          }
           damage(s, tankStats(a).bodyDamage * 0.85, a);
           damage(a, s.kind === "alpha" ? 18 : s.kind === "pentagon" ? 8 : 5, null);
           a.bodyHitT = 0.18;
@@ -3754,8 +3984,8 @@
         }
         const ha = a.health;
         const hb = b.health;
-        a.health -= (a.kind === "trap" && b.kind !== "trap") ? hb * 0.42 : hb;
-        b.health -= (b.kind === "trap" && a.kind !== "trap") ? ha * 0.42 : ha;
+        a.health -= (a.kind === "trap" || a.kind === "pillbox") && b.kind !== "trap" && b.kind !== "pillbox" ? hb * 0.42 : hb;
+        b.health -= (b.kind === "trap" || b.kind === "pillbox") && a.kind !== "trap" && a.kind !== "pillbox" ? ha * 0.42 : ha;
         if (a.health <= 0) {
           a.alive = false;
           burst(a.x, a.y, a.color, 4, 80);
@@ -3775,12 +4005,13 @@
         const dx = s.x - bullet.x;
         const dy = s.y - bullet.y;
         if (dx * dx + dy * dy < (s.r + bullet.r) ** 2) {
+          if (tryNecro(bullet.owner, s, bullet)) continue;
           const kick = s.kind === "alpha" ? 0.00008 : s.kind === "pentagon" ? 0.0022 : 0.01;
           s.vx += bullet.vx * kick;
           s.vy += bullet.vy * kick;
           damage(s, bullet.damage, bullet.owner);
           if (!(bullet.owner && bullet.owner.closer)) {
-            bullet.health -= (bullet.kind === "trap" || bullet.kind === "drone" ? 0.35 : 1) / Math.max(0.35, bullet.pen || 1);
+            bullet.health -= (bullet.kind === "trap" || bullet.kind === "pillbox" || bullet.kind === "drone" || bullet.kind === "minion" ? 0.35 : 1) / Math.max(0.35, bullet.pen || 1);
             if (bullet.health <= 0) bullet.alive = false;
           }
         }
@@ -3793,7 +4024,7 @@
         if (dx * dx + dy * dy >= (tank.r + bullet.r) ** 2) continue;
         if (bullet.kind === "heal") {
           if (tank.dominator || !sameTeam(tank, bullet.owner)) continue;
-          tank.health = Math.min(tank.maxHealth, tank.health + 18);
+          tank.health = Math.min(tank.maxHealth, tank.health + bullet.damage);
           bullet.alive = false;
           continue;
         }
@@ -3802,7 +4033,7 @@
         tank.vy += bullet.vy * 0.01;
         damage(tank, bullet.damage, bullet.owner);
         if (!(bullet.owner && bullet.owner.closer)) {
-          bullet.health -= (bullet.kind === "trap" || bullet.kind === "drone" ? 0.45 : 1.2) / Math.max(0.35, bullet.pen || 1);
+          bullet.health -= (bullet.kind === "trap" || bullet.kind === "pillbox" || bullet.kind === "drone" || bullet.kind === "minion" ? 0.45 : 1.2) / Math.max(0.35, bullet.pen || 1);
           if (bullet.health <= 0) bullet.alive = false;
         }
       }
@@ -4208,7 +4439,7 @@
     c.lineJoin = "round";
     c.fill();
     c.stroke();
-    if (gun.type === "trap") {
+    if (gun.type === "trap" || gun.type === "pillbox") {
       c.beginPath();
       c.moveTo(len, -w1 * 1.15);
       c.lineTo(len + 6, -w1 * 1.45);
@@ -4305,6 +4536,20 @@
       c.lineWidth = 3.4;
       c.fill();
       c.stroke();
+    }
+    if (def.healer) {
+      c.save();
+      c.strokeStyle = "#8abc3f";
+      c.lineWidth = Math.max(4, tank.r * 0.22);
+      c.lineCap = "round";
+      const s = tank.r * 0.34;
+      c.beginPath();
+      c.moveTo(tank.x - s, tank.y);
+      c.lineTo(tank.x + s, tank.y);
+      c.moveTo(tank.x, tank.y - s);
+      c.lineTo(tank.x, tank.y + s);
+      c.stroke();
+      c.restore();
     }
     if (!opts.hideName) {
       if (tank.dominator) {
@@ -4498,14 +4743,52 @@
     }
 
     for (const b of state.bullets) {
-      if (b.kind === "trap") {
+      if (b.kind === "trap" || b.kind === "heal") {
         drawPoly(ctx, b.x, b.y, b.r, 4, b.angle, b.color);
-      } else if (b.kind === "heal") {
+      } else if (b.kind === "drone" || b.kind === "swarm") {
+        drawPoly(ctx, b.x, b.y, b.r, b.sides || (b.kind === "swarm" ? 3 : 3), b.angle, b.color);
+      } else if (b.kind === "minion") {
+        const a = b.turretAim == null ? b.angle : b.turretAim;
+        ctx.save();
+        ctx.translate(b.x, b.y);
+        ctx.rotate(a);
+        ctx.beginPath();
+        ctx.moveTo(0, -3.2);
+        ctx.lineTo(b.r + 9, -2.4);
+        ctx.lineTo(b.r + 9, 2.4);
+        ctx.lineTo(0, 3.2);
+        ctx.closePath();
+        ctx.fillStyle = COLORS.barrel;
+        ctx.strokeStyle = COLORS.outline;
+        ctx.lineWidth = 2.2;
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.r, 0, TAU);
+        ctx.fillStyle = b.color;
+        ctx.strokeStyle = darken(b.color);
+        ctx.lineWidth = 2.5;
+        ctx.fill();
+        ctx.stroke();
+      } else if (b.kind === "pillbox") {
         drawPoly(ctx, b.x, b.y, b.r, 4, b.angle, b.color);
-      } else if (b.kind === "drone") {
-        drawPoly(ctx, b.x, b.y, b.r, 4, b.angle, b.color);
-      } else if (b.kind === "swarm") {
-        drawPoly(ctx, b.x, b.y, b.r, 3, b.angle, b.color);
+        const a = b.turretAim == null ? 0 : b.turretAim;
+        ctx.save();
+        ctx.translate(b.x, b.y);
+        ctx.rotate(a);
+        ctx.beginPath();
+        ctx.moveTo(0, -2.6);
+        ctx.lineTo(b.r + 7, -2);
+        ctx.lineTo(b.r + 7, 2);
+        ctx.lineTo(0, 2.6);
+        ctx.closePath();
+        ctx.fillStyle = COLORS.barrel;
+        ctx.strokeStyle = COLORS.outline;
+        ctx.lineWidth = 2;
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
       } else {
         ctx.beginPath();
         ctx.arc(b.x, b.y, b.r, 0, TAU);

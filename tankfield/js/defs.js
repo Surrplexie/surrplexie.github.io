@@ -52,6 +52,9 @@
     quintuplet: { reload: 1.5, recoil: 2 / 3, shudder: 0.9, pen: 0.9, density: 1.1, spray: 0.9, resist: 0.95 },
     predator: { reload: 1.4, size: 0.8, health: 1.5, damage: 0.9, pen: 1.2, speed: 0.9, maxSpeed: 0.9 },
     dual: { reload: 2, shudder: 0.8, health: 1.5, speed: 1.3, maxSpeed: 1.1, resist: 1.25 },
+    rifle: { reload: 0.8, recoil: 0.8, shudder: 1.5, health: 0.8, damage: 0.8, pen: 0.9, spray: 2 },
+    healer: { damage: -1, speed: 0.5, maxSpeed: 0.5, recoil: 0.5 },
+    moreReload: { reload: 1.16 },
     streamliner: { reload: 1.1, recoil: 0.6, damage: 0.65, speed: 1.24 },
     nailgun: { reload: 0.85, recoil: 2.5, size: 0.8, damage: 0.7, density: 2 },
     pelleter: { reload: 1.25, recoil: 0.25, shudder: 1.5, size: 1.1, damage: 0.35, pen: 1.35, speed: 0.9, maxSpeed: 0.8, density: 1.5, spray: 1.5, resist: 1.2 },
@@ -61,31 +64,37 @@
     lowPower: { shudder: 2, health: 0.5, damage: 0.5, pen: 0.7, spray: 0.5, resist: 0.7 },
     weak: { reload: 2, health: 0.6, damage: 0.6, pen: 0.8, speed: 0.5, maxSpeed: 0.7, range: 0.25, density: 0.3 },
     spam: { reload: 1.1, size: 1.05, damage: 1.1, speed: 0.9, maxSpeed: 0.7, resist: 1.05 },
-    moreReload: { reload: 1.16 },
+    minion: { reload: 48, shudder: 0.1, size: 0.7, damage: 0.75, speed: 3, spray: 0.1 },
+    minionGun: { recoil: 0, shudder: 2, health: 0.4, damage: 0.4, pen: 1.2, range: 0.75, spray: 2 },
+    spawner: { reload: 1.5, maxSpeed: 1.25 },
   };
 
   const PROJECTILE = {
     bullet: { HEALTH: 0.165, DAMAGE: 6, RANGE: 90, SPEED: 3.75 },
-    trap: { HEALTH: 0.5, DAMAGE: 3, RANGE: 450 },
-    drone: { HEALTH: 0.3, DAMAGE: 3.375, RANGE: 200 },
-    swarm: { HEALTH: 0.175, DAMAGE: 2.25, RANGE: 225 },
-    missile: { HEALTH: 0.3, DAMAGE: 4.2, RANGE: 120 },
-    heal: { HEALTH: 0.2, DAMAGE: 0, RANGE: 70 },
-    auto: { HEALTH: 0.165, DAMAGE: 6, RANGE: 90 },
+    trap: { HEALTH: 0.5, DAMAGE: 3, RANGE: 450, SPEED: 0, DAMP: 0.05 },
+    pillbox: { HEALTH: 0.5, DAMAGE: 3, RANGE: 450, SPEED: 0, DAMP: 0.05 },
+    drone: { HEALTH: 0.3, DAMAGE: 3.375, RANGE: 200, SPEED: 3.8, ACCEL: 0.085 },
+    swarm: { HEALTH: 0.175, DAMAGE: 2.25, RANGE: 225, SPEED: 4.5, ACCEL: 3 },
+    minion: { HEALTH: 5, DAMAGE: 1.2, RANGE: 200, SPEED: 1.8, ACCEL: 1 },
+    missile: { HEALTH: 0.3, DAMAGE: 4.2, RANGE: 120, SPEED: 3.75 },
+    heal: { HEALTH: 0.2, DAMAGE: 8, RANGE: 70, SPEED: 3.75 },
+    auto: { HEALTH: 0.165, DAMAGE: 6, RANGE: 90, SPEED: 3.75 },
   };
 
   function layersForType(type) {
-    if (type === "trap") return [g.trap];
+    if (type === "trap" || type === "pillbox") return [g.trap];
     if (type === "drone") return [g.drone];
     if (type === "swarm") return [g.swarm];
+    if (type === "minion") return [g.minion];
+    if (type === "heal") return [g.basic, g.healer];
     if (type === "auto") return [g.basic, g.autoTurret];
     if (type === "missile") return [g.basic, g.pounder, g.launcher];
     return [g.basic];
   }
 
   function calculatorFor(type) {
-    if (type === "trap") return "trap";
-    if (type === "drone") return "drone";
+    if (type === "trap" || type === "pillbox") return "trap";
+    if (type === "drone" || type === "minion") return "drone";
     if (type === "swarm") return "swarm";
     return "default";
   }
@@ -105,6 +114,8 @@
       shoot,
       hasStack,
       calculator: extra.calculator || calculatorFor(type),
+      shape: extra.shape,
+      necro: !!extra.necro,
     };
   }
 
@@ -122,6 +133,8 @@
         shoot,
         hasStack: item.shoot ? !!item.hasStack : false,
         calculator: item.calculator || calculatorFor(type),
+        shape: item.shape,
+        necro: !!item.necro,
       };
     });
   }
@@ -158,6 +171,8 @@
       maxDrones: spec.maxDrones || 0,
       smasher: !!spec.smasher,
       auto: !!spec.auto,
+      necro: spec.necro || 0,
+      healer: !!spec.healer,
       mods: spec.mods || { damage: 1, reload: 1, speed: 1, size: 1, fov: 1, health: 1 },
     };
     return tanks[id];
@@ -180,7 +195,13 @@
       gun(15, 7, 1, 0, 0, ang, 0, { type: "deco" }),
       gun(3, 7, 1.7, 15, 0, ang, 0, { type: "trap", layers: [g.trap, ...more], calculator: "trap" }),
     ],
-    director: (ang = 0, more = []) => [gun(6, 12, 1.2, 8, 0, ang, 0, { type: "drone", layers: [g.drone, ...more], calculator: "drone" })],
+    director: (ang = 0, more = [], extra = {}) => [gun(6, 12, 1.2, 8, 0, ang, 0, {
+      type: "drone",
+      layers: [g.drone, ...more],
+      calculator: "drone",
+      shape: extra.shape || 3,
+      necro: !!extra.necro,
+    })],
     swarm: (y, ang = 0, delay = 0, more = []) => [gun(7, 6.5, 0.6, 7, y, ang, delay, { type: "swarm", layers: [g.swarm, ...more], calculator: "swarm" })],
     auto: (ang = 0, delay = 0) => [gun(16, 6, 1, 0, 0, ang, delay, { type: "auto", layers: [g.basic, g.autoTurret] })],
     twinAt: (ang = 0, y = 5.5, more = []) => [
@@ -195,7 +216,7 @@
     name: "Basic Tank",
     desc: "A reliable all-rounder",
     guns: G.basic(),
-    upgrades: ["twin", "sniper", "machinegun", "flank"],
+    upgrades: ["twin", "sniper", "machinegun", "flank", "director", "pounder", "trapper", "smasher", "healer"],
     needLevel: 1,
   });
 
@@ -212,7 +233,7 @@
     desc: "Long range, hard hits",
     guns: G.sniper(),
     fov: 1.22,
-    upgrades: ["assassin", "overseer", "hunter", "trapper"],
+    upgrades: ["assassin", "hunter", "rifle", "trapper"],
     needLevel: 15,
   });
 
@@ -251,7 +272,7 @@
     body: 4,
     guns: G.director(),
     maxDrones: 6,
-    upgrades: ["overseer", "cruiser", "underseer"],
+    upgrades: ["overseer", "cruiser", "underseer", "spawner"],
     needLevel: 15,
   });
 
@@ -290,6 +311,31 @@
     bodyDamage: 2.2,
     upgrades: ["landmine", "spike", "autosmasher"],
     needLevel: 15,
+  });
+
+  def("healer", {
+    name: "Healer",
+    desc: "Healing shells for teammates",
+    healer: true,
+    guns: [
+      gun(11, 9, -0.4, 9.5, 0, 0, 0, { type: "deco" }),
+      gun(18, 10, 1, 0, 0, 0, 0, { type: "heal", layers: [g.basic, g.healer] }),
+    ],
+    upgrades: ["medic"],
+    needLevel: 15,
+  });
+
+  def("medic", {
+    name: "Medic",
+    desc: "Longer-range healing shells",
+    healer: true,
+    guns: [
+      gun(11, 9, -0.4, 14, 0, 0, 0, { type: "deco" }),
+      gun(22, 10, 1, 0, 0, 0, 0, { type: "heal", layers: [g.basic, g.healer, g.sniper] }),
+    ],
+    fov: 1.2,
+    upgrades: [],
+    needLevel: 30,
   });
 
   def("pelleter", {
@@ -354,6 +400,32 @@
     fov: 1.42,
     upgrades: ["ranger", "stalker"],
     needLevel: 30,
+  });
+
+  def("rifle", {
+    name: "Rifle",
+    desc: "Fast sniper rounds with more spray",
+    guns: [
+      gun(20, 12, 1, 0, 0, 0, 0, { type: "deco" }),
+      gun(24, 7, 1, 0, 0, 0, 0, { layers: [g.basic, g.sniper, g.rifle] }),
+    ],
+    fov: 1.22,
+    upgrades: ["musket"],
+    needLevel: 30,
+  });
+
+  def("musket", {
+    name: "Musket",
+    desc: "Twin rifles",
+    guns: [
+      gun(15.5, 7, 1, 0, 6.15, 0, 0, { type: "deco" }),
+      gun(18, 7, 1, 0, 4.15, 0, 0, { layers: [g.basic, g.sniper, g.rifle, g.twin] }),
+      gun(15.5, 7, 1, 0, -6.15, 0, 0, { type: "deco" }),
+      gun(18, 7, 1, 0, -4.15, 0, 0.5, { layers: [g.basic, g.sniper, g.rifle, g.twin] }),
+    ],
+    fov: 1.22,
+    upgrades: [],
+    needLevel: 45,
   });
 
   def("hunter", {
@@ -458,12 +530,44 @@
 
   def("underseer", {
     name: "Underseer",
-    desc: "Square drones from a square body",
+    desc: "Square drones that steal squares",
     body: 4,
-    guns: [...G.director(90, [g.sunchip]), ...G.director(270, [g.sunchip])],
-    maxDrones: 10,
+    guns: [...G.director(90, [g.sunchip], { shape: 4, necro: true }), ...G.director(270, [g.sunchip], { shape: 4, necro: true })],
+    maxDrones: 15,
+    necro: 4,
     upgrades: ["necromancer", "maleficitor"],
     needLevel: 30,
+  });
+
+  def("spawner", {
+    name: "Spawner",
+    desc: "Builds mini tanks that shoot for you",
+    body: 4,
+    guns: [
+      gun(4.5, 10, 1, 10.5, 0, 0, 0, { type: "deco" }),
+      gun(1, 12, 1, 15, 0, 0, 0, { type: "minion", layers: [g.minion, g.spawner], calculator: "drone" }),
+      gun(11.5, 12, 1, 0, 0, 0, 0, { type: "deco" }),
+    ],
+    maxDrones: 4,
+    fov: 1.1,
+    upgrades: ["factory"],
+    needLevel: 30,
+  });
+
+  def("factory", {
+    name: "Factory",
+    desc: "A bigger spawner with more minions",
+    body: 4,
+    guns: [
+      gun(15.5, 11, 1, 0, 0, 0, 0, { type: "deco" }),
+      gun(2, 14, 1, 15.5, 0, 0, 0, { type: "minion", layers: [g.minion], calculator: "drone" }),
+      gun(12, 14, 1, 0, 0, 0, 0, { type: "deco" }),
+    ],
+    maxDrones: 6,
+    fov: 1.12,
+    speed: 14 / 15,
+    upgrades: [],
+    needLevel: 45,
   });
 
   def("builder", {
@@ -837,20 +941,22 @@
 
   def("necromancer", {
     name: "Necromancer",
-    desc: "Four square-drone spawners",
+    desc: "Four spawners · drones convert squares",
     body: 4,
-    guns: [0, 90, 180, 270].flatMap((a) => G.director(a, [g.sunchip])),
-    maxDrones: 16,
+    guns: [0, 90, 180, 270].flatMap((a) => G.director(a, [g.sunchip], { shape: 4, necro: true })),
+    maxDrones: 14,
+    necro: 4,
     upgrades: [],
     needLevel: 45,
   });
 
   def("maleficitor", {
     name: "Maleficitor",
-    desc: "One underseer spawner, fades while still",
+    desc: "One underseer spawner, fades while still · converts squares",
     body: 4,
-    guns: G.director(0, [g.sunchip, { reload: 0.7 }]),
+    guns: G.director(0, [g.sunchip, { reload: 0.7 }], { shape: 4, necro: true }),
     maxDrones: 12,
+    necro: 4,
     upgrades: [],
     needLevel: 45,
   });
@@ -868,12 +974,13 @@
 
   def("engineer", {
     name: "Engineer",
-    desc: "Traps that sprout auto guns",
+    desc: "Places pillboxes with auto guns",
     guns: [
       gun(18, 10, 1, 0, 0, 0, 0, { type: "deco" }),
-      gun(2, 10, 1.2, 18, 0, 0, 0, { type: "trap", layers: [g.trap, g.setTrap], calculator: "trap", size: 1.2 }),
+      gun(3, 14, 1.3, 15, 0, 0, 0, { type: "deco" }),
+      gun(2, 14, 1.3, 18, 0, 0, 0, { type: "pillbox", layers: [g.trap, g.setTrap], calculator: "trap", size: 1.2 }),
     ],
-    auto: true,
+    maxDrones: 6,
     upgrades: [],
     needLevel: 45,
   });
@@ -1369,6 +1476,7 @@
 
   const skipAuto = new Set([
     "auto3", "auto5", "auto8", "auto2", "autosmasher", "autogunner", "autosniper", "engineer",
+    "healer", "medic", "spawner", "factory",
     "mothership", "arena_closer", "dom_gun", "dom_idle", "dom_heal", "assault_guard",
     "elite_destroyer", "elite_gunner", "elite_sprayer", "elite_battleship", "summoner",
     "nest_keeper", "terrestrial", "celestial", "eternal", "sentry_gun", "sanctuary",
@@ -1376,7 +1484,7 @@
   for (const id of Object.keys(tanks)) {
     const t = tanks[id];
     if (skipAuto.has(id) || t.auto || tanks["auto_" + id]) continue;
-    if (!t.guns.some((g) => g.type === "bullet" || g.type === "trap" || g.type === "drone" || g.type === "swarm")) {
+    if (!t.guns.some((g) => g.type === "bullet" || g.type === "trap" || g.type === "drone" || g.type === "swarm" || g.type === "minion" || g.type === "pillbox" || g.type === "heal")) {
       if (!t.smasher) continue;
     }
     def("auto_" + id, {
@@ -1396,6 +1504,8 @@
       bulletPen: t.bulletPen,
       bulletSize: t.bulletSize,
       maxDrones: t.maxDrones,
+      necro: t.necro,
+      healer: t.healer,
       upgrades: [],
       needLevel: Math.min(45, Math.max(15, t.needLevel)),
     });
@@ -1434,6 +1544,8 @@
       maxDrones: 0,
       smasher: false,
       auto: false,
+      necro: 0,
+      healer: false,
       mods: { damage: 1, reload: 1, speed: 1, size: 1, fov: 1, health: 1 },
     });
   }
