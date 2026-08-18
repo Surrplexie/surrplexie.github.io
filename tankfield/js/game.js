@@ -868,7 +868,7 @@
     const nBots = teams.length || botCountFor(state.mode);
     for (let i = 0; i < nBots; i++) {
       const team = teams[i] || null;
-      const score = state.mode === "protect" ? xpForLevel(LEVEL_CAP) : irand(0, 2200);
+      const score = xpForLevel(LEVEL_CAP);
       const aiJob = state.mode === "protect"
         ? (Math.random() < 0.48 ? "hunt" : Math.random() < 0.28 ? "defend" : "roam")
         : null;
@@ -1099,7 +1099,7 @@
       color: colorFor({ team, player: true }),
       classId: opts.classId || "basic",
       customDef: opts.customDef || null,
-      score: opts.sandbox || state.mode === "protect" ? xpForLevel(LEVEL_CAP) : 0,
+      score: xpForLevel(LEVEL_CAP),
       pos: (state.mode === "tdm" || state.mode === "4tdm") && team
         ? spawnInBase(team)
         : home
@@ -1108,11 +1108,9 @@
     });
     player.ai = false;
     player.spawnProtect = 30;
-    if (opts.maxStats && state.mode !== "protect") maxOutTank(player);
-    if (state.mode === "protect") {
-      player.health = player.maxHealth;
-      state.classDismissed = false;
-    }
+    if (opts.maxStats) maxOutTank(player);
+    player.health = player.maxHealth;
+    state.classDismissed = false;
     state.player = player;
     state.pilotTank = player;
     state.tanks.push(player);
@@ -1217,7 +1215,7 @@
       const team = tank.team;
       setTimeout(() => {
         if (!running || state.closing) return;
-        const score = state.mode === "protect" ? xpForLevel(LEVEL_CAP) : irand(0, 400);
+        const score = xpForLevel(LEVEL_CAP);
         const bot = createTank({
           name: tank.name,
           ai: true,
@@ -3030,14 +3028,14 @@
   let menuMode = "ffa";
   let menuTeam = "blue";
   const MODE_HINT = {
-    ffa: "Everyone for themselves · arena closers after 5 minutes",
-    tdm: "Red vs blue · random team · bases protect your team",
-    "4tdm": "Four bases · random team",
-    manhunt: "Everyone hunts #1 · hunted gets a small boost · hunters can still fight each other",
-    tag: "Shoot to convert · random team · last team standing closes the arena",
-    protect: "Two motherships roam · random team · some bots hunt the rival ship · [N] skip to 45 · [H] to take control",
-    maze: "FFA inside generated walls",
-    domination: "Capture 4 points · random team · hold 3 to close the arena",
+    ffa: "Everyone for themselves · start at 45 · arena closers after 5 minutes",
+    tdm: "Red vs blue · random team · start at 45",
+    "4tdm": "Four bases · random team · start at 45",
+    manhunt: "Everyone hunts #1 · start at 45 · hunted gets a small boost",
+    tag: "Shoot to convert · random team · start at 45",
+    protect: "Two motherships roam · random team · start at 45 · [N] skip to 45 · [H] to take control",
+    maze: "FFA inside generated walls · start at 45",
+    domination: "Capture 4 points · random team · start at 45",
     sandbox: "Level 45 · pick any tank",
   };
 
