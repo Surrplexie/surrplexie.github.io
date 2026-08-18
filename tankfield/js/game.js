@@ -329,6 +329,16 @@
       out.fov = Math.max(out.fov, 1.45);
       out.maxDrones = Math.max(out.maxDrones, 28);
     }
+    if (state.mode === "manhunt" && tank && tank === state.hunted) {
+      out.maxHealth *= 1.16;
+      out.regen *= 1.12;
+      out.bodyDamage *= 1.1;
+      out.bulletDamage *= 1.1;
+      out.bulletPen *= 1.08;
+      out.moveSpeed *= 1.08;
+      out.reload = Math.max(0.08, out.reload * 0.9);
+      out.fov *= 1.05;
+    }
     return out;
   }
 
@@ -1572,20 +1582,29 @@
     }
     const alive = state.tanks.filter((t) => t.alive);
     if (!alive.length) {
+      const prev = state.hunted;
       state.hunted = null;
+      if (prev && prev.alive) applyLevel(prev);
       return;
     }
     alive.sort((a, b) => b.score - a.score);
     const lead = alive[0];
     if (!lead || lead.score <= 0) {
+      const prev = state.hunted;
       state.hunted = null;
+      if (prev && prev.alive) applyLevel(prev);
       return;
     }
     const tied = alive.filter((t) => t.score === lead.score);
-    const next = (state.hunted && state.hunted.alive && tied.includes(state.hunted)) ? state.hunted : lead;
-    if (next !== state.hunted) {
+    const prev = state.hunted;
+    const next = (prev && prev.alive && tied.includes(prev)) ? prev : lead;
+    if (next !== prev) {
       state.hunted = next;
-      if (next) floater(next.x, next.y - 18, "HUNTED");
+      if (prev && prev.alive) applyLevel(prev);
+      if (next) {
+        applyLevel(next);
+        floater(next.x, next.y - 18, "HUNTED");
+      }
     }
   }
 
@@ -1633,10 +1652,14 @@
     const defending = state.mode === "protect" && ownMoth;
     const assaulting = state.mode === "protect" && foeMoth;
     let enemy = hunting
-      ? (canSee(tank, mark) ? mark : null)
+      ? nearestSeen(tank, state.tanks, 720, (t) => isEnemyTank(tank, t))
       : assaulting
         ? (nearestSeen(tank, state.tanks, 380, (t) => isEnemyTank(tank, t) && !t.mothership) || (foeMoth && canSee(tank, foeMoth) ? foeMoth : null))
         : nearestSeen(tank, state.tanks, state.mode === "tag" || state.mode === "protect" ? 1400 : 720, (t) => isEnemyTank(tank, t));
+    if (hunting && mark && canSee(tank, mark)) {
+      const melee = nearestSeen(tank, state.tanks, 360, (t) => isEnemyTank(tank, t) && t !== mark);
+      if (!melee) enemy = mark;
+    }
     const closerNear = nearest(tank, state.tanks, 980, (t) => t.closer);
     const shape = nearestSeen(tank, state.shapes, 900, (s) => s.kind !== "alpha" || tank.level >= 20);
     const low = tank.health < tank.maxHealth * 0.34;
@@ -1647,7 +1670,7 @@
     else if (invading || ((state.mode === "tdm" || state.mode === "4tdm") && tank.team && low)) tank.aiState = "home";
     else if (huntedSelf && hunterNear && dist2(tank, hunterNear) < 480 * 480) tank.aiState = "flee";
     else if (low && enemy && state.mode !== "tag" && !assaulting) tank.aiState = "flee";
-    else if ((hunting && enemy) || (state.mode === "tag" && enemy) || (assaulting && enemy)) tank.aiState = "attack";
+    else if ((hunting && mark && enemy === mark) || (state.mode === "tag" && enemy) || (assaulting && enemy)) tank.aiState = "attack";
     else if (defending && enemy && dist2(tank, enemy) < 520 * 520) tank.aiState = "attack";
     else if (defending) tank.aiState = "defend";
     else if (enemy && dist2(tank, enemy) < 380 * 380) tank.aiState = "attack";
@@ -1708,7 +1731,10 @@
       }
     }
     const st = tankStats(tank);
-    const pace = (state.player && state.player.alive ? tankStats(state.player).moveSpeed : st.moveSpeed);
+    const huntedBot = state.mode === "manhunt" && tank === state.hunted;
+    const pace = huntedBot
+      ? st.moveSpeed
+      : (state.player && state.player.alive ? tankStats(state.player).moveSpeed : st.moveSpeed);
     const ang = Math.atan2(ty - tank.y, tx - tank.x);
     tank.vx += Math.cos(ang) * pace * 62 * dt;
     tank.vy += Math.sin(ang) * pace * 62 * dt;
@@ -1882,7 +1908,9 @@
       const st = tankStats(tank);
       let cap = st.moveSpeed * SPEED_CAP;
       if (tank.ai && !tank.closer && !tank.mothership && state.player && state.player.alive && !state.player.mothership) {
-        cap = tankStats(state.player).moveSpeed * SPEED_CAP * 0.95;
+        if (!(state.mode === "manhunt" && tank === state.hunted)) {
+          cap = tankStats(state.player).moveSpeed * SPEED_CAP * 0.95;
+        }
       }
       if (tank.closer) cap = tankStats(tank).moveSpeed * SPEED_CAP * 1.35;
       if (spd > cap) { tank.vx *= cap / spd; tank.vy *= cap / spd; }
@@ -2768,7 +2796,7 @@
     ffa: "Everyone for themselves · arena closers after 5 minutes",
     tdm: "Red vs blue · bases protect your team",
     "4tdm": "Four bases · blue, red, green, purple",
-    manhunt: "Everyone hunts whoever is #1",
+    manhunt: "Everyone hunts #1 · hunted gets a small boost · hunters can still fight each other",
     tag: "Shoot to convert · last team standing closes the arena",
     protect: "Two motherships · defend yours · start at lv1 · [N] skip to 45 · [H] to take control",
     maze: "FFA inside generated walls",
