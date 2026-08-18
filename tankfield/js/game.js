@@ -377,6 +377,10 @@
       out.reload = Math.max(0.08, out.reload * 0.9);
       out.fov *= 1.05;
     }
+    if (state.mode === "onehp" && tank && !tank.closer && !tank.mothership && !tank.dominator) {
+      out.maxHealth = 1;
+      out.regen = 0;
+    }
     return out;
   }
 
@@ -837,6 +841,9 @@
       const s = irand(6750, 9000);
       WORLD.w = s;
       WORLD.h = s;
+    } else if (mode === "onehp") {
+      WORLD.w = 8200;
+      WORLD.h = 8200;
     } else {
       WORLD.w = WORLD_OPEN;
       WORLD.h = WORLD_OPEN;
@@ -1123,7 +1130,7 @@
     if (mode === "sandbox") return 0;
     if (mode === "maze") return 16;
     if (mode === "assault") return 18;
-    if (mode === "4tdm") return 20;
+    if (mode === "onehp" || mode === "4tdm") return 20;
     return 18;
   }
 
@@ -1171,6 +1178,7 @@
       maze: "Maze",
       domination: "Domination",
       assault: "Assault",
+      onehp: "1 HP",
       sandbox: "Sandbox",
     })[mode] || "FFA";
   }
@@ -1637,6 +1645,10 @@
     if (els.spectateBar) els.spectateBar.classList.add("hidden");
     clearNotes();
     if (state.mode === "assault") welcomeSpawnNotes();
+    if (state.mode === "onehp") {
+      welcomeSpawnNotes();
+      note("Everyone has 1 HP. One hit kills.");
+    }
     els.hud.classList.remove("hidden");
     const ws = document.getElementById("workshop");
     if (ws) ws.classList.add("hidden");
@@ -1924,6 +1936,10 @@
     els.death.classList.add("hidden");
     if (els.spectateBar) els.spectateBar.classList.add("hidden");
     if (state.mode === "assault") welcomeSpawnNotes();
+    if (state.mode === "onehp") {
+      welcomeSpawnNotes();
+      note("Everyone has 1 HP. One hit kills.");
+    }
     try { renderStats(); } catch (err) {}
     try { renderClassPanel(); } catch (err) {}
     return true;
@@ -2948,7 +2964,7 @@
     refreshHunted();
     if (state.mode === "tag") checkTagVictory();
     if (state.mode === "protect") checkProtectClose();
-    if (state.mode === "ffa" && !state.closing && state.time >= FFA_CLOSE_AT) beginArenaClose();
+    if ((state.mode === "ffa" || state.mode === "onehp") && !state.closing && state.time >= FFA_CLOSE_AT) beginArenaClose();
     updateDoms(dt);
     updateAssault(dt);
     if (state.closing && !state.closersSpawned && state.time >= state.closeAt) spawnArenaClosers();
@@ -3274,7 +3290,7 @@
     if (els.killsFill) els.killsFill.style.width = `${clamp((p.kills || 0) * 10, 8, 100)}%`;
     if (els.closeTimer) {
       if (state.closing) els.closeTimer.textContent = "Arena closing";
-      else if (state.mode === "ffa") {
+      else if (state.mode === "ffa" || state.mode === "onehp") {
         const left = Math.max(0, Math.floor(FFA_CLOSE_AT - state.time));
         const h = Math.floor(left / 3600);
         const m = Math.floor((left % 3600) / 60);
@@ -4080,6 +4096,7 @@
     maze: "FFA inside generated walls · start at 45",
     domination: "Capture 4 points · random team · start at 45",
     assault: "Blue attacks Green · smaller maze · capture zones · start at 45 · Green wins in 10:00 if they hold 3/4",
+    onehp: "Everyone for themselves · 1 HP · 20 bots · medium map · start at 45",
     sandbox: "Level 45 · pick any tank",
   };
 
@@ -4099,6 +4116,7 @@
     else if (menuMode === "maze") startGame(name, { mode: "maze" });
     else if (menuMode === "domination") startGame(name, { mode: "domination" });
     else if (menuMode === "assault") startGame(name, { mode: "assault" });
+    else if (menuMode === "onehp") startGame(name, { mode: "onehp" });
     else startGame(name, { mode: "ffa" });
   }
 
