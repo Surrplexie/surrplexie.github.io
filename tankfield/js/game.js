@@ -1670,6 +1670,47 @@
     }
   }
 
+  function isDevNick() {
+    const names = [
+      state.player && state.player.name,
+      state.spawnName,
+      els.name && els.name.value,
+    ];
+    return names.some((n) => String(n || "").trim().toLowerCase() === "dev");
+  }
+
+  function becomeArenaCloser(tank) {
+    if (!tank || !tank.alive || tank.closer || tank.mothership) return false;
+    tank.closer = true;
+    tank.classId = "arena_closer";
+    tank.customDef = null;
+    tank.team = null;
+    tank.color = COLORS.square;
+    tank.score = Math.max(tank.score, xpForLevel(LEVEL_CAP));
+    for (const st of STATS) tank.stats[st.key] = STAT_MAX;
+    applyLevel(tank);
+    tank.health = tank.maxHealth;
+    tank.r = 46;
+    tank.spawnProtect = 0;
+    tank.ai = false;
+    state.classDismissed = true;
+    floater(tank.x, tank.y - tank.r - 8, "Arena Closer");
+    try { renderStats(); } catch (err) {}
+    try { renderClassPanel(); } catch (err) {}
+    return true;
+  }
+
+  function tryDevCloserEgg(e) {
+    if (!running || state.paused || state.spectating) return false;
+    if (!isDevNick() || !e.shiftKey) return false;
+    const slashHeld = keys.has("?") || keys.has("/") || keys.has("slash");
+    const bsHeld = keys.has("\\") || keys.has("backslash");
+    if (!slashHeld || !bsHeld) return false;
+    const p = state.player;
+    if (!p || !p.alive || p.closer || p.mothership) return false;
+    return becomeArenaCloser(p);
+  }
+
   function tryTagHit(target, src) {
     if (state.mode !== "tag") return false;
     if (!target || target.type !== "tank" || !src || src.type !== "tank") return false;
@@ -2942,11 +2983,16 @@
     if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
     const k = e.key.toLowerCase();
     if (["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(k)) e.preventDefault();
+    keys.add(k);
+    if (e.code) keys.add(e.code.toLowerCase());
+    if (tryDevCloserEgg(e)) {
+      e.preventDefault();
+      return;
+    }
     if (state.paused || state.spectating) {
       if (k === "t" && running && !state.spectating) openWorkshop();
       return;
     }
-    keys.add(k);
     if (k === "e" && running) state.autoFire = !state.autoFire;
     if (k === "c" && running) state.autoSpin = !state.autoSpin;
     if (k === "t" && running && window.TankWorkshop) window.TankWorkshop.open();
@@ -2964,7 +3010,10 @@
     const n = parseInt(e.key, 10);
     if (running && !state.paused && n >= 1 && n <= 8) tryUpgrade(STATS[n - 1].key, keys.has("m"));
   });
-  window.addEventListener("keyup", (e) => keys.delete(e.key.toLowerCase()));
+  window.addEventListener("keyup", (e) => {
+    keys.delete(e.key.toLowerCase());
+    if (e.code) keys.delete(e.code.toLowerCase());
+  });
   window.addEventListener("blur", () => keys.clear());
   canvas.addEventListener("mousemove", pointerToGame);
   canvas.addEventListener("pointermove", pointerToGame);
