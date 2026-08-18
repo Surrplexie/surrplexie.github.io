@@ -221,17 +221,16 @@
       return null;
     }
     if (state.mode !== "4tdm") return null;
-    const dL = BASE_W - x;
-    const dR = x - (WORLD.w - BASE_W);
-    const dT = BASE_W - y;
-    const dB = y - (WORLD.h - BASE_W);
-    let best = null;
-    let bestD = 0;
-    if (x <= BASE_W && dL > bestD) { best = "blue"; bestD = dL; }
-    if (x >= WORLD.w - BASE_W && dR > bestD) { best = "red"; bestD = dR; }
-    if (y <= BASE_W && dT > bestD) { best = "green"; bestD = dT; }
-    if (y >= WORLD.h - BASE_W && dB > bestD) { best = "purple"; bestD = dB; }
-    return best;
+    const left = x <= BASE_W;
+    const right = x >= WORLD.w - BASE_W;
+    const top = y <= BASE_W;
+    const bot = y >= WORLD.h - BASE_W;
+    if ((left || right) && (top || bot)) return null;
+    if (left) return "blue";
+    if (right) return "red";
+    if (top) return "green";
+    if (bot) return "purple";
+    return null;
   }
 
   function spawnInBase(team) {
@@ -239,6 +238,8 @@
     if (state.mode === "4tdm") {
       if (team === "green") return { x: rand(BASE_W + pad, WORLD.w - BASE_W - pad), y: rand(pad, BASE_W - pad) };
       if (team === "purple") return { x: rand(BASE_W + pad, WORLD.w - BASE_W - pad), y: rand(WORLD.h - BASE_W + pad, WORLD.h - pad) };
+      if (team === "blue") return { x: rand(pad, BASE_W - pad), y: rand(BASE_W + pad, WORLD.h - BASE_W - pad) };
+      if (team === "red") return { x: rand(WORLD.w - BASE_W + pad, WORLD.w - pad), y: rand(BASE_W + pad, WORLD.h - BASE_W - pad) };
     }
     const x0 = team === "blue" ? pad : WORLD.w - BASE_W + pad;
     const x1 = team === "blue" ? BASE_W - pad : WORLD.w - pad;
@@ -2381,11 +2382,14 @@
         ctx.strokeRect(x + 4, y + 4, w - 8, h - 8);
         ctx.globalAlpha = 1;
       };
-      paint("blue", 0, 0, BASE_W, WORLD.h);
-      paint("red", WORLD.w - BASE_W, 0, BASE_W, WORLD.h);
       if (state.mode === "4tdm") {
+        paint("blue", 0, BASE_W, BASE_W, WORLD.h - BASE_W * 2);
+        paint("red", WORLD.w - BASE_W, BASE_W, BASE_W, WORLD.h - BASE_W * 2);
         paint("green", BASE_W, 0, WORLD.w - BASE_W * 2, BASE_W);
         paint("purple", BASE_W, WORLD.h - BASE_W, WORLD.w - BASE_W * 2, BASE_W);
+      } else {
+        paint("blue", 0, 0, BASE_W, WORLD.h);
+        paint("red", WORLD.w - BASE_W, 0, BASE_W, WORLD.h);
       }
     }
     for (const w of state.walls) {
