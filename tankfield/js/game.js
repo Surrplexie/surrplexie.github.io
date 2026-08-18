@@ -4083,6 +4083,11 @@
   }, { passive: false });
   window.addEventListener("gesturestart", (e) => e.preventDefault());
   window.addEventListener("gesturechange", (e) => e.preventDefault());
+  window.addEventListener("beforeunload", (e) => {
+    if (!running) return;
+    e.preventDefault();
+    e.returnValue = "";
+  });
   window.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && (
       ["+", "-", "=", "_", "0"].includes(e.key)
