@@ -1,26 +1,129 @@
 (() => {
   "use strict";
 
+  function combineStats(stats) {
+    const data = {
+      reload: 1, recoil: 1, shudder: 1, size: 1, health: 1, damage: 1,
+      pen: 1, speed: 1, maxSpeed: 1, range: 1, density: 1, spray: 1, resist: 1,
+    };
+    for (const gStat of stats || []) {
+      if (!gStat) continue;
+      for (const key of Object.keys(data)) data[key] *= gStat[key] == null ? 1 : gStat[key];
+    }
+    return data;
+  }
+
+  const g = {
+    basic: { reload: 10.5, recoil: 1.4, shudder: 0.1, damage: 0.75, speed: 4, spray: 15 },
+    drone: { reload: 36, recoil: 0.25, shudder: 0.1, size: 0.6, speed: 1.5, spray: 0.1 },
+    swarm: { reload: 23, recoil: 0.25, shudder: 0.05, size: 0.4, damage: 0.75, speed: 4, spray: 5 },
+    trap: { reload: 23, shudder: 0.25, size: 0.7, damage: 0.75, speed: 3.25, resist: 3, spray: 0 },
+    twin: { recoil: 0.5, shudder: 0.9, health: 0.9, damage: 0.7, spray: 1.2 },
+    tripleShot: { reload: 1.1, shudder: 0.8, health: 0.9, pen: 0.8, density: 0.8, spray: 0.5 },
+    triplet: { reload: 1.2, recoil: 2 / 3, shudder: 0.9, health: 0.85, damage: 0.85, pen: 0.9, spray: 0.9 },
+    autoTurret: { reload: 0.9, recoil: 0.75, shudder: 0.5, size: 0.8, health: 0.9, damage: 0.6, pen: 1.2, speed: 1.1, range: 0.8 },
+    sniper: { reload: 1.35, shudder: 0.25, damage: 0.8, pen: 1.1, speed: 1.5, maxSpeed: 1.5, density: 1.5, spray: 0.2, resist: 1.15 },
+    assassin: { reload: 1.65, shudder: 0.25, health: 1.15, pen: 1.1, speed: 1.18, maxSpeed: 1.18, density: 3, resist: 1.3 },
+    hunter: { reload: 1.5, recoil: 0.7, size: 0.95, damage: 0.9, speed: 1.1, maxSpeed: 0.8, density: 1.2, resist: 1.15 },
+    hunterSecondary: { size: 0.9, health: 2, damage: 0.5, pen: 1.5 },
+    machineGun: { reload: 0.5, recoil: 0.8, shudder: 1.7, health: 0.7, damage: 0.7, maxSpeed: 0.8, spray: 2.5 },
+    minigun: { reload: 1.25, recoil: 0.6, size: 0.8, health: 0.55, damage: 0.45, pen: 1.25, speed: 1.33, spray: 0.5 },
+    gunner: { recoil: 0.25, shudder: 1.5, size: 1.2, health: 1.35, damage: 0.25, pen: 1.25, speed: 0.8, maxSpeed: 0.65, spray: 1.5 },
+    flankGuard: { recoil: 1.2, health: 1.02, damage: 0.81, pen: 0.9, maxSpeed: 0.85, density: 1.2 },
+    triAngle: { recoil: 0.9, health: 0.9, speed: 0.8, maxSpeed: 0.8, range: 0.6 },
+    triAngleFront: { recoil: 0.2, speed: 1.3, maxSpeed: 1.1, range: 1.5 },
+    thruster: { recoil: 1.5, shudder: 2, health: 0.5, damage: 0.5, pen: 0.7, spray: 0.5, resist: 0.7 },
+    overseer: { reload: 1.25, size: 0.85, health: 0.7, damage: 0.8, maxSpeed: 0.9, density: 2 },
+    battleship: { health: 1.25, damage: 1.15, maxSpeed: 0.85, density: 1.1 },
+    pounder: { reload: 2, recoil: 1.6, damage: 2, speed: 0.85, maxSpeed: 0.8, density: 1.5, resist: 1.15 },
+    destroyer: { reload: 2, recoil: 1.8, shudder: 0.5, health: 2, damage: 0.9, pen: 1.2, speed: 0.5, maxSpeed: 0.6, density: 2, resist: 3 },
+    annihilator: { reload: 1, recoil: 1.35, damage: 0.86 },
+    artillery: { reload: 1.2, recoil: 0.7, health: 0.85, damage: 0.8, speed: 1.15, maxSpeed: 1.1, spray: 1.1 },
+    launcher: { reload: 1.5, recoil: 1.5, shudder: 0.1, size: 0.72, health: 1.05, damage: 0.925, speed: 0.9, maxSpeed: 1.2, range: 1.1, resist: 1.5 },
+    setTrap: { reload: 1.1, recoil: 2, shudder: 0.1, size: 1.5, health: 2, pen: 1.25, speed: 2.2, maxSpeed: 2.15, range: 1.25, resist: 1.25 },
+    nestKeeper: { reload: 3, size: 0.75, health: 1.05, damage: 1.05 },
+    summoner: { reload: 0.35, size: 0.9, health: 0.4, damage: 0.65 },
+    single: { reload: 1.05, speed: 1.05 },
+    doubleTwin: { damage: 1.1 },
+    tripleTwin: { health: 1.1 },
+    hewnDouble: { reload: 1.25, recoil: 1.5, health: 0.9, damage: 0.85, maxSpeed: 0.9 },
+    spreadshotMain: { reload: 0.781, recoil: 0.25, shudder: 0.5, health: 0.5, speed: 1.923, maxSpeed: 2.436 },
+    spreadshot: { reload: 1.5, shudder: 0.25, speed: 0.7, maxSpeed: 0.7, spray: 0.25 },
+    quintuplet: { reload: 1.5, recoil: 2 / 3, shudder: 0.9, pen: 0.9, density: 1.1, spray: 0.9, resist: 0.95 },
+    predator: { reload: 1.4, size: 0.8, health: 1.5, damage: 0.9, pen: 1.2, speed: 0.9, maxSpeed: 0.9 },
+    dual: { reload: 2, shudder: 0.8, health: 1.5, speed: 1.3, maxSpeed: 1.1, resist: 1.25 },
+    streamliner: { reload: 1.1, recoil: 0.6, damage: 0.65, speed: 1.24 },
+    nailgun: { reload: 0.85, recoil: 2.5, size: 0.8, damage: 0.7, density: 2 },
+    pelleter: { reload: 1.25, recoil: 0.25, shudder: 1.5, size: 1.1, damage: 0.35, pen: 1.35, speed: 0.9, maxSpeed: 0.8, density: 1.5, spray: 1.5, resist: 1.2 },
+    cyclone: { health: 1.3, damage: 1.3, pen: 1.1, speed: 1.5, maxSpeed: 1.15 },
+    atomizer: { reload: 0.3, recoil: 0.8, size: 0.5, damage: 0.75, speed: 1.2, maxSpeed: 0.8, spray: 2.25 },
+    sunchip: { reload: 4, size: 1.4, health: 0.5, damage: 0.4, pen: 0.6, density: 0.8 },
+    lowPower: { shudder: 2, health: 0.5, damage: 0.5, pen: 0.7, spray: 0.5, resist: 0.7 },
+    weak: { reload: 2, health: 0.6, damage: 0.6, pen: 0.8, speed: 0.5, maxSpeed: 0.7, range: 0.25, density: 0.3 },
+    spam: { reload: 1.1, size: 1.05, damage: 1.1, speed: 0.9, maxSpeed: 0.7, resist: 1.05 },
+    moreReload: { reload: 1.16 },
+  };
+
+  const PROJECTILE = {
+    bullet: { HEALTH: 0.165, DAMAGE: 6, RANGE: 90, SPEED: 3.75 },
+    trap: { HEALTH: 0.5, DAMAGE: 3, RANGE: 450 },
+    drone: { HEALTH: 0.3, DAMAGE: 3.375, RANGE: 200 },
+    swarm: { HEALTH: 0.175, DAMAGE: 2.25, RANGE: 225 },
+    missile: { HEALTH: 0.3, DAMAGE: 4.2, RANGE: 120 },
+    heal: { HEALTH: 0.2, DAMAGE: 0, RANGE: 70 },
+    auto: { HEALTH: 0.165, DAMAGE: 6, RANGE: 90 },
+  };
+
+  function layersForType(type) {
+    if (type === "trap") return [g.trap];
+    if (type === "drone") return [g.drone];
+    if (type === "swarm") return [g.swarm];
+    if (type === "auto") return [g.basic, g.autoTurret];
+    if (type === "missile") return [g.basic, g.pounder, g.launcher];
+    return [g.basic];
+  }
+
+  function calculatorFor(type) {
+    if (type === "trap") return "trap";
+    if (type === "drone") return "drone";
+    if (type === "swarm") return "swarm";
+    return "default";
+  }
+
   function gun(length, width, aspect, x, y, angle, delay, extra = {}) {
+    const type = extra.type || "bullet";
+    const hasStack = !!(extra.layers || extra.shoot);
+    const layers = extra.layers || extra.shoot || layersForType(type);
+    const shoot = Array.isArray(layers) ? combineStats(layers) : { ...layers };
     return {
       pos: [length, width, aspect, x, y, angle, delay],
-      type: extra.type || "bullet",
+      type,
       spread: extra.spread || 0,
       recoil: extra.recoil,
       size: extra.size,
       stats: extra.stats || {},
+      shoot,
+      hasStack,
+      calculator: extra.calculator || calculatorFor(type),
     };
   }
 
   function cloneGuns(guns) {
-    return (guns || []).map((g) => ({
-      pos: g.pos.slice(),
-      type: g.type,
-      spread: g.spread || 0,
-      recoil: g.recoil,
-      size: g.size,
-      stats: { ...(g.stats || {}) },
-    }));
+    return (guns || []).map((item) => {
+      const type = item.type || "bullet";
+      const shoot = item.shoot ? { ...item.shoot } : combineStats(layersForType(type));
+      return {
+        pos: item.pos.slice(),
+        type,
+        spread: item.spread || 0,
+        recoil: item.recoil,
+        size: item.size,
+        stats: { ...(item.stats || {}) },
+        shoot,
+        hasStack: item.shoot ? !!item.hasStack : false,
+        calculator: item.calculator || calculatorFor(type),
+      };
+    });
   }
 
   function cloneDef(def) {
@@ -61,26 +164,32 @@
   }
 
   const G = {
-    basic: () => [gun(18, 8, 1, 0, 0, 0, 0)],
+    basic: () => [gun(18, 8, 1, 0, 0, 0, 0, { layers: [g.basic] })],
     twin: (y = 5.5) => [
-      gun(20, 8, 1, 0, y, 0, 0),
-      gun(20, 8, 1, 0, -y, 0, 0.5),
+      gun(20, 8, 1, 0, y, 0, 0, { layers: [g.basic, g.twin] }),
+      gun(20, 8, 1, 0, -y, 0, 0.5, { layers: [g.basic, g.twin] }),
     ],
-    sniper: (len = 24) => [gun(len, 8.5, 1, 0, 0, 0, 0)],
-    machine: () => [gun(12, 10, 1.4, 8, 0, 0, 0, { spread: 0.22 })],
+    sniper: (len = 24, more = []) => [gun(len, 8.5, 1, 0, 0, 0, 0, { layers: [g.basic, g.sniper, ...more] })],
+    machine: () => [gun(12, 10, 1.4, 8, 0, 0, 0, { layers: [g.basic, g.machineGun], spread: 0.22 })],
     flank: () => [
-      gun(18, 8, 1, 0, 0, 0, 0),
-      gun(16, 8, 1, 0, 0, 180, 0),
+      gun(18, 8, 1, 0, 0, 0, 0, { layers: [g.basic, g.flankGuard] }),
+      gun(16, 8, 1, 0, 0, 180, 0, { layers: [g.basic, g.flankGuard] }),
     ],
-    pound: () => [gun(20, 12, 1, 0, 0, 0, 0, { recoil: 2.2 })],
-    trap: (ang = 0) => [
+    pound: (more = []) => [gun(20, 12, 1, 0, 0, 0, 0, { layers: [g.basic, g.pounder, ...more] })],
+    trap: (ang = 0, more = []) => [
       gun(15, 7, 1, 0, 0, ang, 0, { type: "deco" }),
-      gun(3, 7, 1.7, 15, 0, ang, 0, { type: "trap" }),
+      gun(3, 7, 1.7, 15, 0, ang, 0, { type: "trap", layers: [g.trap, ...more], calculator: "trap" }),
     ],
-    director: (ang = 0) => [gun(6, 12, 1.2, 8, 0, ang, 0, { type: "drone" })],
-    swarm: (y, ang = 0, delay = 0) => [gun(7, 6.5, 0.6, 7, y, ang, delay, { type: "swarm" })],
-    auto: () => [gun(16, 6, 1, 0, 0, 0, 0, { type: "auto" })],
+    director: (ang = 0, more = []) => [gun(6, 12, 1.2, 8, 0, ang, 0, { type: "drone", layers: [g.drone, ...more], calculator: "drone" })],
+    swarm: (y, ang = 0, delay = 0, more = []) => [gun(7, 6.5, 0.6, 7, y, ang, delay, { type: "swarm", layers: [g.swarm, ...more], calculator: "swarm" })],
+    auto: (ang = 0, delay = 0) => [gun(16, 6, 1, 0, 0, ang, delay, { type: "auto", layers: [g.basic, g.autoTurret] })],
+    twinAt: (ang = 0, y = 5.5, more = []) => [
+      gun(20, 8, 1, 0, y, ang, 0, { layers: [g.basic, g.twin, ...more] }),
+      gun(20, 8, 1, 0, -y, ang, 0.5, { layers: [g.basic, g.twin, ...more] }),
+    ],
   };
+
+  const B = (...more) => ({ layers: [g.basic, ...more] });
 
   def("basic", {
     name: "Basic Tank",
@@ -94,7 +203,6 @@
     name: "Twin",
     desc: "Two barrels, staggered fire",
     guns: G.twin(),
-    reload: 0.92,
     upgrades: ["tripleshot", "quad", "twinflank"],
     needLevel: 15,
   });
@@ -103,9 +211,6 @@
     name: "Sniper",
     desc: "Long range, hard hits",
     guns: G.sniper(),
-    bulletSpeed: 1.55,
-    reload: 1.5,
-    bulletDamage: 1.25,
     fov: 1.22,
     upgrades: ["assassin", "overseer", "hunter", "trapper"],
     needLevel: 15,
@@ -115,9 +220,6 @@
     name: "Machine Gun",
     desc: "Wide barrel, messy spray",
     guns: G.machine(),
-    reload: 0.48,
-    bulletDamage: 0.7,
-    bulletSpeed: 0.92,
     upgrades: ["destroyer", "gunner"],
     needLevel: 15,
   });
@@ -134,9 +236,9 @@
     name: "Tri-Angle",
     desc: "Rear guns that shove you forward",
     guns: [
-      gun(18, 8, 1, 0, 0, 0, 0),
-      gun(16, 8, 1, 0, 0, 150, 0.33),
-      gun(16, 8, 1, 0, 0, 210, 0.66),
+      gun(18, 8, 1, 0, 0, 0, 0, B(g.flankGuard, g.triAngle, g.triAngleFront)),
+      gun(16, 8, 1, 0, 0, 150, 0.33, B(g.flankGuard, g.triAngle, g.thruster)),
+      gun(16, 8, 1, 0, 0, 210, 0.66, B(g.flankGuard, g.triAngle, g.thruster)),
     ],
     speed: 1.12,
     upgrades: ["booster", "fighter"],
@@ -149,7 +251,6 @@
     body: 4,
     guns: G.director(),
     maxDrones: 6,
-    reload: 0.7,
     upgrades: ["overseer", "cruiser", "underseer"],
     needLevel: 15,
   });
@@ -158,10 +259,6 @@
     name: "Pounder",
     desc: "Heavy shells, heavy recoil",
     guns: G.pound(),
-    bulletDamage: 1.7,
-    reload: 1.85,
-    bulletSize: 1.35,
-    bulletPen: 1.4,
     upgrades: ["destroyer", "builder", "artillery", "launcher"],
     needLevel: 15,
   });
@@ -170,8 +267,6 @@
     name: "Trapper",
     desc: "Drops lingering traps",
     guns: G.trap(),
-    reload: 1.55,
-    bulletDamage: 1.05,
     upgrades: ["tritrapper", "megatrapper", "gunnertrapper", "overtrapper"],
     needLevel: 30,
   });
@@ -180,11 +275,7 @@
     name: "Auto-3",
     desc: "Three independently aiming guns",
     auto: true,
-    guns: [
-      gun(16, 6, 1, 0, 0, 0, 0, { type: "auto" }),
-      gun(16, 6, 1, 0, 0, 120, 0.33, { type: "auto" }),
-      gun(16, 6, 1, 0, 0, 240, 0.66, { type: "auto" }),
-    ],
+    guns: [0, 120, 240].map((a, i) => gun(16, 6, 1, 0, 0, a, i * 0.33, { type: "auto", layers: [g.basic, g.autoTurret] })),
     upgrades: ["auto5", "auto8", "autosniper"],
     needLevel: 15,
   });
@@ -205,12 +296,9 @@
     name: "Pelleter",
     desc: "Two small, fast barrels",
     guns: [
-      gun(17, 6.5, 1, 0, 4.2, 0, 0),
-      gun(17, 6.5, 1, 0, -4.2, 0, 0.5),
+      gun(17, 6.5, 1, 0, 4.2, 0, 0, B(g.pelleter)),
+      gun(17, 6.5, 1, 0, -4.2, 0, 0.5, B(g.pelleter)),
     ],
-    reload: 0.55,
-    bulletDamage: 0.55,
-    bulletSize: 0.75,
     upgrades: ["gunner", "nailgun", "borer"],
     needLevel: 15,
   });
@@ -219,11 +307,10 @@
     name: "Triplet",
     desc: "Three barrels of pressure",
     guns: [
-      gun(16, 8, 1, 0, 5.5, 0, 0.5),
-      gun(20, 8, 1, 0, 0, 0, 0),
-      gun(16, 8, 1, 0, -5.5, 0, 0.5),
+      gun(16, 8, 1, 0, 5.5, 0, 0.5, B(g.twin, g.triplet)),
+      gun(20, 8, 1, 0, 0, 0, 0, B(g.twin, g.triplet)),
+      gun(16, 8, 1, 0, -5.5, 0, 0.5, B(g.twin, g.triplet)),
     ],
-    reload: 0.82,
     upgrades: ["penta", "quintuplet"],
     needLevel: 30,
   });
@@ -231,11 +318,7 @@
   def("twinflank", {
     name: "Twin Flank",
     desc: "Twins on both ends",
-    guns: [
-      ...G.twin(5.2),
-      gun(20, 8, 1, 0, 5.2, 180, 0),
-      gun(20, 8, 1, 0, -5.2, 180, 0.5),
-    ],
+    guns: [...G.twinAt(0, 5.2, [g.doubleTwin]), ...G.twinAt(180, 5.2, [g.doubleTwin])],
     upgrades: ["tripletwin", "octo"],
     needLevel: 30,
   });
@@ -244,9 +327,9 @@
     name: "Triple Shot",
     desc: "A spreading fan of fire",
     guns: [
-      gun(19, 8, 1, 0, 0, -27, 0),
-      gun(19, 8, 1, 0, 0, 0, 0),
-      gun(19, 8, 1, 0, 0, 27, 0),
+      gun(19, 8, 1, 0, 0, -27, 0, B(g.twin, g.tripleShot)),
+      gun(19, 8, 1, 0, 0, 0, 0, B(g.twin, g.tripleShot)),
+      gun(19, 8, 1, 0, 0, 27, 0, B(g.twin, g.tripleShot)),
     ],
     upgrades: ["penta", "spread", "triplet"],
     needLevel: 30,
@@ -256,12 +339,10 @@
     name: "Dual",
     desc: "Twin sniper barrels",
     guns: [
-      gun(22, 7, 1, 0, 4.8, 0, 0),
-      gun(22, 7, 1, 0, -4.8, 0, 0.5),
+      gun(22, 7, 1, 0, 4.8, 0, 0, B(g.twin, g.dual)),
+      gun(22, 7, 1, 0, -4.8, 0, 0.5, B(g.twin, g.dual)),
     ],
-    bulletSpeed: 1.35,
     fov: 1.12,
-    reload: 1.15,
     upgrades: ["hewn", "assassin"],
     needLevel: 30,
   });
@@ -269,10 +350,7 @@
   def("assassin", {
     name: "Assassin",
     desc: "See farther, hit harder",
-    guns: G.sniper(27),
-    bulletSpeed: 1.85,
-    reload: 1.85,
-    bulletDamage: 1.45,
+    guns: G.sniper(27, [g.assassin]),
     fov: 1.42,
     upgrades: ["ranger", "stalker"],
     needLevel: 30,
@@ -282,11 +360,9 @@
     name: "Hunter",
     desc: "Staggered sniper shots",
     guns: [
-      gun(24, 8, 1, 0, 0, 0, 0),
-      gun(21, 12, 1, 0, 0, 0, 0.2),
+      gun(24, 8, 1, 0, 0, 0, 0, { layers: [g.basic, g.sniper, g.hunter] }),
+      gun(21, 12, 1, 0, 0, 0, 0.2, { layers: [g.basic, g.sniper, g.hunter, g.hunterSecondary] }),
     ],
-    bulletSpeed: 1.4,
-    reload: 1.4,
     fov: 1.25,
     upgrades: ["predator", "poacher"],
     needLevel: 30,
@@ -296,12 +372,10 @@
     name: "Minigun",
     desc: "A stream of small shots",
     guns: [
-      gun(23, 8, 1, 0, 0, 0, 0),
-      gun(20, 8, 1, 0, 0, 0, 0.33),
-      gun(17, 8, 1, 0, 0, 0, 0.66),
+      gun(23, 8, 1, 0, 0, 0, 0, B(g.minigun)),
+      gun(20, 8, 1, 0, 0, 0, 0.33, B(g.minigun)),
+      gun(17, 8, 1, 0, 0, 0, 0.66, B(g.minigun)),
     ],
-    reload: 0.42,
-    bulletDamage: 0.55,
     fov: 1.15,
     upgrades: ["streamliner", "sprayer"],
     needLevel: 30,
@@ -310,12 +384,7 @@
   def("destroyer", {
     name: "Destroyer",
     desc: "Huge shells, huge recoil",
-    guns: [gun(21, 14, 1, 0, 0, 0, 0, { recoil: 2.6 })],
-    bulletDamage: 3.05,
-    bulletPen: 2.1,
-    reload: 2.5,
-    bulletSpeed: 0.82,
-    bulletSize: 1.55,
+    guns: [gun(21, 14, 1, 0, 0, 0, 0, { layers: [g.basic, g.pounder, g.destroyer] })],
     upgrades: ["hybrid", "annihilator", "skimmer"],
     needLevel: 30,
   });
@@ -324,14 +393,11 @@
     name: "Gunner",
     desc: "Four small, fast guns",
     guns: [
-      gun(12, 4.5, 1, 0, 7.2, 0, 0.5),
-      gun(12, 4.5, 1, 0, -7.2, 0, 0.75),
-      gun(16, 4.5, 1, 0, 3.6, 0, 0),
-      gun(16, 4.5, 1, 0, -3.6, 0, 0.25),
+      gun(12, 4.5, 1, 0, 7.2, 0, 0.5, { layers: [g.basic, g.twin, g.gunner] }),
+      gun(12, 4.5, 1, 0, -7.2, 0, 0.75, { layers: [g.basic, g.twin, g.gunner] }),
+      gun(16, 4.5, 1, 0, 3.6, 0, 0, { layers: [g.basic, g.twin, g.gunner] }),
+      gun(16, 4.5, 1, 0, -3.6, 0, 0.25, { layers: [g.basic, g.twin, g.gunner] }),
     ],
-    reload: 0.5,
-    bulletDamage: 0.42,
-    bulletSize: 0.7,
     upgrades: ["streamliner", "gunnertrapper"],
     needLevel: 30,
   });
@@ -340,11 +406,9 @@
     name: "Sprayer",
     desc: "Machine gun with a secondary stream",
     guns: [
-      gun(23, 8, 1, 0, 0, 0, 0),
-      gun(12, 10, 1.4, 8, 0, 0, 0, { spread: 0.2 }),
+      gun(23, 8, 1, 0, 0, 0, 0, B(g.minigun)),
+      gun(12, 10, 1.4, 8, 0, 0, 0, { layers: [g.basic, g.machineGun], spread: 0.2 }),
     ],
-    reload: 0.45,
-    bulletDamage: 0.62,
     upgrades: ["atomizer", "focal"],
     needLevel: 30,
   });
@@ -352,7 +416,7 @@
   def("quad", {
     name: "Quad Tank",
     desc: "Fire in four directions",
-    guns: [0, 90, 180, 270].map((a, i) => gun(18, 8, 1, 0, 0, a, i * 0.15)),
+    guns: [0, 90, 180, 270].map((a, i) => gun(18, 8, 1, 0, 0, a, i * 0.15, B(g.flankGuard))),
     upgrades: ["octo", "cyclone"],
     needLevel: 30,
   });
@@ -361,11 +425,11 @@
     name: "Booster",
     desc: "Rear thrusters for speed",
     guns: [
-      gun(18, 8, 1, 0, 0, 0, 0),
-      gun(14, 8, 1, 0, 0, 140, 0.33),
-      gun(14, 8, 1, 0, 0, 220, 0.66),
-      gun(16, 8, 1, 0, 0, 150, 0.15),
-      gun(16, 8, 1, 0, 0, 210, 0.5),
+      gun(18, 8, 1, 0, 0, 0, 0, B(g.flankGuard, g.triAngle, g.triAngleFront)),
+      gun(14, 8, 1, 0, 0, 140, 0.33, B(g.flankGuard, g.triAngle, g.thruster)),
+      gun(14, 8, 1, 0, 0, 220, 0.66, B(g.flankGuard, g.triAngle, g.thruster)),
+      gun(16, 8, 1, 0, 0, 150, 0.15, B(g.flankGuard, g.triAngle, g.thruster)),
+      gun(16, 8, 1, 0, 0, 210, 0.5, B(g.flankGuard, g.triAngle, g.thruster)),
     ],
     speed: 1.18,
     upgrades: ["fighter"],
@@ -376,9 +440,8 @@
     name: "Overseer",
     desc: "Two drone spawners",
     body: 4,
-    guns: [...G.director(90), ...G.director(270)],
+    guns: [...G.director(90, [g.overseer]), ...G.director(270, [g.overseer])],
     maxDrones: 8,
-    reload: 0.65,
     upgrades: ["overlord", "necromancer", "manager"],
     needLevel: 30,
   });
@@ -389,8 +452,6 @@
     body: 4,
     guns: [...G.swarm(0, 90, 0), ...G.swarm(0, 270, 0.5)],
     maxDrones: 14,
-    reload: 0.4,
-    bulletDamage: 0.45,
     upgrades: ["carrier", "battleship"],
     needLevel: 30,
   });
@@ -399,10 +460,8 @@
     name: "Underseer",
     desc: "Square drones from a square body",
     body: 4,
-    guns: [...G.director(90), ...G.director(270)],
+    guns: [...G.director(90, [g.sunchip]), ...G.director(270, [g.sunchip])],
     maxDrones: 10,
-    bulletSize: 1.15,
-    reload: 0.7,
     upgrades: ["necromancer", "maleficitor"],
     needLevel: 30,
   });
@@ -412,11 +471,8 @@
     desc: "Fires block traps",
     guns: [
       gun(18, 12, 1, 0, 0, 0, 0, { type: "deco" }),
-      gun(2, 12, 1.1, 18, 0, 0, 0, { type: "trap", size: 1.4 }),
+      gun(2, 12, 1.1, 18, 0, 0, 0, { type: "trap", layers: [g.trap, g.setTrap], calculator: "trap", size: 1.4 }),
     ],
-    reload: 1.9,
-    bulletDamage: 1.6,
-    bulletSize: 1.5,
     upgrades: ["construct", "engineer", "architect"],
     needLevel: 30,
   });
@@ -425,12 +481,10 @@
     name: "Artillery",
     desc: "Side guns plus a pounder",
     guns: [
-      gun(17, 8, 1, 0, 0, -25, 0.5),
-      gun(17, 8, 1, 0, 0, 25, 0.5),
-      gun(19, 12, 1, 0, 0, 0, 0, { recoil: 1.6 }),
+      gun(17, 8, 1, 0, 0, -25, 0.5, B(g.pelleter, g.artillery)),
+      gun(17, 8, 1, 0, 0, 25, 0.5, B(g.pelleter, g.artillery)),
+      gun(19, 12, 1, 0, 0, 0, 0, B(g.pounder, g.artillery)),
     ],
-    reload: 1.4,
-    bulletDamage: 1.2,
     upgrades: ["mortar", "skimmer"],
     needLevel: 30,
   });
@@ -438,10 +492,7 @@
   def("launcher", {
     name: "Launcher",
     desc: "Fires a slow, heavy missile",
-    guns: [gun(16, 13, 1.15, 0, 0, 0, 0, { recoil: 1.8, type: "missile" })],
-    reload: 2.1,
-    bulletDamage: 1.8,
-    bulletSize: 1.4,
+    guns: [gun(16, 13, 1.15, 0, 0, 0, 0, { type: "missile", layers: [g.basic, g.pounder, g.launcher] })],
     upgrades: ["skimmer", "rocketeer"],
     needLevel: 30,
   });
@@ -449,8 +500,7 @@
   def("tritrapper", {
     name: "Tri-Trapper",
     desc: "Traps in three directions",
-    guns: [0, 120, 240].flatMap((a) => G.trap(a)),
-    reload: 1.35,
+    guns: [0, 120, 240].flatMap((a) => G.trap(a, [g.flankGuard])),
     upgrades: ["fortress", "hexatrap"],
     needLevel: 30,
   });
@@ -460,10 +510,8 @@
     desc: "One enormous trap",
     guns: [
       gun(15, 12, 1, 0, 0, 0, 0, { type: "deco" }),
-      gun(4, 12, 1.6, 15, 0, 0, 0, { type: "trap", size: 1.8 }),
+      gun(4, 12, 1.6, 15, 0, 0, 0, { type: "trap", layers: [g.trap, { size: 1.4, health: 1.6, damage: 1.4, reload: 1.4 }], calculator: "trap", size: 1.8 }),
     ],
-    reload: 2.2,
-    bulletDamage: 2.2,
     upgrades: ["gigatrap", "construct"],
     needLevel: 30,
   });
@@ -472,11 +520,10 @@
     name: "Gunner Trapper",
     desc: "Front gunners, rear traps",
     guns: [
-      gun(19, 4.5, 1, 0, 3.2, 0, 0),
-      gun(19, 4.5, 1, 0, -3.2, 0, 0.5),
+      gun(19, 4.5, 1, 0, 3.2, 0, 0, B(g.twin, g.gunner)),
+      gun(19, 4.5, 1, 0, -3.2, 0, 0.5, B(g.twin, g.gunner)),
       ...G.trap(180),
     ],
-    reload: 0.85,
     upgrades: ["bushwhacker", "fortress"],
     needLevel: 30,
   });
@@ -485,9 +532,8 @@
     name: "Overtrapper",
     desc: "Traps up front, drones on the sides",
     body: 4,
-    guns: [...G.trap(0), ...G.director(120), ...G.director(240)],
+    guns: [...G.trap(0), ...G.director(120, [g.overseer]), ...G.director(240, [g.overseer])],
     maxDrones: 4,
-    reload: 1.1,
     upgrades: ["fortress"],
     needLevel: 30,
   });
@@ -534,13 +580,10 @@
     name: "Nailgun",
     desc: "Dense pelleter fire",
     guns: [
-      gun(19, 5.5, 1, 0, 3.6, 0, 0),
-      gun(19, 5.5, 1, 0, -3.6, 0, 0.5),
-      gun(16, 5.5, 1, 0, 0, 0, 0.25),
+      gun(19, 5.5, 1, 0, 3.6, 0, 0, B(g.pelleter, g.nailgun)),
+      gun(19, 5.5, 1, 0, -3.6, 0, 0.5, B(g.pelleter, g.nailgun)),
+      gun(16, 5.5, 1, 0, 0, 0, 0.25, B(g.pelleter, g.nailgun)),
     ],
-    reload: 0.38,
-    bulletDamage: 0.4,
-    bulletSpeed: 1.2,
     upgrades: ["borer"],
     needLevel: 30,
   });
@@ -548,11 +591,10 @@
   def("borer", {
     name: "Borer",
     desc: "Armor-piercing pellets",
-    guns: G.twin(4.4),
-    reload: 0.5,
-    bulletPen: 1.8,
-    bulletSpeed: 1.35,
-    bulletDamage: 0.7,
+    guns: [
+      gun(20, 8, 1, 0, 4.4, 0, 0, B(g.twin, g.pelleter, { pen: 1.8, speed: 1.25 })),
+      gun(20, 8, 1, 0, -4.4, 0, 0.5, B(g.twin, g.pelleter, { pen: 1.8, speed: 1.25 })),
+    ],
     upgrades: [],
     needLevel: 45,
   });
@@ -560,7 +602,7 @@
   def("penta", {
     name: "Penta Shot",
     desc: "Five-wide shotgun",
-    guns: [-40, -20, 0, 20, 40].map((a, i) => gun(16 + (i === 2 ? 4 : 0), 8, 1, 0, 0, a, i % 2 ? 0.5 : 0)),
+    guns: [-40, -20, 0, 20, 40].map((a, i) => gun(16 + (i === 2 ? 4 : 0), 8, 1, 0, 0, a, i % 2 ? 0.5 : 0, B(g.twin, g.tripleShot))),
     upgrades: ["spread"],
     needLevel: 45,
   });
@@ -569,13 +611,12 @@
     name: "Quintuplet",
     desc: "Five forward barrels",
     guns: [
-      gun(14, 7, 1, 0, 8, 0, 0.6),
-      gun(16, 7, 1, 0, 4.5, 0, 0.3),
-      gun(20, 7, 1, 0, 0, 0, 0),
-      gun(16, 7, 1, 0, -4.5, 0, 0.3),
-      gun(14, 7, 1, 0, -8, 0, 0.6),
+      gun(14, 7, 1, 0, 8, 0, 0.6, B(g.twin, g.triplet, g.quintuplet)),
+      gun(16, 7, 1, 0, 4.5, 0, 0.3, B(g.twin, g.triplet, g.quintuplet)),
+      gun(20, 7, 1, 0, 0, 0, 0, B(g.twin, g.triplet, g.quintuplet)),
+      gun(16, 7, 1, 0, -4.5, 0, 0.3, B(g.twin, g.triplet, g.quintuplet)),
+      gun(14, 7, 1, 0, -8, 0, 0.6, B(g.twin, g.triplet, g.quintuplet)),
     ],
-    reload: 0.78,
     upgrades: [],
     needLevel: 45,
   });
@@ -583,10 +624,7 @@
   def("tripletwin", {
     name: "Triple Twin",
     desc: "Twins at 0, 120, 240",
-    guns: [0, 120, 240].flatMap((a) => [
-      gun(20, 8, 1, 0, 5.2, a, 0),
-      gun(20, 8, 1, 0, -5.2, a, 0.5),
-    ]),
+    guns: [0, 120, 240].flatMap((a) => G.twinAt(a, 5.2, [g.spam, g.doubleTwin, g.tripleTwin])),
     upgrades: ["hexadual"],
     needLevel: 45,
   });
@@ -594,7 +632,7 @@
   def("octo", {
     name: "Octo Tank",
     desc: "Eight-way fire",
-    guns: [0, 45, 90, 135, 180, 225, 270, 315].map((a, i) => gun(18, 8, 1, 0, 0, a, (i % 2) * 0.5)),
+    guns: [0, 45, 90, 135, 180, 225, 270, 315].map((a, i) => gun(18, 8, 1, 0, 0, a, (i % 2) * 0.5, B(g.flankGuard, g.spam))),
     upgrades: [],
     needLevel: 45,
   });
@@ -603,10 +641,8 @@
     name: "Spread Shot",
     desc: "A huge fan of small guns",
     guns: [-75, -60, -45, -30, -15, 0, 15, 30, 45, 60, 75].map((a, i) =>
-      gun(13 + (a === 0 ? 6 : 0), a === 0 ? 8 : 6, 1, 0, 0, a, Math.abs(i - 5) * 0.08)
+      gun(13 + (a === 0 ? 6 : 0), a === 0 ? 8 : 6, 1, 0, 0, a, Math.abs(i - 5) * 0.08, a === 0 ? B(g.pounder, g.spreadshotMain, g.spreadshot) : B(g.twin, g.spreadshot))
     ),
-    reload: 0.9,
-    bulletDamage: 0.55,
     upgrades: [],
     needLevel: 45,
   });
@@ -614,10 +650,7 @@
   def("ranger", {
     name: "Ranger",
     desc: "The longest sightline",
-    guns: [gun(30, 8, 1, 0, 0, 0, 0), gun(6, 12, -1.2, 8, 0, 0, 0, { type: "deco" })],
-    bulletSpeed: 2,
-    reload: 2.05,
-    bulletDamage: 1.55,
+    guns: [gun(30, 8, 1, 0, 0, 0, 0, B(g.sniper, g.assassin)), gun(6, 12, -1.2, 8, 0, 0, 0, { type: "deco" })],
     fov: 1.65,
     upgrades: [],
     needLevel: 45,
@@ -626,9 +659,7 @@
   def("stalker", {
     name: "Stalker",
     desc: "Assassin that fades while still",
-    guns: [gun(27, 8.5, -1.1, 0, 0, 0, 0)],
-    bulletSpeed: 1.8,
-    reload: 1.8,
+    guns: [gun(27, 8.5, -1.1, 0, 0, 0, 0, B(g.sniper, g.assassin))],
     fov: 1.45,
     upgrades: [],
     needLevel: 45,
@@ -638,12 +669,10 @@
     name: "Predator",
     desc: "Three stacked sniper barrels",
     guns: [
-      gun(24, 8, 1, 0, 0, 0, 0),
-      gun(21, 11, 1, 0, 0, 0, 0.15),
-      gun(18, 14, 1, 0, 0, 0, 0.3),
+      gun(24, 8, 1, 0, 0, 0, 0, B(g.sniper, g.hunter, g.hunterSecondary, g.hunterSecondary, g.predator)),
+      gun(21, 11, 1, 0, 0, 0, 0.15, B(g.sniper, g.hunter, g.hunterSecondary, g.predator)),
+      gun(18, 14, 1, 0, 0, 0, 0.3, B(g.sniper, g.hunter, g.predator)),
     ],
-    bulletSpeed: 1.45,
-    reload: 1.55,
     fov: 1.35,
     upgrades: [],
     needLevel: 45,
@@ -654,9 +683,9 @@
     desc: "Hunter with a drone spawner",
     body: 4,
     guns: [
-      gun(24, 8, 1, 0, 0, 0, 0),
-      gun(21, 12, 1, 0, 0, 0, 0.2),
-      ...G.director(180),
+      gun(24, 8, 1, 0, 0, 0, 0, { layers: [g.basic, g.sniper, g.hunter] }),
+      gun(21, 12, 1, 0, 0, 0, 0.2, { layers: [g.basic, g.sniper, g.hunter, g.hunterSecondary] }),
+      ...G.director(180, [g.overseer]),
     ],
     maxDrones: 3,
     fov: 1.22,
@@ -667,9 +696,7 @@
   def("streamliner", {
     name: "Streamliner",
     desc: "Five-barrel bullet stream",
-    guns: [24, 21, 18, 15, 12].map((l, i) => gun(l, 7, 1, 0, 0, 0, i * 0.2)),
-    reload: 0.36,
-    bulletDamage: 0.42,
+    guns: [24, 21, 18, 15, 12].map((l, i) => gun(l, 7, 1, 0, 0, 0, i * 0.2, B(g.minigun, g.streamliner))),
     fov: 1.18,
     upgrades: [],
     needLevel: 45,
@@ -678,12 +705,7 @@
   def("annihilator", {
     name: "Annihilator",
     desc: "The biggest gun",
-    guns: [gun(21, 20, 1, 0, 0, 0, 0, { recoil: 3.2 })],
-    bulletDamage: 4.1,
-    bulletPen: 2.6,
-    reload: 2.9,
-    bulletSpeed: 0.78,
-    bulletSize: 1.9,
+    guns: [gun(21, 20, 1, 0, 0, 0, 0, { layers: [g.basic, g.pounder, g.destroyer, g.annihilator] })],
     upgrades: [],
     needLevel: 45,
   });
@@ -692,11 +714,8 @@
     name: "Hybrid",
     desc: "Destroyer plus a drone spawner",
     body: 4,
-    guns: [gun(21, 14, 1, 0, 0, 0, 0, { recoil: 2.4 }), ...G.director(180)],
+    guns: [gun(21, 14, 1, 0, 0, 0, 0, { layers: [g.basic, g.pounder, g.destroyer] }), ...G.director(180, [g.overseer])],
     maxDrones: 3,
-    bulletDamage: 2.7,
-    reload: 2.3,
-    bulletSize: 1.45,
     upgrades: [],
     needLevel: 45,
   });
@@ -706,10 +725,8 @@
     desc: "A spinning missile launcher",
     guns: [
       gun(10, 14, -0.5, 9, 0, 0, 0, { type: "deco" }),
-      gun(16, 13, 1, 0, 0, 0, 0, { type: "missile", recoil: 1.7 }),
+      gun(16, 13, 1, 0, 0, 0, 0, { type: "missile", layers: [g.basic, g.pounder, g.launcher] }),
     ],
-    reload: 2,
-    bulletDamage: 1.6,
     upgrades: [],
     needLevel: 45,
   });
@@ -718,12 +735,9 @@
     name: "Atomizer",
     desc: "Tiny, furious spray",
     guns: [
-      gun(24, 7, 1, 0, 0, 0, 0),
-      gun(12, 10, 1.4, 8, 0, 0, 0, { spread: 0.28 }),
+      gun(24, 7, 1, 0, 0, 0, 0, B(g.pelleter, g.lowPower, g.machineGun, g.atomizer)),
+      gun(12, 10, 1.4, 8, 0, 0, 0, { layers: [g.basic, g.machineGun], spread: 0.28 }),
     ],
-    reload: 0.32,
-    bulletDamage: 0.38,
-    bulletSize: 0.6,
     upgrades: [],
     needLevel: 45,
   });
@@ -732,11 +746,9 @@
     name: "Focal",
     desc: "Sprayer with tighter aim",
     guns: [
-      gun(24, 8, 1, 0, 0, 0, 0),
-      gun(16, 9, 1.1, 4, 0, 0, 0, { spread: 0.08 }),
+      gun(24, 8, 1, 0, 0, 0, 0, B(g.minigun, { spray: 0.4, speed: 1.2 })),
+      gun(16, 9, 1.1, 4, 0, 0, 0, { layers: [g.basic, g.machineGun, { spray: 0.45 }], spread: 0.08 }),
     ],
-    reload: 0.5,
-    bulletSpeed: 1.2,
     upgrades: [],
     needLevel: 45,
   });
@@ -744,10 +756,7 @@
   def("cyclone", {
     name: "Cyclone",
     desc: "Twelve small guns in a ring",
-    guns: Array.from({ length: 12 }, (_, i) => gun(13, 4.5, 1, 0, 0, i * 30, (i % 3) * 0.2)),
-    reload: 0.55,
-    bulletDamage: 0.4,
-    bulletSize: 0.65,
+    guns: Array.from({ length: 12 }, (_, i) => gun(13, 4.5, 1, 0, 0, i * 30, (i % 3) * 0.2, B(g.flankGuard, g.cyclone))),
     upgrades: [],
     needLevel: 45,
   });
@@ -756,11 +765,11 @@
     name: "Fighter",
     desc: "Booster with side guns",
     guns: [
-      gun(18, 8, 1, 0, 0, 0, 0),
-      gun(16, 8, 1, 0, 0, 90, 0.2),
-      gun(16, 8, 1, 0, 0, 270, 0.2),
-      gun(14, 8, 1, 0, 0, 150, 0.5),
-      gun(14, 8, 1, 0, 0, 210, 0.5),
+      gun(18, 8, 1, 0, 0, 0, 0, B(g.flankGuard, g.triAngle, g.triAngleFront)),
+      gun(16, 8, 1, 0, 0, 90, 0.2, B(g.flankGuard, g.triAngle)),
+      gun(16, 8, 1, 0, 0, 270, 0.2, B(g.flankGuard, g.triAngle)),
+      gun(14, 8, 1, 0, 0, 150, 0.5, B(g.flankGuard, g.triAngle, g.thruster)),
+      gun(14, 8, 1, 0, 0, 210, 0.5, B(g.flankGuard, g.triAngle, g.thruster)),
     ],
     speed: 1.12,
     upgrades: [],
@@ -771,11 +780,11 @@
     name: "Surfer",
     desc: "Booster that also launches swarms",
     guns: [
-      gun(18, 8, 1, 0, 0, 0, 0),
+      gun(18, 8, 1, 0, 0, 0, 0, B(g.flankGuard, g.triAngle, g.triAngleFront)),
       ...G.swarm(0, 150, 0.3),
       ...G.swarm(0, 210, 0.6),
-      gun(14, 8, 1, 0, 0, 140, 0.2),
-      gun(14, 8, 1, 0, 0, 220, 0.5),
+      gun(14, 8, 1, 0, 0, 140, 0.2, B(g.flankGuard, g.triAngle, g.thruster)),
+      gun(14, 8, 1, 0, 0, 220, 0.5, B(g.flankGuard, g.triAngle, g.thruster)),
     ],
     maxDrones: 8,
     speed: 1.14,
@@ -787,9 +796,8 @@
     name: "Overlord",
     desc: "Four drone spawners",
     body: 4,
-    guns: [0, 90, 180, 270].flatMap((a) => G.director(a)),
+    guns: [0, 90, 180, 270].flatMap((a) => G.director(a, [g.overseer])),
     maxDrones: 8,
-    reload: 0.6,
     upgrades: [],
     needLevel: 45,
   });
@@ -798,10 +806,8 @@
     name: "Manager",
     desc: "One strong spawner, fades while still",
     body: 4,
-    guns: G.director(0),
+    guns: G.director(0, [g.overseer, { reload: 0.7, damage: 1.25 }]),
     maxDrones: 8,
-    reload: 0.55,
-    bulletDamage: 1.25,
     upgrades: [],
     needLevel: 45,
   });
@@ -811,12 +817,10 @@
     desc: "Four swarm spawners",
     body: 4,
     guns: [90, 270].flatMap((a) => [
-      gun(7, 6.5, 0.6, 7, 4, a, 0, { type: "swarm" }),
-      gun(7, 6.5, 0.6, 7, -4, a, 0.5, { type: "swarm" }),
+      gun(7, 6.5, 0.6, 7, 4, a, 0, { type: "swarm", layers: [g.swarm, g.battleship], calculator: "swarm" }),
+      gun(7, 6.5, 0.6, 7, -4, a, 0.5, { type: "swarm", layers: [g.swarm], calculator: "swarm" }),
     ]),
     maxDrones: 20,
-    reload: 0.35,
-    bulletDamage: 0.4,
     upgrades: [],
     needLevel: 45,
   });
@@ -825,9 +829,8 @@
     name: "Carrier",
     desc: "Three swarm spawners in a fan",
     body: 4,
-    guns: [-30, 0, 30].flatMap((a, i) => G.swarm(0, a, i * 0.2)),
+    guns: [-30, 0, 30].flatMap((a, i) => G.swarm(0, a, i * 0.2, [g.battleship])),
     maxDrones: 16,
-    reload: 0.38,
     upgrades: [],
     needLevel: 45,
   });
@@ -836,10 +839,8 @@
     name: "Necromancer",
     desc: "Four square-drone spawners",
     body: 4,
-    guns: [0, 90, 180, 270].flatMap((a) => G.director(a)),
+    guns: [0, 90, 180, 270].flatMap((a) => G.director(a, [g.sunchip])),
     maxDrones: 16,
-    bulletSize: 1.05,
-    reload: 0.7,
     upgrades: [],
     needLevel: 45,
   });
@@ -848,9 +849,8 @@
     name: "Maleficitor",
     desc: "One underseer spawner, fades while still",
     body: 4,
-    guns: G.director(0),
+    guns: G.director(0, [g.sunchip, { reload: 0.7 }]),
     maxDrones: 12,
-    reload: 0.6,
     upgrades: [],
     needLevel: 45,
   });
@@ -860,10 +860,8 @@
     desc: "Builder with a bigger block",
     guns: [
       gun(18, 16, 1, 0, 0, 0, 0, { type: "deco" }),
-      gun(2, 16, 1.1, 18, 0, 0, 0, { type: "trap", size: 1.8 }),
+      gun(2, 16, 1.1, 18, 0, 0, 0, { type: "trap", layers: [g.trap, g.setTrap, { size: 1.25, health: 1.2, damage: 1.15 }], calculator: "trap", size: 1.8 }),
     ],
-    reload: 2.1,
-    bulletDamage: 2,
     upgrades: [],
     needLevel: 45,
   });
@@ -873,10 +871,9 @@
     desc: "Traps that sprout auto guns",
     guns: [
       gun(18, 10, 1, 0, 0, 0, 0, { type: "deco" }),
-      gun(2, 10, 1.2, 18, 0, 0, 0, { type: "trap", size: 1.2 }),
+      gun(2, 10, 1.2, 18, 0, 0, 0, { type: "trap", layers: [g.trap, g.setTrap], calculator: "trap", size: 1.2 }),
     ],
     auto: true,
-    reload: 1.7,
     upgrades: [],
     needLevel: 45,
   });
@@ -886,9 +883,8 @@
     desc: "Blocks in three directions",
     guns: [0, 120, 240].flatMap((a) => [
       gun(18, 12, 1, 0, 0, a, 0, { type: "deco" }),
-      gun(2, 12, 1.1, 18, 0, a, 0, { type: "trap", size: 1.35 }),
+      gun(2, 12, 1.1, 18, 0, a, 0, { type: "trap", layers: [g.trap, g.setTrap, g.flankGuard], calculator: "trap", size: 1.35 }),
     ]),
-    reload: 1.8,
     upgrades: [],
     needLevel: 45,
   });
@@ -897,11 +893,10 @@
     name: "Mortar",
     desc: "Artillery with gunner sides",
     guns: [
-      gun(12, 4.5, 1, 0, 8, -25, 0.5),
-      gun(12, 4.5, 1, 0, -8, 25, 0.5),
-      gun(19, 12, 1, 0, 0, 0, 0, { recoil: 1.7 }),
+      gun(12, 4.5, 1, 0, 8, -25, 0.5, B(g.twin, g.gunner, g.artillery)),
+      gun(12, 4.5, 1, 0, -8, 25, 0.5, B(g.twin, g.gunner, g.artillery)),
+      gun(19, 12, 1, 0, 0, 0, 0, B(g.pounder, g.artillery)),
     ],
-    reload: 1.35,
     upgrades: [],
     needLevel: 45,
   });
@@ -909,10 +904,7 @@
   def("rocketeer", {
     name: "Rocketeer",
     desc: "A faster missile with a tapered barrel",
-    guns: [gun(16, 12, 0.7, 0, 0, 0, 0, { type: "missile", recoil: 1.9 })],
-    reload: 1.85,
-    bulletSpeed: 1.15,
-    bulletDamage: 1.7,
+    guns: [gun(16, 12, 0.7, 0, 0, 0, 0, { type: "missile", layers: [g.basic, g.pounder, g.launcher, { speed: 1.15, reload: 0.9 }] })],
     upgrades: [],
     needLevel: 45,
   });
@@ -921,11 +913,10 @@
     name: "Fortress",
     desc: "Traps all around, gunners in front",
     guns: [
-      gun(18, 4.5, 1, 0, 3.2, 0, 0),
-      gun(18, 4.5, 1, 0, -3.2, 0, 0.5),
-      ...[0, 120, 240].flatMap((a) => G.trap(a)),
+      gun(18, 4.5, 1, 0, 3.2, 0, 0, B(g.twin, g.gunner)),
+      gun(18, 4.5, 1, 0, -3.2, 0, 0.5, B(g.twin, g.gunner)),
+      ...[0, 120, 240].flatMap((a) => G.trap(a, [g.flankGuard])),
     ],
-    reload: 1.05,
     upgrades: [],
     needLevel: 45,
   });
@@ -933,8 +924,7 @@
   def("hexatrap", {
     name: "Hexa-Trapper",
     desc: "Six trap launchers",
-    guns: [0, 60, 120, 180, 240, 300].flatMap((a) => G.trap(a)),
-    reload: 1.2,
+    guns: [0, 60, 120, 180, 240, 300].flatMap((a) => G.trap(a, [g.flankGuard])),
     upgrades: [],
     needLevel: 45,
   });
@@ -944,10 +934,8 @@
     desc: "An even bigger trap",
     guns: [
       gun(15, 16, 1, 0, 0, 0, 0, { type: "deco" }),
-      gun(4, 16, 1.5, 15, 0, 0, 0, { type: "trap", size: 2.1 }),
+      gun(4, 16, 1.5, 15, 0, 0, 0, { type: "trap", layers: [g.trap, { size: 1.7, health: 2, damage: 1.7, reload: 1.7 }], calculator: "trap", size: 2.1 }),
     ],
-    reload: 2.6,
-    bulletDamage: 2.8,
     upgrades: [],
     needLevel: 45,
   });
@@ -956,9 +944,7 @@
     name: "Bushwhacker",
     desc: "Sniper front, traps behind",
     guns: [...G.sniper(24), ...G.trap(180)],
-    bulletSpeed: 1.4,
     fov: 1.2,
-    reload: 1.25,
     upgrades: [],
     needLevel: 45,
   });
@@ -980,15 +966,12 @@
     desc: "Gunner with a turret",
     auto: true,
     guns: [
-      gun(12, 4.5, 1, 0, 7.2, 0, 0.5),
-      gun(12, 4.5, 1, 0, -7.2, 0, 0.75),
-      gun(16, 4.5, 1, 0, 3.6, 0, 0),
-      gun(16, 4.5, 1, 0, -3.6, 0, 0.25),
+      gun(12, 4.5, 1, 0, 7.2, 0, 0.5, B(g.twin, g.gunner)),
+      gun(12, 4.5, 1, 0, -7.2, 0, 0.75, B(g.twin, g.gunner)),
+      gun(16, 4.5, 1, 0, 3.6, 0, 0, B(g.twin, g.gunner)),
+      gun(16, 4.5, 1, 0, -3.6, 0, 0.25, B(g.twin, g.gunner)),
       ...G.auto(),
     ],
-    reload: 0.5,
-    bulletDamage: 0.42,
-    bulletSize: 0.7,
     upgrades: [],
     needLevel: 45,
   });
@@ -997,10 +980,8 @@
     name: "Auto Assassin",
     desc: "Sniper turret on a spinning hull",
     auto: true,
-    guns: [...G.sniper(24), ...G.auto()],
-    bulletSpeed: 1.5,
+    guns: [...G.sniper(24, [g.assassin]), ...G.auto()],
     fov: 1.3,
-    reload: 1.4,
     upgrades: [],
     needLevel: 45,
   });
@@ -1009,7 +990,7 @@
     name: "Auto-5",
     desc: "Five auto guns",
     auto: true,
-    guns: [0, 72, 144, 216, 288].map((a, i) => gun(16, 6, 1, 0, 0, a, i * 0.15, { type: "auto" })),
+    guns: [0, 72, 144, 216, 288].map((a, i) => gun(16, 6, 1, 0, 0, a, i * 0.15, { type: "auto", layers: [g.basic, g.autoTurret] })),
     upgrades: [],
     needLevel: 45,
   });
@@ -1018,8 +999,7 @@
     name: "Auto-8",
     desc: "Eight auto guns",
     auto: true,
-    guns: Array.from({ length: 8 }, (_, i) => gun(14, 5.5, 1, 0, 0, i * 45, i * 0.1, { type: "auto" })),
-    reload: 0.85,
+    guns: Array.from({ length: 8 }, (_, i) => gun(14, 5.5, 1, 0, 0, i * 45, i * 0.1, { type: "auto", layers: [g.basic, g.autoTurret] })),
     upgrades: [],
     needLevel: 45,
   });
@@ -1028,13 +1008,11 @@
     name: "Hewn Pelleter",
     desc: "Gunner with side barrels",
     guns: [
-      gun(17, 6.5, 1, 0, 4.2, 0, 0),
-      gun(17, 6.5, 1, 0, -4.2, 0, 0.5),
-      gun(15, 6.5, 1, 0, 0, 28, 0.25),
-      gun(15, 6.5, 1, 0, 0, -28, 0.75),
+      gun(17, 6.5, 1, 0, 4.2, 0, 0, B(g.pelleter)),
+      gun(17, 6.5, 1, 0, -4.2, 0, 0.5, B(g.pelleter)),
+      gun(15, 6.5, 1, 0, 0, 28, 0.25, B(g.twin, g.hewnDouble)),
+      gun(15, 6.5, 1, 0, 0, -28, 0.75, B(g.twin, g.hewnDouble)),
     ],
-    reload: 0.52,
-    bulletDamage: 0.5,
     upgrades: [],
     needLevel: 45,
   });
@@ -1043,8 +1021,8 @@
     name: "Hexa Dual",
     desc: "Duals in three directions",
     guns: [0, 120, 240].flatMap((a) => [
-      gun(21, 7, 1, 0, 4.5, a, 0),
-      gun(21, 7, 1, 0, -4.5, a, 0.5),
+      gun(21, 7, 1, 0, 4.5, a, 0, B(g.twin, g.dual)),
+      gun(21, 7, 1, 0, -4.5, a, 0.5, B(g.twin, g.dual)),
     ]),
     upgrades: [],
     needLevel: 45,
@@ -1053,9 +1031,7 @@
   def("single", {
     name: "Single",
     desc: "One oversized basic gun",
-    guns: [gun(20, 10, 1, 0, 0, 0, 0)],
-    bulletDamage: 1.35,
-    reload: 1.15,
+    guns: [gun(20, 10, 1, 0, 0, 0, 0, B(g.single))],
     upgrades: ["pounder", "sniper"],
     needLevel: 15,
   });
@@ -1065,8 +1041,8 @@
     desc: "Two auto guns",
     auto: true,
     guns: [
-      gun(16, 6, 1, 0, 0, 0, 0, { type: "auto" }),
-      gun(16, 6, 1, 0, 0, 180, 0.5, { type: "auto" }),
+      gun(16, 6, 1, 0, 0, 0, 0, { type: "auto", layers: [g.basic, g.autoTurret] }),
+      gun(16, 6, 1, 0, 0, 180, 0.5, { type: "auto", layers: [g.basic, g.autoTurret] }),
     ],
     upgrades: ["auto3", "twinflank"],
     needLevel: 15,
@@ -1085,10 +1061,10 @@
     desc: "Triple shot plus a drone",
     body: 4,
     guns: [
-      gun(19, 8, 1, 0, 0, -27, 0),
-      gun(19, 8, 1, 0, 0, 0, 0),
-      gun(19, 8, 1, 0, 0, 27, 0),
-      ...G.director(180),
+      gun(19, 8, 1, 0, 0, -27, 0, B(g.twin, g.tripleShot)),
+      gun(19, 8, 1, 0, 0, 0, 0, B(g.twin, g.tripleShot)),
+      gun(19, 8, 1, 0, 0, 27, 0, B(g.twin, g.tripleShot)),
+      ...G.director(180, [g.overseer]),
     ],
     maxDrones: 3,
     upgrades: [],
@@ -1216,15 +1192,8 @@
     name: "Elite Destroyer",
     desc: "Pink crasher boss with three devastator guns",
     body: 3,
-    guns: [0, 120, 240].map((a) => gun(8, 16, 1, 6, 0, a, 0, { recoil: 0.4 })),
-    health: 42,
-    speed: 0.22,
-    fov: 1.22,
-    reload: 2.35,
-    bulletSpeed: 0.92,
-    bulletDamage: 3.15,
-    bulletPen: 2.3,
-    bulletSize: 1.65,
+    guns: [0, 120, 240].map((a) => gun(8, 16, 1, 6, 0, a, 0, { layers: [g.basic, g.pounder, g.destroyer], recoil: 0.4 })),
+    health: 160,
     bodyDamage: 3.6,
     upgrades: [],
     needLevel: 45,
@@ -1236,15 +1205,10 @@
     desc: "Pink crasher boss with paired gunner barrels",
     body: 3,
     guns: [60, 300].flatMap((a) => [
-      gun(16, 5.2, 1, 0, 4.2, a, 0),
-      gun(16, 5.2, 1, 0, -4.2, a, 0.5),
+      gun(16, 5.2, 1, 0, 4.2, a, 0, { layers: [g.basic, g.twin, g.gunner] }),
+      gun(16, 5.2, 1, 0, -4.2, a, 0.5, { layers: [g.basic, g.twin, g.gunner] }),
     ]),
-    health: 38,
-    speed: 0.24,
-    fov: 1.2,
-    reload: 0.52,
-    bulletDamage: 0.72,
-    bulletSize: 0.72,
+    health: 160,
     bodyDamage: 3.2,
     upgrades: [],
     needLevel: 45,
@@ -1255,13 +1219,10 @@
     name: "Elite Sprayer",
     desc: "Pink crasher boss that sprays from three faces",
     body: 3,
-    guns: [0, 120, 240].map((a) => gun(13, 10, 1.35, 4, 0, a, a / 360, { spread: 0.2 })),
-    health: 40,
+    guns: [0, 120, 240].map((a) => gun(13, 10, 1.35, 4, 0, a, a / 360, { layers: [g.basic, g.machineGun], spread: 0.2 })),
+    health: 160,
     speed: 0.2,
     fov: 1.18,
-    reload: 0.46,
-    bulletDamage: 0.78,
-    bulletSize: 0.85,
     bodyDamage: 3.3,
     upgrades: [],
     needLevel: 45,
@@ -1273,14 +1234,12 @@
     desc: "Pink crasher boss that launches swarms",
     body: 3,
     guns: [0, 120, 240].flatMap((a) => [
-      ...G.swarm(4.2, a, 0),
-      ...G.swarm(-4.2, a, 0.5),
+      ...G.swarm(4.2, a, 0, [g.battleship]),
+      ...G.swarm(-4.2, a, 0.5, [g.battleship]),
     ]),
-    health: 44,
+    health: 160,
     speed: 0.18,
     fov: 1.25,
-    reload: 0.7,
-    bulletDamage: 0.85,
     maxDrones: 18,
     bodyDamage: 3.4,
     upgrades: [],
@@ -1292,12 +1251,10 @@
     name: "Summoner",
     desc: "Square mystical that floods drones",
     body: 4,
-    guns: [0, 90, 180, 270].flatMap((a) => G.director(a)),
-    health: 48,
+    guns: [0, 90, 180, 270].flatMap((a) => G.director(a, [g.summoner])),
+    health: 180,
     speed: 0.16,
     fov: 1.15,
-    reload: 0.85,
-    bulletDamage: 0.95,
     maxDrones: 28,
     bodyDamage: 2.8,
     upgrades: [],
@@ -1309,12 +1266,10 @@
     name: "Nest Keeper",
     desc: "Pentagon nester with five guns",
     body: 5,
-    guns: [0, 72, 144, 216, 288].map((a) => gun(18, 8.2, 1, 0, 0, a, a / 360)),
-    health: 52,
+    guns: [0, 72, 144, 216, 288].map((a) => gun(18, 8.2, 1, 0, 0, a, a / 360, B(g.nestKeeper))),
+    health: 220,
     speed: 0.14,
     fov: 1.2,
-    reload: 1.15,
-    bulletDamage: 1.45,
     bodyDamage: 3.1,
     upgrades: [],
     needLevel: 45,
@@ -1329,7 +1284,7 @@
       ...[0, 72, 144, 216, 288].map((a) => gun(20, 14, 1, 0, 0, a, a / 360, { recoil: 0.5 })),
       ...[36, 108, 180, 252, 324].flatMap((a) => G.trap(a)),
     ],
-    health: 88,
+    health: 320,
     speed: 0.1,
     fov: 1.28,
     reload: 1.85,
@@ -1349,7 +1304,7 @@
     guns: [0, 45, 90, 135, 180, 225, 270, 315].map((a) =>
       gun(18, 12, 1, 0, 0, a, a / 360, { recoil: 0.25 })
     ),
-    health: 120,
+    health: 450,
     speed: 0.08,
     fov: 1.32,
     reload: 1.55,
@@ -1367,7 +1322,7 @@
     desc: "Final siege boss",
     body: 3,
     guns: [0, 120, 240].map((a) => gun(12, 18, 1, 4, 0, a, 0, { recoil: 0.7 })),
-    health: 175,
+    health: 650,
     speed: 0.07,
     fov: 1.4,
     reload: 2.15,
@@ -1491,6 +1446,9 @@
     cloneDef,
     cloneGuns,
     blank,
+    combineStats,
+    g,
+    PROJECTILE,
     count: () => Object.keys(tanks).length,
   };
 })();

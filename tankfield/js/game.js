@@ -5,10 +5,23 @@
   const WORLD_OPEN = 11500;
   const ASSAULT_ZONE = 320;
   const TAU = Math.PI * 2;
-  const STAT_MAX = 7;
+  const STAT_MAX = 9;
   const LEVEL_CAP = 45;
   const BASE_MOVE = 23.2;
   const SPEED_CAP = 110;
+  const ARRAS_TICK = 30;
+  const ARRAS_BASE = {
+    ACCEL: 1.6,
+    SPEED: 5.25,
+    HEALTH: 20,
+    DAMAGE: 3,
+    RESIST: 1,
+    PENETRATION: 1.05,
+    SHIELD: 5.75,
+    REGEN: 0.01,
+    FOV: 1.02,
+    DENSITY: 0.5,
+  };
   const FADE_TANKS = new Set(["landmine", "stalker", "manager", "maleficitor"]);
 
   const COLORS = {
@@ -297,6 +310,7 @@
   }
 
   const XP_AT = [0, 0];
+  const SKILL_AT = [0, 0];
   const GROWTH_SKILL = [0, 0];
 
   function levelCap() {
@@ -304,7 +318,7 @@
   }
 
   function statCap() {
-    return state.mode === "growth" ? 9 : STAT_MAX;
+    return STAT_MAX;
   }
 
   function xpForLevel(level) {
@@ -340,6 +354,33 @@
     return lo;
   }
 
+  function skillCurve(points) {
+    const cap = Math.max(1, statCap());
+    return Math.log(4 * (Math.max(0, points) / cap) + 1) / 1.6;
+  }
+
+  function applyFactor(f, x) {
+    return x < 0 ? 1 / (1 - x * f) : f * x + 1;
+  }
+
+  function skillOf(tank) {
+    const s = (tank && tank.stats) || {};
+    const c = (key) => skillCurve(s[key] || 0);
+    return {
+      rld: Math.pow(0.5, c("reload")),
+      pen: applyFactor(2.5, c("bulletPen")),
+      str: applyFactor(2, c("bulletPen")),
+      dam: applyFactor(3, c("bulletDamage")),
+      spd: 0.5 + applyFactor(1.5, c("bulletSpeed")),
+      shi: applyFactor(2, c("shieldCap")),
+      atk: applyFactor(0.021, c("bodyDamage")),
+      hlt: applyFactor(1, c("maxHealth")),
+      rgn: applyFactor(25, c("regen")),
+      shieldRgn: applyFactor(25, c("shieldRegen")),
+      mob: applyFactor(0.8, c("moveSpeed")),
+    };
+  }
+
   function tankStats(tank) {
     if (tank && tank.closer) {
       return {
@@ -354,39 +395,37 @@
         fov: 1.35,
         bulletSize: 3.4,
         maxDrones: 0,
+        maxShield: 0,
+        shieldRegen: 0,
       };
     }
-    const s = tank.stats;
     const def = getDef(tank);
     const m = modsOf(def);
+    const sk = skillOf(tank);
     const lvl = Math.min(tank.level, state.mode === "growth" ? 120 : LEVEL_CAP);
+    const withLevel = !(tank && (tank.closer));
+    const bodyHealth = ARRAS_BASE.HEALTH * (def.health || 1) * (m.health || 1);
+    const bodyDamage = ARRAS_BASE.DAMAGE * (def.bodyDamage || 1);
+    const sizeRatio = Math.max(1, (tank.r || 22) / 22);
+    const speedReduce = Math.min(state.mode === "growth" ? 4 : 2, sizeRatio);
     const out = {
-      maxHealth: (48 + s.maxHealth * 22 + lvl * 2.2) * (def.health || 1) * (m.health || 1),
-      regen: 0.9 + s.regen * 1.35 + lvl * 0.02,
-      bodyDamage: (7 + s.bodyDamage * 4.2) * (def.bodyDamage || 1),
-      bulletSpeed: (7.2 + s.bulletSpeed * 1.15) * (def.bulletSpeed || 1),
-      bulletPen: (1 + s.bulletPen * 0.55) * (def.bulletPen || 1),
-      bulletDamage: (7 + s.bulletDamage * 3.1) * (def.bulletDamage || 1) * (m.damage || 1),
-      reload: Math.max(0.08, (0.42 - s.reload * 0.032) * (def.reload || 1) / (m.reload || 1)),
-      moveSpeed: (BASE_MOVE + s.moveSpeed * 0.4 - Math.min(lvl, 30) * 0.008) * (def.speed || 1) * (m.speed || 1),
-      fov: (def.fov || 1) * (m.fov || 1),
+      maxHealth: ((withLevel ? 2 * lvl : 0) + bodyHealth) * sk.hlt,
+      regen: ((withLevel ? 0.006 * lvl : 0) + 1) * ARRAS_BASE.REGEN * 55 * sk.rgn,
+      bodyDamage: bodyDamage * sk.atk * 2.4,
+      bulletSpeed: sk.spd * 4,
+      bulletPen: sk.pen,
+      bulletDamage: 0.75 * sk.dam * 6,
+      reload: 10.5 * sk.rld / ARRAS_TICK,
+      moveSpeed: BASE_MOVE * (def.speed || 1) * (m.speed || 1) * sk.mob / speedReduce,
+      fov: (def.fov || 1) * (m.fov || 1) * ARRAS_BASE.FOV,
       bulletSize: (def.bulletSize || 1) * (m.size || 1),
       maxDrones: def.maxDrones || 0,
       maxShield: 0,
       shieldRegen: 0,
     };
     if (!(tank && (tank.closer || tank.mothership || tank.dominator))) {
-      out.maxShield = (s.shieldCap || 0) * 24;
-      out.shieldRegen = (s.shieldRegen || 0) * 1.55;
-    }
-    if ((def.reload || 1) <= 0.55) {
-      out.reload = Math.max(0.16, (0.42 - s.reload * 0.022) * (def.reload || 1) / (m.reload || 1) * 1.26);
-      const maxed = Math.min(1, (s.bulletDamage + s.bulletPen + s.bulletSpeed) / 21);
-      const n = 1 - 0.22 * maxed;
-      out.bulletDamage *= n;
-      out.bulletPen *= n;
-      out.bulletSpeed *= 1 - 0.1 * maxed;
-      out.bulletSize *= 1 - 0.12 * maxed;
+      out.maxShield = ((withLevel ? 0.6 * lvl : 0) + ARRAS_BASE.SHIELD) * sk.shi;
+      out.shieldRegen = ((withLevel ? 0.006 * lvl : 0) + 1) * ARRAS_BASE.REGEN * 40 * sk.shieldRgn;
     }
     if (tank && tank.dominator && !tank.destroyed) {
       out.regen = Math.max(out.regen, 12);
@@ -409,14 +448,11 @@
       out.fov *= 1.05;
     }
     if (state.mode === "growth" && tank && !tank.closer && !tank.mothership && !tank.dominator && !tank.boss) {
-      const sizeRatio = Math.max(1, (tank.r || 22) / 28);
-      out.moveSpeed /= Math.min(4, sizeRatio);
       out.fov *= 1 + Math.min(0.85, Math.max(0, (tank.r || 22) - 28) / 140);
     }
     if (tank && tank.sanctuary && !tank.destroyed && tank.team === "blue") {
       const tier = tank.sancTier || 1;
       out.maxHealth = Math.max(out.maxHealth, 5200 + tier * 900);
-      out.reload = Math.max(0.22, out.reload * Math.max(0.55, 1.12 - tier * 0.08));
     }
     if (state.mode === "onehp" && tank && !tank.closer && !tank.mothership && !tank.dominator) {
       out.maxHealth = 1;
@@ -427,22 +463,26 @@
     return out;
   }
 
-  function growthPointAt(level) {
+  function pointAtLevel(level, growth) {
     if (level < 2) return 0;
     if (level <= 40) return 1;
-    if (level <= 51 && level % 2 === 1) return 1;
-    if (level % 10 === 1) return 1;
+    if (level <= 45 && level % 2 === 1) return 1;
+    if (growth) {
+      if (level <= 51 && level % 2 === 1) return 1;
+      if (level % 10 === 1) return 1;
+    }
     return 0;
   }
 
   function skillPointsFor(level) {
-    if (state.mode !== "growth") return Math.min(Math.max(0, level - 1), 33);
     const lv = Math.max(1, Math.floor(Number(level) || 1));
-    while (GROWTH_SKILL.length <= lv) {
-      const L = GROWTH_SKILL.length;
-      GROWTH_SKILL.push(GROWTH_SKILL[L - 1] + growthPointAt(L));
+    const growth = state.mode === "growth";
+    const cache = growth ? GROWTH_SKILL : SKILL_AT;
+    while (cache.length <= lv) {
+      const L = cache.length;
+      cache.push(cache[L - 1] + pointAtLevel(L, growth));
     }
-    return GROWTH_SKILL[lv];
+    return cache[lv];
   }
   function spentPoints(tank) { return STATS.reduce((n, st) => n + tank.stats[st.key], 0); }
 
@@ -656,7 +696,7 @@
 
   function leadPoint(from, target, st) {
     if (!target) return from;
-    const spd = Math.max(80, (st && st.bulletSpeed ? st.bulletSpeed : 7) * 58);
+    const spd = Math.max(80, (st && st.bulletSpeed ? st.bulletSpeed : 4) * 70);
     const dist = Math.hypot(target.x - from.x, target.y - from.y) || 1;
     const t = Math.min(0.9, dist / spd);
     return { x: target.x + (target.vx || 0) * t, y: target.y + (target.vy || 0) * t };
@@ -2522,20 +2562,15 @@
     return tank.angle + (gun.pos[5] * Math.PI) / 180;
   }
 
-  function applyRecoil(tank, gun, kind, st, width, ang) {
+  function applyRecoil(tank, gun, kind, shoot, width, ang) {
     if (!tank || tank.closer || tank.mothership || tank.dominator) return;
     if (gun.type === "deco") return;
     let rec = gun.recoil;
-    if (rec == null) {
-      if (gun.type === "auto") rec = 0.2;
-      else if (kind === "drone" || kind === "swarm") rec = 0.12;
-      else if (kind === "trap") rec = 0.45;
-      else rec = 1;
-    }
+    if (rec == null) rec = shoot && shoot.recoil != null ? shoot.recoil : 1;
     const widthMul = Math.max(0.4, (width || 8) / 8);
-    const sizeMul = st.bulletSize || 1;
+    const sizeMul = (shoot && shoot.size) || 1;
     const mass = Math.max(0.5, (tank.r / 22) ** 2);
-    const kick = rec * widthMul * sizeMul * 64 / mass;
+    const kick = rec * widthMul * sizeMul * 48 / mass;
     tank.vx -= Math.cos(ang) * kick;
     tank.vy -= Math.sin(ang) * kick;
   }
@@ -2546,10 +2581,74 @@
     return n;
   }
 
+  function gunShootSettings(tank, gun) {
+    const def = getDef(tank);
+    const m = modsOf(def);
+    const sk = skillOf(tank);
+    const shoot = {
+      reload: 1, recoil: 1, shudder: 1, size: 1, health: 1, damage: 1,
+      pen: 1, speed: 1, maxSpeed: 1, range: 1, density: 1, spray: 1, resist: 1,
+      ...(gun.shoot || {}),
+    };
+    if (!gun.hasStack) {
+      shoot.reload *= def.reload || 1;
+      shoot.damage *= def.bulletDamage || 1;
+      shoot.speed *= def.bulletSpeed || 1;
+      shoot.maxSpeed *= def.bulletSpeed || 1;
+      shoot.pen *= def.bulletPen || 1;
+      shoot.health *= def.bulletPen || 1;
+      shoot.size *= def.bulletSize || 1;
+    }
+    shoot.reload /= m.reload || 1;
+    shoot.damage *= m.damage || 1;
+    shoot.size *= m.size || 1;
+    const kind = gun.type === "auto" ? "bullet" : gun.type;
+    const proj = (window.TankCatalog && TankCatalog.PROJECTILE && TankCatalog.PROJECTILE[kind]) || TankCatalog.PROJECTILE.bullet;
+    const sizeFactor = Math.max(0.35, (tank.r || 22) / 22);
+    const out = {
+      SPEED: shoot.maxSpeed * sk.spd,
+      HEALTH: shoot.health * sk.str,
+      RESIST: shoot.resist,
+      DAMAGE: shoot.damage * sk.dam,
+      PENETRATION: Math.max(1, shoot.pen * sk.pen),
+      RANGE: shoot.range / Math.sqrt(sk.spd),
+      DENSITY: (shoot.density * sk.pen * sk.pen) / sizeFactor,
+      reload: shoot.reload,
+      recoil: shoot.recoil,
+      shudder: shoot.shudder,
+      size: shoot.size,
+      spray: shoot.spray,
+      speed: shoot.speed,
+      launch: shoot.speed * sk.spd,
+      rld: sk.rld,
+    };
+    const calc = gun.calculator || "default";
+    if (calc === "swarm") {
+      out.PENETRATION = Math.max(1, shoot.pen * (0.5 * (sk.pen - 1) + 1));
+      out.HEALTH /= Math.max(0.2, shoot.pen * sk.pen);
+    } else if (calc === "trap") {
+      out.RANGE = shoot.range;
+    } else if (calc === "drone") {
+      out.PENETRATION = Math.max(1, shoot.pen * (0.5 * (sk.pen - 1) + 1));
+      out.HEALTH = (shoot.health * sk.str + sizeFactor) / Math.pow(sk.pen, 0.8);
+      out.DAMAGE = shoot.damage * sk.dam * Math.sqrt(sizeFactor) * Math.sqrt(shoot.pen * sk.pen);
+    }
+    if (proj) {
+      out.HEALTH *= proj.HEALTH || 1;
+      out.DAMAGE *= proj.DAMAGE || 1;
+      out.RANGE *= (proj.RANGE || 90) / 90;
+    }
+    out.HEALTH *= 7.3;
+    return out;
+  }
+
   function spawnShot(tank, gun, index, st) {
     const u = unitOf(tank);
     const [L, W, A, X, Y] = gun.pos;
-    const ang = gunAngle(tank, gun, index) + rand(-(gun.spread || 0), gun.spread || 0);
+    const shoot = gunShootSettings(tank, gun);
+    const sprayRad = ((shoot.spray || 0) * (shoot.shudder || 1) * Math.PI) / 180;
+    const jitter = sprayRad ? (Math.random() - 0.5) * 2 * sprayRad : 0;
+    const ang = gunAngle(tank, gun, index) + jitter + rand(-(gun.spread || 0), gun.spread || 0);
     const px = -Math.sin(ang);
     const py = Math.cos(ang);
     const ox = Math.cos(ang) * (X + L) * u + px * Y * u;
@@ -2560,13 +2659,13 @@
     }
     const kind = gun.type === "auto" ? "bullet" : gun.type;
     const gs = gun.stats || {};
-    const speedMul = gs.speed || (kind === "trap" ? 0.45 : kind === "drone" || kind === "swarm" ? 0.7 : kind === "missile" ? 0.55 : 1);
-    const speed = st.bulletSpeed * 58 * speedMul;
-    applyRecoil(tank, gun, kind, st, W, ang);
-    const sizeMul = gun.size || gs.size || (kind === "swarm" ? 0.55 : kind === "trap" ? 1.12 : 1);
-    const lifeBase = kind === "trap" ? 8 : kind === "drone" || kind === "swarm" ? 999 : kind === "missile" ? 2.4 : 1.55 + st.fov * 0.15;
-    let br = (7.2 * st.bulletSize * sizeMul) * (0.85 + tank.r / 40);
-    if (tank.mothership && kind !== "drone" && kind !== "swarm") br = 8.2 * st.bulletSize * sizeMul;
+    const kindMul = gs.speed || (kind === "trap" ? 0.45 : kind === "drone" || kind === "swarm" ? 0.7 : kind === "missile" ? 0.55 : 1);
+    const speed = Math.max(40, (shoot.launch || 4) * 70 * kindMul);
+    applyRecoil(tank, gun, kind, shoot, W, ang);
+    const sizeMul = gun.size || gs.size || shoot.size || 1;
+    const lifeBase = kind === "trap" ? 8 * shoot.RANGE : kind === "drone" || kind === "swarm" ? 999 : kind === "missile" ? 2.4 : Math.max(0.45, 1.55 * shoot.RANGE);
+    let br = (7.2 * sizeMul) * (0.85 + tank.r / 40);
+    if (tank.mothership && kind !== "drone" && kind !== "swarm") br = 8.2 * sizeMul;
     if (tank.closer) br = 26;
     if (kind === "heal") br = Math.max(3.1, br * 0.36);
     let orbit = rand(0, TAU);
@@ -2577,8 +2676,9 @@
       vx: Math.cos(ang) * speed + tank.vx * 0.15,
       vy: Math.sin(ang) * speed + tank.vy * 0.15,
       r: br,
-      health: st.bulletPen * (kind === "trap" ? 2.4 : kind === "heal" ? 1.15 : kind === "drone" ? 2.2 : 1),
-      damage: st.bulletDamage * (gs.damage || (kind === "trap" ? 0.8 : kind === "swarm" ? 0.55 : 1)),
+      health: Math.max(0.2, shoot.HEALTH),
+      damage: Math.max(0.2, shoot.DAMAGE * (gs.damage || (kind === "heal" ? 0 : 1))),
+      pen: shoot.PENETRATION || 1,
       life: lifeBase * (gs.life || 1),
       color: kind === "heal" ? "#8abc3f" : tank.color,
       owner: tank,
@@ -2631,7 +2731,8 @@
       if (autoGun && !nearestSeen(tank, [...state.tanks, ...state.shapes], 520, (o) => o !== tank && o.alive && (o.type !== "tank" || isEnemyTank(tank, o)))) continue;
       if (tank.gunCd[i] > 0) continue;
       if ((gun.type === "drone" || gun.type === "swarm") && countOwned(gun.type, tank) >= Math.max(1, st.maxDrones)) continue;
-      tank.gunCd[i] = st.reload * (0.65 + (gun.pos[6] || 0));
+      const fired = gunShootSettings(tank, gun);
+      tank.gunCd[i] = Math.max(0.05, (fired.reload * (fired.rld || 1) / ARRAS_TICK) * (0.15 + (gun.pos[6] || 0) + 0.85));
       if (!autoGun) breakSpawnProtect(tank);
       spawnShot(tank, gun, i, st);
     }
@@ -3679,7 +3780,7 @@
           s.vy += bullet.vy * kick;
           damage(s, bullet.damage, bullet.owner);
           if (!(bullet.owner && bullet.owner.closer)) {
-            bullet.health -= bullet.kind === "trap" || bullet.kind === "drone" ? 0.35 : 1;
+            bullet.health -= (bullet.kind === "trap" || bullet.kind === "drone" ? 0.35 : 1) / Math.max(0.35, bullet.pen || 1);
             if (bullet.health <= 0) bullet.alive = false;
           }
         }
@@ -3701,7 +3802,7 @@
         tank.vy += bullet.vy * 0.01;
         damage(tank, bullet.damage, bullet.owner);
         if (!(bullet.owner && bullet.owner.closer)) {
-          bullet.health -= bullet.kind === "trap" || bullet.kind === "drone" ? 0.45 : 1.2;
+          bullet.health -= (bullet.kind === "trap" || bullet.kind === "drone" ? 0.45 : 1.2) / Math.max(0.35, bullet.pen || 1);
           if (bullet.health <= 0) bullet.alive = false;
         }
       }

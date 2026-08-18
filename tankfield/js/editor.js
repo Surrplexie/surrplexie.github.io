@@ -177,6 +177,7 @@
   function readGun() {
     const g = current.guns[gunIndex];
     if (!g) return;
+    const prevType = g.type;
     g.type = fields.type.value;
     g.pos = [
       Number(fields.length.value),
@@ -188,6 +189,18 @@
       Number(fields.delay.value),
     ];
     g.spread = Number(fields.spread.value);
+    if (!g.shoot || prevType !== g.type) {
+      const rebuilt = TankCatalog.gun(g.pos[0], g.pos[1], g.pos[2], g.pos[3], g.pos[4], g.pos[5], g.pos[6], {
+        type: g.type,
+        spread: g.spread,
+        recoil: g.recoil,
+        size: g.size,
+        stats: g.stats,
+      });
+      g.shoot = rebuilt.shoot;
+      g.hasStack = false;
+      g.calculator = rebuilt.calculator;
+    }
     current.auto = current.guns.some((gun) => gun.type === "auto");
   }
 
