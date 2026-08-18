@@ -689,6 +689,7 @@
             d.team = team;
             d.progress = 1;
             floater(d.x, d.y - 24, `${TEAMS[team].name} captured`);
+            note(`${TEAMS[team].name} captured a dominator.`);
           }
         }
       } else if (teams.size > 1) {
@@ -881,8 +882,8 @@
     row.className = "note";
     row.textContent = text;
     box.appendChild(row);
-    while (box.children.length > 4) box.firstElementChild.remove();
-    const life = clamp(ms == null ? 4000 : ms, 3000, 5000);
+    while (box.children.length > 6) box.firstElementChild.remove();
+    const life = clamp(ms == null ? 4000 : ms, 2500, 5000);
     window.setTimeout(() => {
       row.classList.add("out");
       window.setTimeout(() => row.remove(), 420);
@@ -893,15 +894,32 @@
     if (els.notes) els.notes.innerHTML = "";
   }
 
-  function killNote(victim) {
-    const cls = (getDef(victim) && getDef(victim).name) || "Tank";
-    if (victim.mothership) {
-      const team = victim.team && TEAMS[victim.team] ? TEAMS[victim.team].name : "";
-      return team ? `You killed the ${team} mothership.` : "You killed a mothership.";
+  function victimLabel(ent) {
+    if (!ent) return "a tank";
+    if (ent.type === "shape") {
+      if (ent.kind === "alpha") return "an Alpha Pentagon";
+      if (ent.kind === "pentagon") return "a Pentagon";
+      if (ent.kind === "crasher") return "a Crasher";
+      if (ent.kind === "triangle") return "a Triangle";
+      return "a Square";
     }
-    const raw = String(victim.name || "").trim();
-    if (!raw || /^unnamed/i.test(raw)) return `You killed an unnamed ${cls}.`;
-    return `You killed ${raw}'s ${cls}.`;
+    if (ent.mothership) {
+      const team = ent.team && TEAMS[ent.team] ? TEAMS[ent.team].name : "";
+      return team ? `the ${team} mothership` : "a mothership";
+    }
+    const cls = (getDef(ent) && getDef(ent).name) || "Tank";
+    const raw = String(ent.name || "").trim();
+    if (!raw || /^unnamed/i.test(raw)) return `an unnamed ${cls}`;
+    return `${raw}'s ${cls}`;
+  }
+
+  function notePlayerKill(victim, payout) {
+    if (state.spectating || !payout || payout.playerAmt <= 0) return;
+    const killer = payout.killer;
+    const me = state.player;
+    if (!killer || !me) return;
+    if (killer === me) note(`You killed ${victimLabel(victim)}.`);
+    else note(`You assisted ${killer.name} in killing ${victimLabel(victim)}.`);
   }
 
   function populateWorld() {
@@ -1033,6 +1051,7 @@
     try { renderStats(); } catch (err) {}
     try { renderClassPanel(); } catch (err) {}
     floater(tank.x, tank.y - tank.r - 8, "Level 45");
+    if (tank === state.player || tank === menuTank()) note("You are now level 45.");
     return true;
   }
 
@@ -1215,14 +1234,15 @@
     burst(tank.x, tank.y, tank.color, 18, 220);
     const huntedBonus = state.mode === "manhunt" && tank === state.hunted ? Math.max(80, Math.floor(tank.score * 0.2)) : 0;
     const pool = Math.max(20, Math.floor(tank.score * 0.45) + 20) + huntedBonus;
-    const credited = splitKillScore(tank, pool, killer, tank.x, tank.y);
+    const payout = applyKillScore(tank, pool, killer, tank.x, tank.y);
+    const credited = payout.killer;
     tank.killedBy = cause || (credited ? credited.name : killer ? killer.name : "a polygon");
     if (credited) {
       state.lastKiller = credited;
       credited.kills = (credited.kills || 0) + 1;
       if (huntedBonus) floater(tank.x, tank.y - 24, "Hunted down");
-      if (credited === state.player && !state.spectating) note(killNote(tank));
     }
+    notePlayerKill(tank, payout);
     if (tank === state.player) {
       if (tank.mothership) {
         const body = state.pilotTank;
@@ -1358,25 +1378,34 @@
     return { shares, sum };
   }
 
-  function splitKillScore(target, total, fallback, x, y) {
+  function applyKillScore(target, total, fallback, x, y) {
     total = Math.max(0, Math.floor(total));
-    const claimable = (t) => t && t.alive && !t.closer;
-    if (total <= 0) return claimable(fallback) ? fallback : null;
+    const claimable = (t) => t && t.alive && !t.closer && t.type === "tank";
+    const fb = claimable(dealerOf(fallback) || fallback) ? (dealerOf(fallback) || fallback) : null;
+    const me = state.player;
+    if (total <= 0) return { killer: fb, playerAmt: 0 };
     const { shares, sum } = damageShares(target);
     if (sum <= 0 || !shares.length) {
-      const fb = claimable(fallback) ? fallback : null;
       if (fb) giveScore(fb, total, x, y);
-      return fb;
+      return { killer: fb, playerAmt: fb === me ? total : 0 };
     }
     shares.sort((a, b) => b.amt - a.amt);
     const parts = shares.map((s) => ({ tank: s.tank, n: Math.floor(total * (s.amt / sum)) }));
     let used = 0;
     for (const p of parts) used += p.n;
     parts[0].n += total - used;
+    let playerAmt = 0;
     for (const p of parts) {
-      if (p.n > 0) giveScore(p.tank, p.n, x, y);
+      if (p.n > 0) {
+        giveScore(p.tank, p.n, x, y);
+        if (p.tank === me) playerAmt = p.n;
+      }
     }
-    return parts[0].tank;
+    return { killer: parts[0].tank, playerAmt };
+  }
+
+  function splitKillScore(target, total, fallback, x, y) {
+    return applyKillScore(target, total, fallback, x, y).killer;
   }
 
   function showDeath(tank) {
@@ -1743,6 +1772,7 @@
     burst(target.x, target.y, next.color, 14, 200);
     floater(target.x, target.y - 18, next.name);
     if (target === state.player) note(`You were tagged. You are now ${next.name}.`);
+    else if (by === state.player) note(`You tagged ${target.name}.`);
     if (by.alive) giveScore(by, 35, target.x, target.y);
     checkTagVictory();
     return true;
@@ -1827,6 +1857,7 @@
     tank.ai = false;
     state.classDismissed = true;
     floater(tank.x, tank.y - tank.r - 8, "Arena Closer");
+    if (tank === state.player) note("You are now an Arena Closer.", 5000);
     try { renderStats(); } catch (err) {}
     try { renderClassPanel(); } catch (err) {}
     return true;
@@ -2188,8 +2219,10 @@
       target.alive = false;
       burst(target.x, target.y, target.color, target.kind === "alpha" ? 36 : 12, 180);
       if (target.kind === "alpha") state.alphaRespawnAt = state.time + rand(60, 120);
-      if (target.type === "shape") splitKillScore(target, target.score, src, target.x, target.y);
-      else if (target.type === "tank") killTank(target, src);
+      if (target.type === "shape") {
+        const payout = applyKillScore(target, target.score, src, target.x, target.y);
+        if (target.kind === "alpha") notePlayerKill(target, payout);
+      } else if (target.type === "tank") killTank(target, src);
     }
   }
 
@@ -3199,8 +3232,14 @@
       if (k === "t" && running && !state.spectating) openWorkshop();
       return;
     }
-    if (k === "e" && running) state.autoFire = !state.autoFire;
-    if (k === "c" && running) state.autoSpin = !state.autoSpin;
+    if (k === "e" && running) {
+      state.autoFire = !state.autoFire;
+      note(state.autoFire ? "Autofire enabled." : "Autofire disabled.");
+    }
+    if (k === "c" && running) {
+      state.autoSpin = !state.autoSpin;
+      note(state.autoSpin ? "Autospin enabled." : "Autospin disabled.");
+    }
     if (k === "t" && running && window.TankWorkshop) window.TankWorkshop.open();
     const skippedLevel = k === "n" && running && !state.paused && state.mode === "protect" && skipToLevelCap(menuTank());
     if (k === "h" && running && !state.paused && state.mode === "protect") {
