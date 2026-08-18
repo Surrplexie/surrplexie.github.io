@@ -765,15 +765,26 @@ kbd {
 }
 
 #death-stats,
-#best-score {
+#best-score,
+#death-wait {
   margin: 8px 0;
   color: #444;
+}
+
+#death-wait {
+  color: #222;
+  font-weight: 600;
 }
 
 #death button {
   width: 100%;
   margin: 0 0 8px;
   border: 0;
+}
+
+#death button:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 #death #menu-btn,
@@ -806,6 +817,22 @@ kbd {
 
 #spectate-bar.hidden {
   display: none !important;
+}
+
+#spectate-bar button {
+  border: 0;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  background: #fff;
+  color: #111;
+}
+
+#spectate-bar button:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 #notes {
@@ -855,17 +882,6 @@ kbd {
 
 @keyframes note-out {
   to { opacity: 0; transform: translateY(-6px); }
-}
-
-#spectate-bar button {
-  border: 0;
-  border-radius: 6px;
-  padding: 6px 10px;
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
-  background: #fff;
-  color: #111;
 }
 
 #close-timer:empty {

@@ -110,6 +110,7 @@
     closeTimer: document.getElementById("close-timer"),
     skipUpgrade: document.getElementById("skip-upgrade"),
     showClasses: document.getElementById("show-classes"),
+    deathWait: document.getElementById("death-wait"),
     deathMsg: document.getElementById("death-msg"),
     deathStats: document.getElementById("death-stats"),
     bestScore: document.getElementById("best-score"),
@@ -170,6 +171,7 @@
     spectateTarget: null,
     ghost: null,
     lastKiller: null,
+    respawnAt: 0,
     walls: [],
     doms: [],
     domHold: null,
@@ -1151,6 +1153,7 @@
     state.ghost = null;
     state.camera.zoom = 1;
     state.lastKiller = null;
+    state.respawnAt = 0;
     state.alphaRespawnAt = 0;
     state.pentagonAt = rand(30, 60);
     state.triangleAt = rand(60, 180);
@@ -1257,29 +1260,6 @@
           shake = 14;
           showDeath(tank);
         }
-      } else if (state.mode === "protect" && mothershipOf(tank.team) && !state.closing) {
-        shake = 10;
-        const team = tank.team;
-        setTimeout(() => {
-          if (!running || state.closing || !mothershipOf(team)) return;
-          const home = mothershipOf(team);
-          const p = createTank({
-            name: state.spawnName,
-            ai: false,
-            classId: "basic",
-            team,
-            color: TEAMS[team].color,
-            score: xpForLevel(LEVEL_CAP),
-            pos: around(home.x, home.y, 220),
-          });
-          p.spawnProtect = 8;
-          state.classDismissed = false;
-          state.player = p;
-          state.pilotTank = p;
-          state.tanks.push(p);
-          try { renderStats(); } catch (err) {}
-          try { renderClassPanel(); } catch (err) {}
-        }, 1400);
       } else {
         shake = 14;
         showDeath(tank);
@@ -1408,13 +1388,90 @@
     return applyKillScore(target, total, fallback, x, y).killer;
   }
 
+  function arenaLocked() {
+    return !!state.closersSpawned;
+  }
+
+  function respawnWait() {
+    return Math.max(0, (state.respawnAt || 0) - state.time);
+  }
+
+  function canRespawn() {
+    return running && !arenaLocked() && respawnWait() <= 0 && !(state.player && state.player.alive);
+  }
+
+  function updateRespawnUi() {
+    const deathOpen = els.death && !els.death.classList.contains("hidden");
+    if (!deathOpen && !state.spectating) return;
+    const lock = arenaLocked();
+    const wait = respawnWait();
+    const ready = canRespawn();
+    const secs = Math.ceil(wait);
+    const label = lock ? "Arena closing" : wait > 0 ? `Respawn (${secs})` : "Respawn";
+    if (els.again) {
+      els.again.disabled = !ready;
+      els.again.textContent = label;
+    }
+    if (els.spectateAgain) {
+      els.spectateAgain.disabled = !ready;
+      els.spectateAgain.textContent = label;
+    }
+    if (els.deathWait) {
+      if (lock) els.deathWait.textContent = "Arena closers have spawned. This server is closing.";
+      else if (wait > 0) els.deathWait.textContent = `(you may respawn in ${secs} second${secs === 1 ? "" : "s"})`;
+      else els.deathWait.textContent = "(you may respawn)";
+    }
+  }
+
   function showDeath(tank) {
     const best = Math.max(tank.score, Number(localStorage.getItem("tankfield-best") || 0));
     localStorage.setItem("tankfield-best", String(best));
     els.deathMsg.textContent = `Destroyed by ${tank.killedBy}.`;
     els.deathStats.textContent = `Score ${Math.floor(tank.score)}  ·  Level ${tank.level}  ·  ${getDef(tank).name}`;
     els.bestScore.textContent = `Best score: ${Math.floor(best)}`;
+    state.respawnAt = state.time + 5;
+    updateRespawnUi();
     els.death.classList.remove("hidden");
+  }
+
+  function respawnPlayer() {
+    if (!canRespawn()) return false;
+    const opts = state.playOpts || {};
+    const prev = state.player;
+    const team = prev && prev.team ? prev.team : pickStartTeam(state.mode);
+    const home = team ? mothershipOf(team) : null;
+    const pos = (state.mode === "tdm" || state.mode === "4tdm") && team
+      ? spawnInBase(team)
+      : home
+        ? around(home.x, home.y, 220)
+        : awayFrom(WORLD.w / 2, WORLD.h / 2, 700);
+    const player = createTank({
+      name: state.spawnName,
+      team,
+      color: state.mode === "sandbox" ? (state.selectedColor || colorFor({ team, player: true })) : colorFor({ team, player: true }),
+      classId: state.mode === "sandbox" ? (opts.classId || "basic") : "basic",
+      customDef: state.mode === "sandbox" ? (opts.customDef || null) : null,
+      score: xpForLevel(LEVEL_CAP),
+      pos,
+    });
+    player.ai = false;
+    player.spawnProtect = 8;
+    if (opts.maxStats) maxOutTank(player);
+    player.health = player.maxHealth;
+    state.spectating = false;
+    state.spectateTarget = null;
+    state.ghost = null;
+    state.player = player;
+    state.pilotTank = player;
+    state.tanks.push(player);
+    state.camera.x = player.x;
+    state.camera.y = player.y;
+    state.classDismissed = false;
+    els.death.classList.add("hidden");
+    if (els.spectateBar) els.spectateBar.classList.add("hidden");
+    try { renderStats(); } catch (err) {}
+    try { renderClassPanel(); } catch (err) {}
+    return true;
   }
 
   function spectateList() {
@@ -1830,6 +1887,8 @@
       bot.angle = Math.atan2(WORLD.h / 2 - bot.y, WORLD.w / 2 - bot.x);
       state.tanks.push(bot);
     }
+    updateRespawnUi();
+    note("Arena closers have spawned. This server is closing.", 5000);
   }
 
   function isDevNick() {
@@ -2290,6 +2349,7 @@
     if (state.mode === "ffa" && !state.closing && state.time >= FFA_CLOSE_AT) beginArenaClose();
     updateDoms(dt);
     if (state.closing && !state.closersSpawned && state.time >= state.closeAt) spawnArenaClosers();
+    updateRespawnUi();
     if (!state.spectating) updatePlayer(dt);
     else updateGhost(dt);
 
@@ -3360,14 +3420,14 @@
     els.name.addEventListener("keydown", (e) => { if (e.key === "Enter") playSelected(); });
     els.name.addEventListener("change", () => saveName(els.name.value.trim()));
   }
-  if (els.again) els.again.addEventListener("click", () => startGame(state.spawnName, state.playOpts || {}));
+  if (els.again) els.again.addEventListener("click", () => respawnPlayer());
   if (els.menu) els.menu.addEventListener("click", goToMenu);
   if (els.resume) els.resume.addEventListener("click", () => setUserPaused(false));
   if (els.pauseMenu) els.pauseMenu.addEventListener("click", goToMenu);
   if (els.spectateBtn) els.spectateBtn.addEventListener("click", beginSpectate);
   if (els.spectateNext) els.spectateNext.addEventListener("click", () => cycleSpectate(1));
   if (els.spectateFreeBtn) els.spectateFreeBtn.addEventListener("click", () => enterFreeCam(cameraFocus()));
-  if (els.spectateAgain) els.spectateAgain.addEventListener("click", () => startGame(state.spawnName, state.playOpts || {}));
+  if (els.spectateAgain) els.spectateAgain.addEventListener("click", () => respawnPlayer());
   if (els.spectateMenu) els.spectateMenu.addEventListener("click", goToMenu);
   if (els.editInGame) els.editInGame.addEventListener("click", openWorkshop);
   if (els.skipUpgrade) {
