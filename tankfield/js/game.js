@@ -174,6 +174,7 @@
     lastKiller: null,
     respawnAt: 0,
     walls: [],
+    maze: null,
     doms: [],
     domHold: null,
     domHoldT: 0,
@@ -464,6 +465,37 @@
     return { x: WORLD.w / 2, y: WORLD.h / 2 };
   }
 
+  function randomOpenNear(from, minD, maxD) {
+    for (let i = 0; i < 28; i++) {
+      const a = rand(0, TAU);
+      const d = rand(minD, maxD);
+      const p = { x: from.x + Math.cos(a) * d, y: from.y + Math.sin(a) * d };
+      if (p.x < 80 || p.y < 80 || p.x > WORLD.w - 80 || p.y > WORLD.h - 80) continue;
+      if (hitsWall(p.x, p.y, (from.r || 22) + 14)) continue;
+      if (!canSee(from, p)) continue;
+      return p;
+    }
+    return randomInWorld(180);
+  }
+
+  function eachNearbyWall(x, y, r, fn) {
+    const m = state.maze;
+    if (m) {
+      const minC = Math.max(0, Math.floor((x - r - m.x0) / m.cube));
+      const maxC = Math.min(m.cols - 1, Math.floor((x + r - m.x0) / m.cube));
+      const minR = Math.max(0, Math.floor((y - r - m.y0) / m.cube));
+      const maxR = Math.min(m.rows - 1, Math.floor((y + r - m.y0) / m.cube));
+      for (let row = minR; row <= maxR; row++) {
+        for (let col = minC; col <= maxC; col++) {
+          if (!m.filled[row][col]) continue;
+          fn({ x: m.x0 + col * m.cube, y: m.y0 + row * m.cube, w: m.cube, h: m.cube });
+        }
+      }
+      return;
+    }
+    for (const w of state.walls) fn(w);
+  }
+
   function awayFrom(x, y, minDist) {
     for (let i = 0; i < 24; i++) {
       const p = randomInWorld(120);
@@ -473,14 +505,16 @@
   }
 
   function hitsWall(x, y, r) {
-    for (const w of state.walls) {
+    let hit = false;
+    eachNearbyWall(x, y, r, (w) => {
+      if (hit) return;
       const nx = clamp(x, w.x, w.x + w.w);
       const ny = clamp(y, w.y, w.y + w.h);
       const dx = x - nx;
       const dy = y - ny;
-      if (dx * dx + dy * dy < r * r) return true;
-    }
-    return false;
+      if (dx * dx + dy * dy < r * r) hit = true;
+    });
+    return hit;
   }
 
   function segHitsAabb(x1, y1, x2, y2, minX, minY, maxX, maxY) {
@@ -510,6 +544,20 @@
     const y1 = a.y;
     const x2 = b.x;
     const y2 = b.y;
+    const m = state.maze;
+    if (m) {
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const dist = Math.hypot(dx, dy);
+      const n = Math.max(1, Math.ceil(dist / (m.cube * 0.28)));
+      for (let i = 1; i < n; i++) {
+        const t = i / n;
+        const c = Math.floor((x1 + dx * t - m.x0) / m.cube);
+        const r = Math.floor((y1 + dy * t - m.y0) / m.cube);
+        if (r >= 0 && c >= 0 && r < m.rows && c < m.cols && m.filled[r][c]) return false;
+      }
+      return true;
+    }
     for (const w of state.walls) {
       if (segHitsAabb(x1, y1, x2, y2, w.x - 1, w.y - 1, w.x + w.w + 1, w.y + w.h + 1)) return false;
     }
@@ -583,25 +631,25 @@
   function pushOutWalls(ent) {
     if (!state.walls.length) return false;
     let hit = false;
-    for (const w of state.walls) {
+    eachNearbyWall(ent.x, ent.y, ent.r + 2, (w) => {
       const nx = clamp(ent.x, w.x, w.x + w.w);
       const ny = clamp(ent.y, w.y, w.y + w.h);
       let dx = ent.x - nx;
       let dy = ent.y - ny;
       let d2 = dx * dx + dy * dy;
-      if (d2 >= ent.r * ent.r) continue;
+      if (d2 >= ent.r * ent.r) return;
       hit = true;
       if (d2 < 1e-6) {
         const left = ent.x - w.x;
         const right = w.x + w.w - ent.x;
         const top = ent.y - w.y;
         const bot = w.y + w.h - ent.y;
-        const m = Math.min(left, right, top, bot);
-        if (m === left) { ent.x = w.x - ent.r; ent.vx = Math.min(0, ent.vx); }
-        else if (m === right) { ent.x = w.x + w.w + ent.r; ent.vx = Math.max(0, ent.vx); }
-        else if (m === top) { ent.y = w.y - ent.r; ent.vy = Math.min(0, ent.vy); }
+        const side = Math.min(left, right, top, bot);
+        if (side === left) { ent.x = w.x - ent.r; ent.vx = Math.min(0, ent.vx); }
+        else if (side === right) { ent.x = w.x + w.w + ent.r; ent.vx = Math.max(0, ent.vx); }
+        else if (side === top) { ent.y = w.y - ent.r; ent.vy = Math.min(0, ent.vy); }
         else { ent.y = w.y + w.h + ent.r; ent.vy = Math.max(0, ent.vy); }
-        continue;
+        return;
       }
       const d = Math.sqrt(d2);
       const overlap = ent.r - d + 0.5;
@@ -614,64 +662,76 @@
         ent.vx -= vn * dx;
         ent.vy -= vn * dy;
       }
-    }
+    });
     return hit;
   }
 
   function buildMaze() {
-    const cols = irand(18, 26);
-    const rows = irand(18, 26);
-    const thick = irand(50, 64);
-    const pad = irand(48, 90);
-    const cellW = (WORLD.w - pad * 2) / cols;
-    const cellH = (WORLD.h - pad * 2) / rows;
-    const east = Array.from({ length: rows }, () => Array(cols).fill(true));
-    const south = Array.from({ length: rows }, () => Array(cols).fill(true));
-    const seen = Array.from({ length: rows }, () => Array(cols).fill(false));
-    const sr = irand(0, rows - 1);
-    const sc = irand(0, cols - 1);
+    const tankD = 56;
+    const cube = tankD * 3;
+    const pad = cube;
+    let cols = Math.max(13, Math.floor((WORLD.w - pad * 2) / cube));
+    let rows = Math.max(13, Math.floor((WORLD.h - pad * 2) / cube));
+    if (cols % 2 === 0) cols -= 1;
+    if (rows % 2 === 0) rows -= 1;
+    const x0 = (WORLD.w - cols * cube) / 2;
+    const y0 = (WORLD.h - rows * cube) / 2;
+    const filled = Array.from({ length: rows }, () => Array(cols).fill(true));
+    const inside = (r, c) => r > 0 && r < rows - 1 && c > 0 && c < cols - 1;
+    const sr = 1 + 2 * irand(0, Math.floor((rows - 3) / 2));
+    const sc = 1 + 2 * irand(0, Math.floor((cols - 3) / 2));
+    filled[sr][sc] = false;
     const stack = [[sr, sc]];
-    seen[sr][sc] = true;
     while (stack.length) {
       const [r, c] = stack[stack.length - 1];
       const opts = [];
-      if (r > 0 && !seen[r - 1][c]) opts.push([r - 1, c, "N"]);
-      if (r < rows - 1 && !seen[r + 1][c]) opts.push([r + 1, c, "S"]);
-      if (c > 0 && !seen[r][c - 1]) opts.push([r, c - 1, "W"]);
-      if (c < cols - 1 && !seen[r][c + 1]) opts.push([r, c + 1, "E"]);
+      for (const [dr, dc] of [[-2, 0], [2, 0], [0, -2], [0, 2]]) {
+        const nr = r + dr;
+        const nc = c + dc;
+        if (inside(nr, nc) && filled[nr][nc]) opts.push([nr, nc, r + dr / 2, c + dc / 2]);
+      }
       if (!opts.length) {
         stack.pop();
         continue;
       }
-      const [nr, nc, dir] = opts[irand(0, opts.length - 1)];
-      if (dir === "E") east[r][c] = false;
-      else if (dir === "W") east[r][nc] = false;
-      else if (dir === "S") south[r][c] = false;
-      else south[nr][c] = false;
-      seen[nr][nc] = true;
+      const [nr, nc, wr, wc] = opts[irand(0, opts.length - 1)];
+      filled[nr][nc] = false;
+      filled[wr][wc] = false;
       stack.push([nr, nc]);
     }
-    const extra = irand(Math.floor(cols * rows * 0.12), Math.floor(cols * rows * 0.34));
+    const extra = irand(Math.floor(cols * rows * 0.04), Math.floor(cols * rows * 0.09));
     for (let i = 0; i < extra; i++) {
-      if (Math.random() < 0.5) east[irand(0, rows - 1)][irand(0, cols - 2)] = false;
-      else south[irand(0, rows - 2)][irand(0, cols - 1)] = false;
+      const r = 1 + 2 * irand(0, Math.floor((rows - 3) / 2));
+      const c = 1 + 2 * irand(0, Math.floor((cols - 3) / 2));
+      const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]].filter(([dr, dc]) => inside(r + dr, c + dc));
+      if (!dirs.length) continue;
+      const [dr, dc] = dirs[irand(0, dirs.length - 1)];
+      filled[r + dr][c + dc] = false;
     }
-    const walls = [];
-    const x0 = pad;
-    const y0 = pad;
-    const join = Math.ceil(thick * 0.5);
+    const cr = (rows - 1) / 2;
+    const cc = (cols - 1) / 2;
+    const hole = Math.max(4, Math.floor(Math.min(rows, cols) * 0.13));
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
-        const x = x0 + c * cellW;
-        const y = y0 + r * cellH;
-        if (c < cols - 1 && east[r][c]) {
-          walls.push({ x: x + cellW - thick / 2, y: y - join, w: thick, h: cellH + join * 2 });
-        }
-        if (r < rows - 1 && south[r][c]) {
-          walls.push({ x: x - join, y: y + cellH - thick / 2, w: cellW + join * 2, h: thick });
-        }
+        if ((r - cr) * (r - cr) + (c - cc) * (c - cc) <= hole * hole) filled[r][c] = false;
       }
     }
+    for (let r = 0; r < rows; r++) {
+      filled[r][0] = false;
+      filled[r][cols - 1] = false;
+    }
+    for (let c = 0; c < cols; c++) {
+      filled[0][c] = false;
+      filled[rows - 1][c] = false;
+    }
+    const walls = [];
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (!filled[r][c]) continue;
+        walls.push({ x: x0 + c * cube, y: y0 + r * cube, w: cube, h: cube });
+      }
+    }
+    state.maze = { cube, x0, y0, cols, rows, filled };
     state.walls = walls;
   }
 
@@ -1160,6 +1220,7 @@
     state.particles = [];
     state.floaters = [];
     state.walls = [];
+    state.maze = null;
     state.doms = [];
     state.domHold = null;
     state.domHoldT = 0;
@@ -2085,20 +2146,21 @@
     const defending = state.mode === "protect" && ownMoth && tank.aiJob === "defend";
     const huntingMoth = state.mode === "protect" && foeMoth && tank.aiJob === "hunt";
     const ram = isRammer(tank);
-    const fightRange = ram ? 820 : 980;
-    const seeRange = state.mode === "tag" || state.mode === "protect" ? 2200 : 1800;
+    const maze = state.mode === "maze";
+    const fightRange = maze ? (ram ? 520 : 640) : (ram ? 820 : 980);
+    const seeRange = maze ? 1100 : (state.mode === "tag" || state.mode === "protect" ? 2200 : 1800);
     let enemy = hunting
-      ? nearestSeen(tank, state.tanks, 1600, (t) => isEnemyTank(tank, t))
+      ? nearestSeen(tank, state.tanks, maze ? 900 : 1600, (t) => isEnemyTank(tank, t))
       : huntingMoth
         ? (nearestSeen(tank, state.tanks, 520, (t) => isEnemyTank(tank, t) && !t.mothership) || foeMoth)
         : nearestSeen(tank, state.tanks, seeRange, (t) => isEnemyTank(tank, t));
-    const heard = enemy ? null : nearest(tank, state.tanks, 3200, (t) => isEnemyTank(tank, t));
+    const heard = maze || enemy ? null : nearest(tank, state.tanks, 3200, (t) => isEnemyTank(tank, t));
     if (hunting && mark && canSee(tank, mark)) {
       const melee = nearestSeen(tank, state.tanks, 420, (t) => isEnemyTank(tank, t) && t !== mark);
       if (!melee) enemy = mark;
     }
     const closerNear = nearest(tank, state.tanks, 980, (t) => t.closer);
-    const shape = bestFarm(tank, ram ? 640 : 1100);
+    const shape = bestFarm(tank, maze ? 520 : (ram ? 640 : 1100));
     const hpPct = tank.maxHealth > 0 ? tank.health / tank.maxHealth : 1;
     const low = hpPct < (ram ? 0.16 : 0.22);
     const zone = zoneAt(tank.x, tank.y);
@@ -2111,15 +2173,16 @@
     else if ((hunting && mark && enemy === mark) || (state.mode === "tag" && enemy) || (huntingMoth && foeMoth)) tank.aiState = "attack";
     else if (defending && enemy && dist2(tank, enemy) < 720 * 720) tank.aiState = "attack";
     else if (defending) tank.aiState = "defend";
+    else if (maze && enemy) tank.aiState = "attack";
     else if (enemy && dist2(tank, enemy) < fightRange * fightRange) tank.aiState = "attack";
     else if (heard && dist2(tank, heard) < 2600 * 2600) tank.aiState = "seek";
-    else if (shape && dist2(tank, shape) < 420 * 420) tank.aiState = "farm";
+    else if (shape && dist2(tank, shape) < (maze ? 280 : 420) * (maze ? 280 : 420) && (!maze || canSee(tank, shape))) tank.aiState = "farm";
     else tank.aiState = "wander";
 
     if (player && player.alive && isEnemyTank(tank, player) && tank.aiState !== "flee" && tank.aiState !== "home" && !(huntingMoth && dist2(tank, player) > 520 * 520)) {
       const pd = dist2(tank, player);
       const seen = canSee(tank, player);
-      if (pd < (ram ? 900 : 760) * (ram ? 900 : 760) && (hpPct > 0.28 || pd < 260 * 260) && (seen || pd < 500 * 500)) {
+      if (pd < (ram ? 900 : 760) * (ram ? 900 : 760) && (hpPct > 0.28 || pd < 260 * 260) && (seen || (!maze && pd < 500 * 500))) {
         tank.aiState = "attack";
         enemy = player;
       }
@@ -2211,7 +2274,11 @@
       tank.angle = Math.atan2(heard.y - tank.y, heard.x - tank.x);
     } else if (tank.aiT <= 0) {
       tank.aiT = rand(2.2, 5.5);
-      if (tank.aiHunt === "mid" || Math.random() < 0.42) {
+      if (maze) {
+        const p = randomOpenNear(tank, 220, 640);
+        tank.roamX = p.x;
+        tank.roamY = p.y;
+      } else if (tank.aiHunt === "mid" || Math.random() < 0.42) {
         const mid = nestPos(1100);
         tank.roamX = mid.x;
         tank.roamY = mid.y;
@@ -2223,7 +2290,7 @@
     }
     if (tank.aiState === "wander") {
       if (tank.roamX == null || tank.roamY == null) {
-        const mid = nestPos(900);
+        const mid = maze ? randomOpenNear(tank, 180, 520) : nestPos(900);
         tank.roamX = mid.x;
         tank.roamY = mid.y;
       }
@@ -2248,6 +2315,17 @@
     const ang = Math.atan2(ty - tank.y, tx - tank.x);
     tank.vx += Math.cos(ang) * pace * 62 * dt;
     tank.vy += Math.sin(ang) * pace * 62 * dt;
+    if (maze && Math.hypot(tank.vx, tank.vy) < 16) {
+      tank.stuckT = (tank.stuckT || 0) + dt;
+      if (tank.stuckT > 0.4) {
+        tank.stuckT = 0;
+        tank.aiT = 0;
+        tank.strafeDir = -(tank.strafeDir || 1);
+        const p = randomOpenNear(tank, 160, 480);
+        tank.roamX = p.x;
+        tank.roamY = p.y;
+      }
+    } else tank.stuckT = 0;
     updateTurrets(tank, dt);
     shoot(tank, dt);
   }
@@ -3157,11 +3235,11 @@
       }
     }
     for (const w of state.walls) {
-      ctx.fillStyle = "#9a9a9a";
-      ctx.strokeStyle = "#7a7a7a";
-      ctx.lineWidth = 2;
+      ctx.fillStyle = "#8f8f8f";
+      ctx.strokeStyle = "#6a6a6a";
+      ctx.lineWidth = 3;
       ctx.fillRect(w.x, w.y, w.w, w.h);
-      ctx.strokeRect(w.x + 1, w.y + 1, Math.max(0, w.w - 2), Math.max(0, w.h - 2));
+      ctx.strokeRect(w.x + 1.5, w.y + 1.5, Math.max(0, w.w - 3), Math.max(0, w.h - 3));
     }
     for (const d of state.doms) {
       const col = d.team && TEAMS[d.team] ? TEAMS[d.team].color : "#888888";
