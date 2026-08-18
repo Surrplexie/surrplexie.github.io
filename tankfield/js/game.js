@@ -645,6 +645,7 @@
       closer: !!opts.closer,
       mothership: !!opts.mothership,
       tagLock: 0,
+      dmgLog: [],
     };
     applyLevel(tank);
     tank.health = tank.maxHealth;
@@ -685,7 +686,7 @@
       type: "shape", kind, sides: t.sides, x: p.x, y: p.y, vx: 0, vy: 0,
       r: t.r, health: t.hp, maxHealth: t.hp, score: t.score, color: t.color,
       rot: rand(0, TAU), spin: t.spin * (Math.random() < 0.5 ? 1 : -1), alive: true,
-      wanderA: rand(0, TAU),
+      wanderA: rand(0, TAU), dmgLog: [],
     };
   }
 
@@ -1013,15 +1014,15 @@
     if (!tank || tank.deadHandled) return;
     tank.deadHandled = true;
     tank.alive = false;
-    tank.killedBy = cause || (killer ? killer.name : "a polygon");
     clearOwnedShots(tank);
     burst(tank.x, tank.y, tank.color, 18, 220);
-    if (killer && killer.alive) {
-      state.lastKiller = killer;
-      killer.kills = (killer.kills || 0) + 1;
-      const huntedBonus = state.mode === "manhunt" && tank === state.hunted ? Math.max(80, Math.floor(tank.score * 0.2)) : 0;
-      const gain = Math.max(20, Math.floor(tank.score * 0.45) + 20) + huntedBonus;
-      giveScore(killer, gain, tank.x, tank.y);
+    const huntedBonus = state.mode === "manhunt" && tank === state.hunted ? Math.max(80, Math.floor(tank.score * 0.2)) : 0;
+    const pool = Math.max(20, Math.floor(tank.score * 0.45) + 20) + huntedBonus;
+    const credited = splitKillScore(tank, pool, killer, tank.x, tank.y);
+    tank.killedBy = cause || (credited ? credited.name : killer ? killer.name : "a polygon");
+    if (credited) {
+      state.lastKiller = credited;
+      credited.kills = (credited.kills || 0) + 1;
       if (huntedBonus) floater(tank.x, tank.y - 24, "Hunted down");
     }
     if (tank === state.player) {
@@ -1097,10 +1098,11 @@
   }
 
   function giveScore(tank, amount, x, y) {
+    if (!tank || !tank.alive || amount <= 0) return;
     tank.score += amount;
     const leveled = applyLevel(tank);
     if (tank === state.player) {
-      floater(x, y - 10, `+${amount}`);
+      floater(x, y - 10, `+${Math.floor(amount)}`);
       renderStats();
       if (leveled) {
         state.classDismissed = false;
@@ -1109,6 +1111,68 @@
     } else if (leveled) {
       autoUpgradeBot(tank);
     }
+  }
+
+  const ASSIST_WINDOW = 30;
+
+  function dealerOf(src) {
+    if (!src) return null;
+    if (src.type === "tank") return src;
+    if (src.owner && src.owner.type === "tank") return src.owner;
+    return null;
+  }
+
+  function creditDamage(target, amount, src) {
+    const dealer = dealerOf(src);
+    if (!target || !dealer || dealer === target || amount <= 0) return;
+    let log = target.dmgLog;
+    if (!log) log = target.dmgLog = [];
+    log.push({ tank: dealer, amount, t: state.time });
+    const cut = state.time - ASSIST_WINDOW;
+    if (log.length > 48 && log[0].t < cut) {
+      let i = 0;
+      while (i < log.length && log[i].t < cut) i++;
+      if (i) target.dmgLog = log.slice(i);
+    }
+  }
+
+  function damageShares(target) {
+    const log = target.dmgLog || [];
+    const cut = state.time - ASSIST_WINDOW;
+    const totals = new Map();
+    for (const e of log) {
+      if (e.t < cut || !e.tank || e.amount <= 0) continue;
+      totals.set(e.tank, (totals.get(e.tank) || 0) + e.amount);
+    }
+    const shares = [];
+    let sum = 0;
+    for (const [tank, amt] of totals) {
+      if (!tank.alive || tank.closer) continue;
+      shares.push({ tank, amt });
+      sum += amt;
+    }
+    return { shares, sum };
+  }
+
+  function splitKillScore(target, total, fallback, x, y) {
+    total = Math.max(0, Math.floor(total));
+    const claimable = (t) => t && t.alive && !t.closer;
+    if (total <= 0) return claimable(fallback) ? fallback : null;
+    const { shares, sum } = damageShares(target);
+    if (sum <= 0 || !shares.length) {
+      const fb = claimable(fallback) ? fallback : null;
+      if (fb) giveScore(fb, total, x, y);
+      return fb;
+    }
+    shares.sort((a, b) => b.amt - a.amt);
+    const parts = shares.map((s) => ({ tank: s.tank, n: Math.floor(total * (s.amt / sum)) }));
+    let used = 0;
+    for (const p of parts) used += p.n;
+    parts[0].n += total - used;
+    for (const p of parts) {
+      if (p.n > 0) giveScore(p.tank, p.n, x, y);
+    }
+    return parts[0].tank;
   }
 
   function showDeath(tank) {
@@ -1688,6 +1752,8 @@
     if (tryTagHit(target, src)) return;
     if (target.spawnProtect > 0 && !(src && src.closer)) return;
     if (src && src.spawnProtect > 0 && !src.closer) return;
+    const taken = Math.min(amount, Math.max(0, target.health));
+    if (taken > 0) creditDamage(target, taken, src);
     target.health -= amount;
     if (target.type === "tank") target.bodyHitT = 0.08;
     if (target === state.player) shake = Math.max(shake, Math.min(10, amount * 0.25));
@@ -1695,7 +1761,7 @@
       target.alive = false;
       burst(target.x, target.y, target.color, target.kind === "alpha" ? 36 : 12, 180);
       if (target.kind === "alpha") state.alphaRespawnAt = state.time + rand(60, 120);
-      if (target.type === "shape" && src) giveScore(src, target.score, target.x, target.y);
+      if (target.type === "shape") splitKillScore(target, target.score, src, target.x, target.y);
       else if (target.type === "tank") killTank(target, src);
     }
   }
