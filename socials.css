@@ -1,13 +1,29 @@
-/* Container for the boxes */
+.social-heading {
+    margin: 1.5rem 0 0.25rem;
+    font-size: 1.05em;
+    color: var(--color-primary);
+    border-bottom: 1px solid var(--color-secondary);
+    padding-bottom: 6px;
+}
+
 .social-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 15px;
-    padding: 20px;
-    list-style: none; /* Removes bullet points if using <li> */
+    padding: 20px 0;
+    list-style: none;
 }
 
-/* Base style for each box */
+.social-grid-primary {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.social-grid-secondary {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    padding-top: 8px;
+}
+
 .social-box {
     display: flex;
     flex-direction: column;
@@ -16,16 +32,25 @@
     padding: 25px;
     text-decoration: none;
     border-radius: 15px;
-    color: white !important; /* Forces text to stay white */
+    color: white !important;
     font-family: 'Roboto Mono', monospace;
     font-weight: 600;
-    transition: all 0.3s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, filter 0.3s ease;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.social-grid-secondary .social-box {
+    padding: 18px;
 }
 
 .social-box i {
     font-size: 2.5rem;
     margin-bottom: 12px;
+}
+
+.social-grid-secondary .social-box i {
+    font-size: 1.85rem;
+    margin-bottom: 8px;
 }
 
 .social-box:hover {
@@ -34,15 +59,62 @@
     filter: brightness(1.1);
 }
 
-/* Brand Colors */
+.social-box:focus-visible {
+    outline: var(--focus-outline);
+    outline-offset: var(--focus-offset);
+}
+
+.social-elsewhere {
+    margin-top: 8px;
+    padding-top: 16px;
+    border-top: 1px solid var(--color-secondary);
+}
+
+.social-elsewhere summary {
+    cursor: pointer;
+    font-weight: 700;
+    color: var(--color-primary);
+    font-size: 1.05em;
+    padding: 6px 0;
+    list-style-position: outside;
+}
+
+.social-elsewhere summary:hover {
+    color: var(--color-accent);
+}
+
+.social-elsewhere summary:focus-visible {
+    outline: var(--focus-outline);
+    outline-offset: var(--focus-offset);
+    border-radius: 2px;
+}
+
+.social-elsewhere-note {
+    margin: 10px 0 0;
+    font-size: 0.88em;
+    color: var(--color-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .social-box {
+        transition: none;
+    }
+
+    .social-box:hover {
+        transform: none;
+        filter: none;
+    }
+}
+
 .proton { background-color: #6d4aff; }
 .gmail { background-color: #DB4437; }
 .discord { background-color: #5865F2; }
+.linkedin { background-color: #0077B5; }
 .github { background-color: #24292e; }
 .instagram { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
 .pinterest { background-color: #BD081C; }
 .reddit { background-color: #FF4500; }
-.snapchat { background-color: #FFFC00; color: #000 !important; } /* Snap is yellow, text must be black */
+.snapchat { background-color: #FFFC00; color: #000 !important; }
 .tiktok { background-color: #000000; border: 1px solid #ff0050; }
 .twitch { background-color: #9146FF; }
 .youtube { background-color: #FF0000; }

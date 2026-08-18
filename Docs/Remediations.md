@@ -152,3 +152,14 @@ Dev logs rules; REM-1, REM-2 any of these terms are the new 'updates' like "Upd
 - **Sitemap:** Enabled `jekyll-sitemap` plugin in `_config.yml`; `Docs/` pages excluded from sitemap via `defaults`.
 - **Lazy images:** Certificate images on `certs/index.html` use `loading="lazy"`, `decoding="async"`, and explicit `width` / `height` to reduce layout shift.
 - **Mobile nav:** Hamburger toggle in `_layouts/default.html` with `site-nav.js` (toggle, Escape to close, auto-close on link click and viewport resize); short labels on small screens (**Certs**, **Labs**, **Contact**); stacked full-width nav panel; homepage CTA buttons stack on narrow viewports.
+
+---
+
+## REM-15
+
+**P4 socials page strategy** — hiring channels first; personal profiles folded away.
+
+- **Primary:** Email (Proton, `mailto:` unchanged), LinkedIn, and GitHub under **Hiring contacts** so recruiters land on the three professional channels.
+- **Secondary:** Discord, Instagram, X, YouTube, Twitch, TikTok, Reddit, Pinterest, and Snapchat moved into a closed **Elsewhere** `<details>` block with a note that those are not hiring contacts.
+- Restored missing `.linkedin` brand color; added `:focus-visible` on tiles and the Elsewhere summary; gated hover motion behind `prefers-reduced-motion`.
+- Nav long label and homepage aside link now **Contact** (URL remains `/socials/`). Heading dropped the terminal `> Get In Touch` prefix.
