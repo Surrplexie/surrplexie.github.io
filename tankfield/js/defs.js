@@ -173,6 +173,7 @@
       auto: !!spec.auto,
       necro: spec.necro || 0,
       healer: !!spec.healer,
+      spin: !!spec.spin,
       mods: spec.mods || { damage: 1, reload: 1, speed: 1, size: 1, fov: 1, health: 1 },
     };
     return tanks[id];
@@ -1295,6 +1296,24 @@
     needLevel: 45,
   });
 
+  function mysticGuns(count, more = [], shape) {
+    const step = 360 / count;
+    const sides = shape == null ? (count < 3 ? 0 : count) : shape;
+    return Array.from({ length: count }, (_, i) => gun(3.5, 8.65, 1.2, 8, 0, i * step, i / count, {
+      type: "drone",
+      layers: [g.drone, g.summoner, ...more],
+      calculator: "drone",
+      shape: sides,
+    }));
+  }
+
+  const BOSS = {
+    elite: { health: 160, speed: 0.18, fov: 1.22, bodyDamage: 3.4, mods: { size: 2.35, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 } },
+    mystic: { health: 180, speed: 0.12, fov: 1.15, bodyDamage: 2.8, mods: { size: 2.45, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 } },
+    nester: { health: 220, speed: 0.14, fov: 1.2, bodyDamage: 3.1, mods: { size: 2.55, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 } },
+    rogue: { health: 260, speed: 0.08, fov: 1.28, bodyDamage: 3.6, mods: { size: 2.7, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 } },
+  };
+
   def("elite_destroyer", {
     name: "Elite Destroyer",
     desc: "Pink crasher boss with three devastator guns",
@@ -1344,43 +1363,250 @@
       ...G.swarm(4.2, a, 0, [g.battleship]),
       ...G.swarm(-4.2, a, 0.5, [g.battleship]),
     ]),
-    health: 160,
+    health: BOSS.elite.health,
     speed: 0.18,
     fov: 1.25,
     maxDrones: 18,
-    bodyDamage: 3.4,
+    bodyDamage: BOSS.elite.bodyDamage,
     upgrades: [],
     needLevel: 45,
-    mods: { size: 2.4, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 },
+    mods: BOSS.elite.mods,
+  });
+
+  def("elite_spawner", {
+    name: "Elite Spawner",
+    desc: "Pink crasher that builds sentry minions",
+    body: 3,
+    guns: [60, 180, 300].flatMap((a) => [
+      gun(11, 16, 1, 0, 0, a, 0, { type: "deco" }),
+      gun(2, 18, 1, 11, 0, a, 0, { type: "minion", layers: [g.minion, { reload: 2, size: 0.55, speed: 0.65 }], calculator: "drone" }),
+    ]).concat(G.auto()),
+    health: BOSS.elite.health,
+    speed: 0.16,
+    fov: 1.22,
+    maxDrones: 9,
+    bodyDamage: 3.3,
+    upgrades: [],
+    needLevel: 45,
+    mods: BOSS.elite.mods,
+  });
+
+  def("elite_trapguard", {
+    name: "Elite Trap Guard",
+    desc: "Pink crasher with traps on every face",
+    body: 3,
+    guns: [0, 120, 240].flatMap((a) => G.trap(a, [{ speed: 1.1, reload: 1.5, damage: 1.6 }])).concat(G.auto()),
+    health: BOSS.elite.health,
+    speed: 0.17,
+    fov: 1.2,
+    bodyDamage: 3.3,
+    upgrades: [],
+    needLevel: 45,
+    mods: BOSS.elite.mods,
+  });
+
+  def("elite_spinner", {
+    name: "Elite Spinner",
+    desc: "Pink crasher that spins gunner streams",
+    body: 3,
+    spin: true,
+    guns: [0, 120, 240].flatMap((a) => [
+      gun(9.5, 2, 1, 8.5, 1.5, a + 10, 0, { layers: [g.basic, g.twin, g.gunner] }),
+      gun(9.5, 2, 1, 3.5, 6.5, a + 10, 1 / 3, { layers: [g.basic, g.twin, g.gunner] }),
+      gun(9.5, 2, 1, -1.5, 11.5, a + 10, 2 / 3, { layers: [g.basic, g.twin, g.gunner] }),
+      gun(2, 18, 0.75, 8, 0, a + 60, 0, { type: "deco" }),
+    ]).concat(G.auto()),
+    health: BOSS.elite.health,
+    speed: 0.16,
+    fov: 1.2,
+    bodyDamage: 3.2,
+    upgrades: [],
+    needLevel: 45,
+    mods: { ...BOSS.elite.mods, size: 2.38 },
+  });
+
+  def("elite_skimmer", {
+    name: "Elite Skimmer",
+    desc: "Pink crasher that launches missiles",
+    body: 3,
+    guns: [60, 180, 300].map((a) => gun(16, 13, 1.15, 0, 0, a, a / 360, { type: "missile", layers: [g.basic, g.pounder, g.launcher] })),
+    health: BOSS.elite.health,
+    speed: 0.17,
+    fov: 1.24,
+    bodyDamage: 3.5,
+    upgrades: [],
+    needLevel: 45,
+    mods: BOSS.elite.mods,
+  });
+
+  def("sorcerer", {
+    name: "Sorcerer",
+    desc: "Egg mystical that floods tiny drones",
+    body: 0,
+    guns: mysticGuns(2, [{ size: 0.4, spray: 1.8, damage: 1.4 }], 0),
+    health: 150,
+    speed: 0.14,
+    fov: 1.12,
+    maxDrones: 50,
+    bodyDamage: 2.2,
+    upgrades: [],
+    needLevel: 45,
+    mods: { ...BOSS.mystic.mods, size: 2.2 },
   });
 
   def("summoner", {
     name: "Summoner",
     desc: "Square mystical that floods drones",
     body: 4,
-    guns: [0, 90, 180, 270].flatMap((a) => G.director(a, [g.summoner])),
-    health: 180,
+    guns: mysticGuns(4, [{ size: 0.8 }], 4),
+    health: BOSS.mystic.health,
     speed: 0.16,
     fov: 1.15,
     maxDrones: 28,
-    bodyDamage: 2.8,
+    bodyDamage: BOSS.mystic.bodyDamage,
     upgrades: [],
     needLevel: 45,
-    mods: { size: 2.45, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 },
+    mods: BOSS.mystic.mods,
+  });
+
+  def("enchantress", {
+    name: "Enchantress",
+    desc: "Triangle mystical with three drone spawners",
+    body: 3,
+    guns: mysticGuns(3, [{ size: 0.9, damage: 1.1 }], 3),
+    health: 200,
+    speed: 0.11,
+    fov: 1.15,
+    maxDrones: 28,
+    bodyDamage: 3,
+    upgrades: [],
+    needLevel: 45,
+    mods: BOSS.mystic.mods,
+  });
+
+  def("exorcistor", {
+    name: "Exorcistor",
+    desc: "Pentagon mystical with heavy drones",
+    body: 5,
+    guns: mysticGuns(5, [g.destroyer, { size: 1.15, reload: 2.4, damage: 2.2 }], 5),
+    health: 240,
+    speed: 0.1,
+    fov: 1.16,
+    maxDrones: 20,
+    bodyDamage: 3.6,
+    upgrades: [],
+    needLevel: 45,
+    mods: { ...BOSS.mystic.mods, size: 2.55 },
+  });
+
+  def("shaman", {
+    name: "Shaman",
+    desc: "Hex mystical with six drone spawners",
+    body: 6,
+    guns: mysticGuns(6, [g.destroyer, { size: 1.25, reload: 2.2, damage: 2 }], 6),
+    health: 260,
+    speed: 0.09,
+    fov: 1.18,
+    maxDrones: 20,
+    bodyDamage: 4,
+    upgrades: [],
+    needLevel: 45,
+    mods: { ...BOSS.mystic.mods, size: 2.6 },
+  });
+
+  def("witch", {
+    name: "Witch",
+    desc: "Triangle mystical with paired drone spawners",
+    body: 3,
+    guns: [0, 120, 240].flatMap((a) => [
+      gun(3.5, 8.65, 1.2, 8, 5.5, a, 0, { type: "drone", layers: [g.drone, g.summoner, { size: 0.4 }], calculator: "drone", shape: 3 }),
+      gun(3.5, 8.65, 1.2, 8, -5.5, a, 0.5, { type: "drone", layers: [g.drone, g.summoner, { size: 0.4 }], calculator: "drone", shape: 3 }),
+    ]),
+    health: 170,
+    speed: 0.13,
+    fov: 1.14,
+    maxDrones: 40,
+    bodyDamage: 2.5,
+    upgrades: [],
+    needLevel: 45,
+    mods: BOSS.mystic.mods,
   });
 
   def("nest_keeper", {
     name: "Nest Keeper",
-    desc: "Pentagon nester with five guns",
+    desc: "Pentagon nester that spawns mega crashers",
     body: 5,
-    guns: [0, 72, 144, 216, 288].map((a) => gun(18, 8.2, 1, 0, 0, a, a / 360, B(g.nestKeeper))),
-    health: 220,
+    guns: [36, 108, 180, 252, 324].flatMap((a) => G.director(a, [g.nestKeeper], { shape: 3 })).concat(G.auto()),
+    health: BOSS.nester.health,
     speed: 0.14,
     fov: 1.2,
-    bodyDamage: 3.1,
+    maxDrones: 15,
+    bodyDamage: BOSS.nester.bodyDamage,
     upgrades: [],
     needLevel: 45,
-    mods: { size: 2.55, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 },
+    mods: BOSS.nester.mods,
+  });
+
+  def("nest_warden", {
+    name: "Nest Warden",
+    desc: "Pentagon nester that drops block traps",
+    body: 5,
+    guns: [36, 108, 180, 252, 324].flatMap((a) => G.trap(a, [g.setTrap])).concat(G.auto()),
+    health: BOSS.nester.health,
+    speed: 0.13,
+    fov: 1.22,
+    bodyDamage: 3,
+    upgrades: [],
+    needLevel: 45,
+    mods: BOSS.nester.mods,
+  });
+
+  def("nest_guardian", {
+    name: "Nest Guardian",
+    desc: "Pentagon nester with five devastators",
+    body: 5,
+    guns: [36, 108, 180, 252, 324].map((a) => gun(8, 16, 1, 6, 0, a, a / 360, { layers: [g.basic, g.pounder, g.destroyer], recoil: 0.35 })).concat(G.auto()),
+    health: 240,
+    speed: 0.13,
+    fov: 1.22,
+    bodyDamage: 3.4,
+    upgrades: [],
+    needLevel: 45,
+    mods: BOSS.nester.mods,
+  });
+
+  def("rogue_palisade", {
+    name: "Rogue Palisade",
+    desc: "Grey hex that builds independent minions",
+    body: 6,
+    guns: [0, 60, 120, 180, 240, 300].flatMap((a) => [
+      gun(4, 6, -1.6, 8, 0, a, a / 360, { type: "minion", layers: [g.minion, g.pounder, { reload: 2, damage: 0.7 }], calculator: "drone" }),
+    ]).concat([30, 90, 150, 210, 270, 330].flatMap((a) => G.trap(a))),
+    health: BOSS.rogue.health,
+    speed: 0.06,
+    fov: 1.3,
+    maxDrones: 18,
+    bodyDamage: BOSS.rogue.bodyDamage,
+    upgrades: [],
+    needLevel: 45,
+    mods: BOSS.rogue.mods,
+  });
+
+  def("rogue_armada", {
+    name: "Rogue Armada",
+    desc: "Grey heptagon with shotgun faces",
+    body: 7,
+    guns: Array.from({ length: 7 }, (_, i) => {
+      const a = (360 / 7) * i + 360 / 14;
+      return gun(12, 10, 1.25, 4, 0, a, i / 7, { layers: [g.basic, g.machineGun, g.pounder], spread: 0.28 });
+    }),
+    health: BOSS.rogue.health,
+    speed: 0.09,
+    fov: 1.28,
+    bodyDamage: 3.5,
+    upgrades: [],
+    needLevel: 45,
+    mods: { ...BOSS.rogue.mods, size: 2.62 },
   });
 
   def("terrestrial", {
@@ -1443,7 +1669,7 @@
   });
 
   def("sentry_gun", {
-    name: "Sentry",
+    name: "Sentry Gun",
     desc: "Small armed crasher",
     body: 3,
     guns: G.machine(),
@@ -1456,6 +1682,36 @@
     upgrades: [],
     needLevel: 45,
     mods: { size: 0.85, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 },
+  });
+
+  def("sentry_swarm", {
+    name: "Sentry Swarm",
+    desc: "Small crasher that launches swarms",
+    body: 3,
+    guns: [...G.swarm(0, 0, 0), ...G.swarm(0, 0, 0.5)],
+    health: 2.4,
+    speed: 0.95,
+    fov: 1.12,
+    maxDrones: 8,
+    reload: 0.7,
+    bodyDamage: 1.35,
+    upgrades: [],
+    needLevel: 45,
+    mods: { size: 0.85, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 },
+  });
+
+  def("sentry_trap", {
+    name: "Sentry Trap",
+    desc: "Small crasher that drops traps",
+    body: 3,
+    guns: G.trap(),
+    health: 2.6,
+    speed: 0.9,
+    fov: 1.1,
+    bodyDamage: 1.5,
+    upgrades: [],
+    needLevel: 45,
+    mods: { size: 0.88, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 },
   });
 
   def("sanctuary", {
@@ -1478,8 +1734,11 @@
     "auto3", "auto5", "auto8", "auto2", "autosmasher", "autogunner", "autosniper", "engineer",
     "healer", "medic", "spawner", "factory",
     "mothership", "arena_closer", "dom_gun", "dom_idle", "dom_heal", "assault_guard",
-    "elite_destroyer", "elite_gunner", "elite_sprayer", "elite_battleship", "summoner",
-    "nest_keeper", "terrestrial", "celestial", "eternal", "sentry_gun", "sanctuary",
+    "elite_destroyer", "elite_gunner", "elite_sprayer", "elite_battleship", "elite_spawner",
+    "elite_trapguard", "elite_spinner", "elite_skimmer",
+    "sorcerer", "summoner", "enchantress", "exorcistor", "shaman", "witch",
+    "nest_keeper", "nest_warden", "nest_guardian", "rogue_palisade", "rogue_armada",
+    "terrestrial", "celestial", "eternal", "sentry_gun", "sentry_swarm", "sentry_trap", "sanctuary",
   ]);
   for (const id of Object.keys(tanks)) {
     const t = tanks[id];

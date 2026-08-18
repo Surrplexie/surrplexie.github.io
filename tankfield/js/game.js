@@ -1179,19 +1179,40 @@
     }
   }
 
-  const SIEGE_ELITES = ["elite_destroyer", "elite_gunner", "elite_sprayer", "elite_battleship"];
-  const SIEGE_MYSTICALS = ["summoner", "nest_keeper"];
+  const SIEGE_ELITES = [
+    "elite_destroyer", "elite_gunner", "elite_sprayer", "elite_battleship",
+    "elite_spawner", "elite_trapguard", "elite_spinner", "elite_skimmer",
+  ];
+  const SIEGE_MYSTICALS = ["sorcerer", "summoner", "enchantress", "exorcistor", "shaman", "witch"];
+  const SIEGE_NESTERS = ["nest_keeper", "nest_warden", "nest_guardian"];
+  const SIEGE_ROGUES = ["rogue_palisade", "rogue_armada"];
+  const SIEGE_SENTRIES = ["sentry_gun", "sentry_swarm", "sentry_trap"];
   const BOSS_KILL = {
     elite_destroyer: 4000,
     elite_gunner: 4000,
     elite_sprayer: 4000,
     elite_battleship: 5500,
+    elite_spawner: 5000,
+    elite_trapguard: 4500,
+    elite_spinner: 4500,
+    elite_skimmer: 5000,
+    sorcerer: 4500,
     summoner: 6000,
+    enchantress: 5500,
+    exorcistor: 7000,
+    shaman: 8000,
+    witch: 5000,
     nest_keeper: 5000,
+    nest_warden: 5500,
+    nest_guardian: 6000,
+    rogue_palisade: 8000,
+    rogue_armada: 8000,
     terrestrial: 18000,
     celestial: 40000,
     eternal: 90000,
     sentry_gun: 220,
+    sentry_swarm: 220,
+    sentry_trap: 240,
   };
 
   function pickN(list, n) {
@@ -1209,23 +1230,23 @@
       pickN(SIEGE_ELITES, 4),
       pickN(SIEGE_ELITES, 3).concat(pickN(SIEGE_MYSTICALS, 1)),
       pickN(SIEGE_ELITES, 2).concat(pickN(SIEGE_MYSTICALS, 2)),
-      pickN(SIEGE_ELITES, 1).concat(pickN(SIEGE_MYSTICALS, 3)),
-      pickN(SIEGE_MYSTICALS, 4),
-      pickN(SIEGE_ELITES, 1).concat(pickN(SIEGE_MYSTICALS, 4)),
-      pickN(SIEGE_ELITES, 2).concat(pickN(SIEGE_MYSTICALS, 4)),
-      pickN(SIEGE_ELITES, 3).concat(pickN(SIEGE_MYSTICALS, 4)),
-      pickN(SIEGE_ELITES, 4).concat(pickN(SIEGE_MYSTICALS, 4)),
+      pickN(SIEGE_ELITES, 1).concat(pickN(SIEGE_MYSTICALS, 2), pickN(SIEGE_NESTERS, 1)),
+      pickN(SIEGE_MYSTICALS, 3).concat(pickN(SIEGE_NESTERS, 1)),
+      pickN(SIEGE_ELITES, 1).concat(pickN(SIEGE_MYSTICALS, 3), pickN(SIEGE_NESTERS, 1)),
+      pickN(SIEGE_ELITES, 2).concat(pickN(SIEGE_MYSTICALS, 2), pickN(SIEGE_NESTERS, 1), pickN(SIEGE_ROGUES, 1)),
+      pickN(SIEGE_ELITES, 3).concat(pickN(SIEGE_MYSTICALS, 2), pickN(SIEGE_NESTERS, 2)),
+      pickN(SIEGE_ELITES, 3).concat(pickN(SIEGE_MYSTICALS, 2), pickN(SIEGE_NESTERS, 1), pickN(SIEGE_ROGUES, 1)),
       ["terrestrial"],
       ["celestial"],
       ["celestial"],
       ["celestial"],
       ["celestial"],
       pickN(SIEGE_ELITES, 1).concat(pickN(SIEGE_MYSTICALS, 1), ["celestial"]),
-      pickN(SIEGE_ELITES, 3).concat(pickN(SIEGE_MYSTICALS, 1), ["celestial"]),
-      pickN(SIEGE_ELITES, 3).concat(pickN(SIEGE_MYSTICALS, 3), ["celestial"]),
-      pickN(SIEGE_ELITES, 4).concat(pickN(SIEGE_MYSTICALS, 4), ["celestial"]),
+      pickN(SIEGE_ELITES, 2).concat(pickN(SIEGE_NESTERS, 1), pickN(SIEGE_ROGUES, 1), ["celestial"]),
+      pickN(SIEGE_ELITES, 3).concat(pickN(SIEGE_MYSTICALS, 2), pickN(SIEGE_NESTERS, 1), ["celestial"]),
+      pickN(SIEGE_ELITES, 3).concat(pickN(SIEGE_MYSTICALS, 2), pickN(SIEGE_NESTERS, 1), pickN(SIEGE_ROGUES, 1), ["celestial"]),
       ["celestial", "celestial"],
-      pickN(SIEGE_ELITES, 3).concat(pickN(SIEGE_MYSTICALS, 3), ["celestial", "celestial"]),
+      pickN(SIEGE_ELITES, 2).concat(pickN(SIEGE_MYSTICALS, 2), pickN(SIEGE_NESTERS, 1), pickN(SIEGE_ROGUES, 1), ["celestial", "celestial"]),
       ["eternal"],
     ];
   }
@@ -1357,7 +1378,7 @@
     note(`Wave ${waveId + 1} has started!`, 4000);
     for (const id of wave) spawnSiegeBoss(id, false);
     const sentries = Math.floor(waveId / 2);
-    for (let i = 0; i < sentries; i++) spawnSiegeBoss("sentry_gun", true);
+    for (let i = 0; i < sentries; i++) spawnSiegeBoss(SIEGE_SENTRIES[i % SIEGE_SENTRIES.length], true);
     const tier = Math.min(6, Math.floor(waveId / 5) + 1);
     if (tier !== state.siegeTier) {
       state.siegeTier = tier;
@@ -3289,9 +3310,10 @@
       if (prey) {
         tx = prey.x;
         ty = prey.y;
-        tank.angle = aimAt(tank, prey, tankStats(tank));
         tank.aiTarget = prey;
+        if (!getDef(tank).spin) tank.angle = aimAt(tank, prey, tankStats(tank));
       }
+      if (getDef(tank).spin) tank.angle += 2.4 * dt;
       const st = tankStats(tank);
       const ang = Math.atan2(ty - tank.y, tx - tank.x);
       const push = tank.fodder ? 70 : 48;
@@ -4746,7 +4768,18 @@
       if (b.kind === "trap" || b.kind === "heal") {
         drawPoly(ctx, b.x, b.y, b.r, 4, b.angle, b.color);
       } else if (b.kind === "drone" || b.kind === "swarm") {
-        drawPoly(ctx, b.x, b.y, b.r, b.sides || (b.kind === "swarm" ? 3 : 3), b.angle, b.color);
+        const sides = b.sides || (b.kind === "swarm" ? 3 : 3);
+        if (sides < 3) {
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.r, 0, TAU);
+          ctx.fillStyle = b.color;
+          ctx.strokeStyle = darken(b.color);
+          ctx.lineWidth = 2.5;
+          ctx.fill();
+          ctx.stroke();
+        } else {
+          drawPoly(ctx, b.x, b.y, b.r, sides, b.angle, b.color);
+        }
       } else if (b.kind === "minion") {
         const a = b.turretAim == null ? b.angle : b.turretAim;
         ctx.save();
