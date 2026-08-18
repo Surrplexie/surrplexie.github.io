@@ -325,6 +325,7 @@
       bulletSize: (def.bulletSize || 1) * (m.size || 1),
       maxDrones: def.maxDrones || 0,
     };
+    if ((def.reload || 1) <= 0.55) out.reload = Math.max(0.12, out.reload * 1.28);
     if (tank && tank.mothership) {
       out.maxHealth = Math.max(24000, out.maxHealth);
       out.regen = Math.max(48, out.regen);
@@ -351,49 +352,68 @@
     const inner = Math.max(1, window.innerWidth);
     const outer = window.outerWidth || inner;
     let sizeZ = outer / inner;
-    if (!isFinite(sizeZ) || sizeZ < 0.25 || sizeZ > 5) sizeZ = 1;
+    if (!isFinite(sizeZ) || sizeZ < 0.15 || sizeZ > 8) sizeZ = 1;
 
     const dprNow = window.devicePixelRatio || 1;
     const pinch = (window.visualViewport && window.visualViewport.scale) || 1;
-    const sizeSaysZoom = Math.abs(sizeZ - 1) >= 0.07;
-    const looksNativeDpr = [1, 1.5, 2, 2.5, 3].some((n) => Math.abs(dprNow - n) < 0.04);
-    const dprAgrees = Math.abs(dprNow - sizeZ) < 0.15
-      || Math.abs(dprNow / 2 - sizeZ) < 0.15
-      || Math.abs(dprNow * 2 - sizeZ) < 0.15;
-
-    let z = 1;
-    if (sizeSaysZoom && (dprAgrees || !looksNativeDpr)) z = sizeZ;
-    if (Math.abs(pinch - 1) > 0.02) z *= pinch;
-    const steps = [0.25, 0.33, 0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5];
-    let best = z;
+    const natives = [1, 1.25, 1.5, 1.75, 2, 2.5, 3];
+    const zooms = [0.25, 0.33, 0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5];
+    let dprZ = 1;
     let bestD = Infinity;
-    for (const s of steps) {
+    for (const n of natives) {
+      for (const zz of zooms) {
+        const d = Math.abs(dprNow - n * zz);
+        if (d < bestD) {
+          bestD = d;
+          dprZ = zz;
+        }
+      }
+    }
+    if (natives.some((n) => Math.abs(dprNow - n) < 0.03)) dprZ = 1;
+
+    const sizeSaysZoom = Math.abs(sizeZ - 1) >= 0.06;
+    let z = 1;
+    if (sizeSaysZoom) z = sizeZ;
+    else if (Math.abs(dprZ - 1) >= 0.06) z = dprZ;
+    if (Math.abs(pinch - 1) > 0.02) z *= pinch;
+
+    let best = z;
+    let snapD = Infinity;
+    for (const s of zooms) {
       const d = Math.abs(z - s);
-      if (d < bestD) {
-        bestD = d;
+      if (d < snapD) {
+        snapD = d;
         best = s;
       }
     }
-    if (bestD < 0.06) z = best;
-    return clamp(z, 0.25, 5);
+    if (snapD < 0.07) z = best;
+    return clamp(z, 0.2, 5);
+  }
+
+  function clearZoomFix(el) {
+    el.style.transform = "";
+    el.style.transformOrigin = "";
+    el.style.width = "";
+    el.style.height = "";
   }
 
   function applyAntiZoom() {
     pageZ = detectBrowserZoom();
     const root = document.documentElement;
+    const body = document.body;
+    if (!body) return;
+    clearZoomFix(root);
+    clearZoomFix(root);
     if (Math.abs(pageZ - 1) < 0.02) {
       pageZ = 1;
-      root.style.transform = "";
-      root.style.transformOrigin = "";
-      root.style.width = "";
-      root.style.height = "";
+      clearZoomFix(body);
       return;
     }
     const inv = 1 / pageZ;
-    root.style.transformOrigin = "0 0";
-    root.style.transform = `scale(${inv})`;
-    root.style.width = `${100 / inv}%`;
-    root.style.height = `${100 / inv}%`;
+    body.style.transformOrigin = "0 0";
+    body.style.transform = `scale(${inv})`;
+    body.style.width = `${100 * pageZ}%`;
+    body.style.height = `${100 * pageZ}%`;
   }
 
   function pointerToGame(e) {
