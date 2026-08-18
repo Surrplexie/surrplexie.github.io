@@ -1890,8 +1890,8 @@
     const best = Math.max(tank.score, Number(localStorage.getItem("tankfield-best") || 0));
     localStorage.setItem("tankfield-best", String(best));
     els.deathMsg.textContent = `Destroyed by ${tank.killedBy}.`;
-    els.deathStats.textContent = `Score ${Math.floor(tank.score)}  ·  Level ${tank.level}  ·  ${getDef(tank).name}`;
-    els.bestScore.textContent = `Best score: ${Math.floor(best)}`;
+    els.deathStats.textContent = `Score ${formatScore(tank.score)}  ·  Level ${tank.level}  ·  ${getDef(tank).name}`;
+    els.bestScore.textContent = `Best score: ${formatScore(best)}`;
     state.respawnAt = state.time + 5;
     updateRespawnUi();
     els.death.classList.remove("hidden");
@@ -3252,10 +3252,25 @@
   }
 
   function formatScore(n) {
-    n = Math.floor(n);
-    if (n >= 1000000) return (n / 1000000).toFixed(2) + "m";
-    if (n >= 1000) return (n / 1000).toFixed(2) + "k";
-    return String(n);
+    n = Math.max(0, Number(n) || 0);
+    const units = ["", "K", "M", "B", "T", "Qa"];
+    let u = 0;
+    let v = n;
+    while (v >= 1000 && u < units.length - 1) {
+      v /= 1000;
+      u += 1;
+    }
+    if (!u) return Math.floor(n).toLocaleString("en-US");
+    let decimals = v >= 100 ? 1 : 2;
+    let s = v.toFixed(decimals);
+    if (Number(s) >= 1000 && u < units.length - 1) {
+      v /= 1000;
+      u += 1;
+      s = v.toFixed(2);
+    }
+    const parts = s.split(".");
+    const head = Number(parts[0]).toLocaleString("en-US");
+    return (parts[1] ? `${head}.${parts[1]}` : head) + units[u];
   }
 
   function updateHud() {
@@ -3284,7 +3299,7 @@
       else if (state.player && state.player.mothership) els.playerName.textContent = p.name + "  ·  Mothership";
       else els.playerName.textContent = state.hunted === p ? p.name + "  ·  HUNTED" : p.name;
     }
-    if (els.scoreText) els.scoreText.textContent = `Score: ${Math.floor(p.score).toLocaleString()}`;
+    if (els.scoreText) els.scoreText.textContent = `Score: ${formatScore(p.score)}`;
     if (els.scoreFill) els.scoreFill.style.width = `${clamp((p.score / top) * 100, 8, 100)}%`;
     if (els.killsText) els.killsText.textContent = `Kills: ${p.kills || 0}`;
     if (els.killsFill) els.killsFill.style.width = `${clamp((p.kills || 0) * 10, 8, 100)}%`;
