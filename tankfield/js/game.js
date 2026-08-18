@@ -121,6 +121,7 @@
     spectateBar: document.getElementById("spectate-bar"),
     spectateLabel: document.getElementById("spectate-label"),
     spectateNext: document.getElementById("spectate-next"),
+    spectateFreeBtn: document.getElementById("spectate-free"),
     spectateAgain: document.getElementById("spectate-again"),
     spectateMenu: document.getElementById("spectate-menu"),
   };
@@ -166,6 +167,7 @@
     userPaused: false,
     spectating: false,
     spectateTarget: null,
+    ghost: null,
     lastKiller: null,
     walls: [],
     doms: [],
@@ -1094,6 +1096,8 @@
     state.userPaused = false;
     state.spectating = false;
     state.spectateTarget = null;
+    state.ghost = null;
+    state.camera.zoom = 1;
     state.lastKiller = null;
     state.alphaRespawnAt = 0;
     state.pentagonAt = rand(30, 60);
@@ -1352,10 +1356,34 @@
     return state.tanks.filter((t) => t.alive && !t.closer);
   }
 
+  function spectateFree() {
+    return !!(state.spectating && state.ghost && !(state.spectateTarget && state.spectateTarget.alive));
+  }
+
+  function placeGhost(x, y) {
+    const r = 16;
+    state.ghost = {
+      x: clamp(x, r, WORLD.w - r),
+      y: clamp(y, r, WORLD.h - r),
+      r,
+      ghost: true,
+      alive: true,
+    };
+  }
+
   function cameraFocus() {
-    if (state.spectating && state.spectateTarget && state.spectateTarget.alive) return state.spectateTarget;
+    if (state.spectating) {
+      if (state.spectateTarget && state.spectateTarget.alive) return state.spectateTarget;
+      if (state.ghost) return state.ghost;
+    }
     if (state.player && state.player.alive) return state.player;
     return spectateList()[0] || state.player;
+  }
+
+  function viewFov() {
+    const p = cameraFocus();
+    if (!p || p.ghost || !p.alive) return 1;
+    return tankStats(p).fov || 1;
   }
 
   function beginSpectate() {
@@ -1366,27 +1394,71 @@
     state.userPaused = false;
     const ws = document.getElementById("workshop");
     state.paused = !!(ws && !ws.classList.contains("hidden"));
-    const list = spectateList();
-    const killer = state.lastKiller && state.lastKiller.alive ? state.lastKiller : null;
-    state.spectateTarget = killer || list[0] || null;
+    const src = state.player || state.camera;
+    placeGhost(src.x, src.y);
+    state.spectateTarget = null;
     if (els.spectateBar) els.spectateBar.classList.remove("hidden");
     updateSpectateLabel();
     try { renderClassPanel(); } catch (err) {}
   }
 
+  function enterFreeCam(from) {
+    if (!state.ghost) placeGhost(state.camera.x, state.camera.y);
+    if (from) {
+      state.ghost.x = from.x;
+      state.ghost.y = from.y;
+    }
+    state.spectateTarget = null;
+    updateSpectateLabel();
+  }
+
   function cycleSpectate(dir) {
     const list = spectateList();
-    if (!list.length) return;
-    let i = list.indexOf(state.spectateTarget);
+    const slots = [null, ...list];
+    let i = state.spectateTarget && state.spectateTarget.alive ? slots.indexOf(state.spectateTarget) : 0;
     if (i < 0) i = 0;
-    i = (i + dir + list.length) % list.length;
-    state.spectateTarget = list[i];
+    i = (i + dir + slots.length) % slots.length;
+    state.spectateTarget = slots[i];
+    if (state.spectateTarget && state.ghost) {
+      state.ghost.x = state.spectateTarget.x;
+      state.ghost.y = state.spectateTarget.y;
+    }
     updateSpectateLabel();
+  }
+
+  function bumpSpectateZoom(dir) {
+    if (!state.spectating) return;
+    const step = dir > 0 ? 1.12 : 1 / 1.12;
+    state.camera.zoom = clamp(state.camera.zoom * step, 0.28, 3.4);
+  }
+
+  function updateGhost(dt) {
+    if (!state.spectating || !state.ghost) return;
+    const moving = keys.has("w") || keys.has("arrowup") || keys.has("s") || keys.has("arrowdown")
+      || keys.has("a") || keys.has("arrowleft") || keys.has("d") || keys.has("arrowright");
+    if (state.spectateTarget && state.spectateTarget.alive) {
+      if (moving) enterFreeCam(state.spectateTarget);
+      else return;
+    }
+    let mx = 0;
+    let my = 0;
+    if (keys.has("w") || keys.has("arrowup")) my -= 1;
+    if (keys.has("s") || keys.has("arrowdown")) my += 1;
+    if (keys.has("a") || keys.has("arrowleft")) mx -= 1;
+    if (keys.has("d") || keys.has("arrowright")) mx += 1;
+    if (!mx && !my) return;
+    const m = Math.hypot(mx, my) || 1;
+    const speed = 560;
+    const g = state.ghost;
+    g.x = clamp(g.x + (mx / m) * speed * dt, g.r, WORLD.w - g.r);
+    g.y = clamp(g.y + (my / m) * speed * dt, g.r, WORLD.h - g.r);
   }
 
   function updateSpectateLabel() {
     const t = state.spectateTarget;
-    if (els.spectateLabel) els.spectateLabel.textContent = t && t.alive ? `Spectating ${t.name}` : "Spectating";
+    if (!els.spectateLabel) return;
+    if (t && t.alive) els.spectateLabel.textContent = `Spectating ${t.name}  ·  WASD to fly`;
+    else els.spectateLabel.textContent = "Free camera  ·  WASD · scroll zoom";
   }
 
   function setUserPaused(on) {
@@ -1403,6 +1475,9 @@
     state.userPaused = false;
     state.paused = false;
     state.spectating = false;
+    state.spectateTarget = null;
+    state.ghost = null;
+    state.camera.zoom = 1;
     if (els.pause) els.pause.classList.add("hidden");
     if (els.spectateBar) els.spectateBar.classList.add("hidden");
     els.death.classList.add("hidden");
@@ -2015,9 +2090,7 @@
 
   function screenToWorld(sx, sy) {
     const cam = state.camera;
-    const p = cameraFocus();
-    const fov = p ? tankStats(p).fov : 1;
-    const zoom = cam.zoom / fov;
+    const zoom = cam.zoom / viewFov();
     return { x: cam.x + (sx - width / 2) / zoom, y: cam.y + (sy - height / 2) / zoom };
   }
 
@@ -2145,6 +2218,7 @@
     updateDoms(dt);
     if (state.closing && !state.closersSpawned && state.time >= state.closeAt) spawnArenaClosers();
     if (!state.spectating) updatePlayer(dt);
+    else updateGhost(dt);
 
     for (const tank of state.tanks) {
       if (!tank.alive) continue;
@@ -2397,8 +2471,13 @@
 
     const p = cameraFocus();
     if (p) {
-      state.camera.x = lerp(state.camera.x, p.x, 1 - Math.pow(0.0002, dt));
-      state.camera.y = lerp(state.camera.y, p.y, 1 - Math.pow(0.0002, dt));
+      if (p.ghost) {
+        state.camera.x = p.x;
+        state.camera.y = p.y;
+      } else {
+        state.camera.x = lerp(state.camera.x, p.x, 1 - Math.pow(0.0002, dt));
+        state.camera.y = lerp(state.camera.y, p.y, 1 - Math.pow(0.0002, dt));
+      }
       updateHud();
     }
   }
@@ -2422,9 +2501,10 @@
     const top = Math.max(1, ranked[0] ? ranked[0].score : 1);
     const free = skillPointsFor(p.level) - spentPoints(p);
     if (els.xpFill) els.xpFill.style.width = `${clamp(pct, 0, 100)}%`;
-    if (els.xpLabel) els.xpLabel.textContent = `Level ${p.level} ${def.name}`;
+    if (els.xpLabel) els.xpLabel.textContent = spectateFree() ? "Free camera" : `Level ${p.level} ${def.name}`;
     if (els.playerName) {
-      if (state.spectating) els.playerName.textContent = (p.name || "Tank") + "  ·  spectate";
+      if (spectateFree()) els.playerName.textContent = "Spectator";
+      else if (state.spectating) els.playerName.textContent = (p.name || "Tank") + "  ·  spectate";
       else if (state.player && state.player.mothership) els.playerName.textContent = p.name + "  ·  Mothership";
       else els.playerName.textContent = state.hunted === p ? p.name + "  ·  HUNTED" : p.name;
     }
@@ -2707,6 +2787,20 @@
     c.fill();
   }
 
+  function drawGhost(c, g) {
+    if (!g) return;
+    c.save();
+    c.beginPath();
+    c.arc(g.x, g.y, g.r, 0, TAU);
+    c.fillStyle = "rgba(255,255,255,0.18)";
+    c.fill();
+    c.strokeStyle = "rgba(255,255,255,0.7)";
+    c.lineWidth = 2.4;
+    c.setLineDash([5, 4]);
+    c.stroke();
+    c.restore();
+  }
+
   function drawTank(c, tank, opts = {}) {
     const def = tank.customDef || TankCatalog.get(tank.classId);
     const guns = def.guns || [];
@@ -2797,9 +2891,7 @@
 
   function render() {
     const cam = state.camera;
-    const p = cameraFocus();
-    const fov = p && p.alive ? tankStats(p).fov : 1;
-    const zoom = cam.zoom / fov;
+    const zoom = cam.zoom / viewFov();
     const sx = (Math.random() - 0.5) * shake;
     const sy = (Math.random() - 0.5) * shake;
 
@@ -2909,6 +3001,7 @@
     }
 
     for (const t of state.tanks) if (t.alive) drawTank(ctx, t);
+    if (spectateFree()) drawGhost(ctx, state.ghost);
 
     for (const pt of state.particles) {
       ctx.globalAlpha = pt.life / pt.max;
@@ -2947,12 +3040,13 @@
       mctx.fill();
     }
     const p = cameraFocus();
+    const watching = state.spectating;
     for (const t of state.tanks) {
       if (!t.alive || t.closer) continue;
       const self = t === p;
       const ally = !!(p && t.team && p.team && t.team === p.team);
       const boss = !!t.mothership;
-      if (!self && !ally && !boss) continue;
+      if (!watching && !self && !ally && !boss) continue;
       mctx.fillStyle = t.color;
       mctx.beginPath();
       mctx.arc(mapX(t.x), mapY(t.y), boss ? 6 : self ? 4 : 3, 0, TAU);
@@ -2962,6 +3056,13 @@
         mctx.lineWidth = 1.2;
         mctx.stroke();
       }
+    }
+    if (spectateFree() && state.ghost) {
+      mctx.beginPath();
+      mctx.arc(mapX(state.ghost.x), mapY(state.ghost.y), 4, 0, TAU);
+      mctx.strokeStyle = "#fff";
+      mctx.lineWidth = 1.6;
+      mctx.stroke();
     }
   }
 
@@ -2990,7 +3091,14 @@
     window.visualViewport.addEventListener("scroll", resize);
   }
   window.addEventListener("wheel", (e) => {
-    if (e.ctrlKey || e.metaKey) e.preventDefault();
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      return;
+    }
+    if (running && state.spectating) {
+      e.preventDefault();
+      bumpSpectateZoom(e.deltaY < 0 ? 1 : -1);
+    }
   }, { passive: false });
   window.addEventListener("gesturestart", (e) => e.preventDefault());
   window.addEventListener("gesturechange", (e) => e.preventDefault());
@@ -3018,6 +3126,16 @@
     if (["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(k)) e.preventDefault();
     keys.add(k);
     if (e.code) keys.add(e.code.toLowerCase());
+    if (running && state.spectating && (k === "+" || k === "=" || e.code === "NumpadAdd")) {
+      e.preventDefault();
+      bumpSpectateZoom(1);
+      return;
+    }
+    if (running && state.spectating && (k === "-" || k === "_" || e.code === "NumpadSubtract")) {
+      e.preventDefault();
+      bumpSpectateZoom(-1);
+      return;
+    }
     if (tryDevCloserEgg(e)) {
       e.preventDefault();
       return;
@@ -3154,6 +3272,7 @@
   if (els.pauseMenu) els.pauseMenu.addEventListener("click", goToMenu);
   if (els.spectateBtn) els.spectateBtn.addEventListener("click", beginSpectate);
   if (els.spectateNext) els.spectateNext.addEventListener("click", () => cycleSpectate(1));
+  if (els.spectateFreeBtn) els.spectateFreeBtn.addEventListener("click", () => enterFreeCam(cameraFocus()));
   if (els.spectateAgain) els.spectateAgain.addEventListener("click", () => startGame(state.spawnName, state.playOpts || {}));
   if (els.spectateMenu) els.spectateMenu.addEventListener("click", goToMenu);
   if (els.editInGame) els.editInGame.addEventListener("click", openWorkshop);
