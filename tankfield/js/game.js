@@ -868,7 +868,7 @@
     const nBots = teams.length || botCountFor(state.mode);
     for (let i = 0; i < nBots; i++) {
       const team = teams[i] || null;
-      const score = irand(0, 2200);
+      const score = state.mode === "protect" ? xpForLevel(LEVEL_CAP) : irand(0, 2200);
       const bot = createTank({
         name: names[i % names.length],
         ai: true,
@@ -1090,7 +1090,7 @@
       color: colorFor({ team, player: true }),
       classId: opts.classId || "basic",
       customDef: opts.customDef || null,
-      score: opts.sandbox ? xpForLevel(LEVEL_CAP) : 0,
+      score: opts.sandbox || state.mode === "protect" ? xpForLevel(LEVEL_CAP) : 0,
       pos: (state.mode === "tdm" || state.mode === "4tdm") && team
         ? spawnInBase(team)
         : home
@@ -1101,10 +1101,8 @@
     player.spawnProtect = 30;
     if (opts.maxStats && state.mode !== "protect") maxOutTank(player);
     if (state.mode === "protect") {
-      player.score = 0;
-      for (const st of STATS) player.stats[st.key] = 0;
-      applyLevel(player);
       player.health = player.maxHealth;
+      state.classDismissed = false;
     }
     state.player = player;
     state.pilotTank = player;
@@ -1184,10 +1182,11 @@
             classId: "basic",
             team,
             color: TEAMS[team].color,
-            score: 0,
+            score: xpForLevel(LEVEL_CAP),
             pos: around(home.x, home.y, 220),
           });
           p.spawnProtect = 8;
+          state.classDismissed = false;
           state.player = p;
           state.pilotTank = p;
           state.tanks.push(p);
@@ -1209,7 +1208,7 @@
       const team = tank.team;
       setTimeout(() => {
         if (!running || state.closing) return;
-        const score = irand(0, 400);
+        const score = state.mode === "protect" ? xpForLevel(LEVEL_CAP) : irand(0, 400);
         const bot = createTank({
           name: tank.name,
           ai: true,
@@ -2944,7 +2943,7 @@
     "4tdm": "Four bases · blue, red, green, purple",
     manhunt: "Everyone hunts #1 · hunted gets a small boost · hunters can still fight each other",
     tag: "Shoot to convert · last team standing closes the arena",
-    protect: "Two motherships · defend yours · start at lv1 · [N] skip to 45 · [H] to take control",
+    protect: "Two motherships · defend yours · everyone starts at 45 · [N] skip to 45 · [H] to take control",
     maze: "FFA inside generated walls",
     domination: "Capture 4 points · hold 3 to close the arena",
     sandbox: "Level 45 · pick any tank",
