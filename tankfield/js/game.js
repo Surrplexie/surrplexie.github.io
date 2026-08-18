@@ -128,6 +128,7 @@
   let dpr = 1;
   let width = 0;
   let height = 0;
+  let pageZ = 1;
   let last = 0;
   let running = false;
   let shake = 0;
@@ -334,13 +335,74 @@
   function skillPointsFor(level) { return Math.min(level - 1, 33); }
   function spentPoints(tank) { return STATS.reduce((n, st) => n + tank.stats[st.key], 0); }
 
+  function detectBrowserZoom() {
+    const inner = Math.max(1, window.innerWidth);
+    const outer = window.outerWidth || inner;
+    let sizeZ = outer / inner;
+    if (!isFinite(sizeZ) || sizeZ < 0.25 || sizeZ > 5) sizeZ = 1;
+
+    const dprNow = window.devicePixelRatio || 1;
+    const pinch = (window.visualViewport && window.visualViewport.scale) || 1;
+    const sizeSaysZoom = Math.abs(sizeZ - 1) >= 0.07;
+    const looksNativeDpr = [1, 1.5, 2, 2.5, 3].some((n) => Math.abs(dprNow - n) < 0.04);
+    const dprAgrees = Math.abs(dprNow - sizeZ) < 0.15
+      || Math.abs(dprNow / 2 - sizeZ) < 0.15
+      || Math.abs(dprNow * 2 - sizeZ) < 0.15;
+
+    let z = 1;
+    if (sizeSaysZoom && (dprAgrees || !looksNativeDpr)) z = sizeZ;
+    if (Math.abs(pinch - 1) > 0.02) z *= pinch;
+    const steps = [0.25, 0.33, 0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5];
+    let best = z;
+    let bestD = Infinity;
+    for (const s of steps) {
+      const d = Math.abs(z - s);
+      if (d < bestD) {
+        bestD = d;
+        best = s;
+      }
+    }
+    if (bestD < 0.06) z = best;
+    return clamp(z, 0.25, 5);
+  }
+
+  function applyAntiZoom() {
+    pageZ = detectBrowserZoom();
+    const root = document.documentElement;
+    if (Math.abs(pageZ - 1) < 0.02) {
+      pageZ = 1;
+      root.style.transform = "";
+      root.style.transformOrigin = "";
+      root.style.width = "";
+      root.style.height = "";
+      return;
+    }
+    const inv = 1 / pageZ;
+    root.style.transformOrigin = "0 0";
+    root.style.transform = `scale(${inv})`;
+    root.style.width = `${100 / inv}%`;
+    root.style.height = `${100 / inv}%`;
+  }
+
+  function pointerToGame(e) {
+    const rect = canvas.getBoundingClientRect();
+    const rw = rect.width || 1;
+    const rh = rect.height || 1;
+    mouse.x = ((e.clientX - rect.left) / rw) * width;
+    mouse.y = ((e.clientY - rect.top) / rh) * height;
+  }
+
   function resize() {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
-    width = window.innerWidth;
-    height = window.innerHeight;
+    applyAntiZoom();
+    const nativeDpr = (window.devicePixelRatio || 1) / pageZ;
+    dpr = Math.min(Math.max(nativeDpr, 1), 2);
+    width = window.innerWidth * pageZ;
+    height = window.innerHeight * pageZ;
     canvas.width = Math.floor(width * dpr);
     canvas.height = Math.floor(height * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    document.documentElement.style.setProperty("--app-w", `${width}px`);
+    document.documentElement.style.setProperty("--app-h", `${height}px`);
   }
 
   function randomInWorld(margin = 80) {
@@ -2526,7 +2588,23 @@
   }
 
   window.addEventListener("resize", resize);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", resize);
+    window.visualViewport.addEventListener("scroll", resize);
+  }
+  window.addEventListener("wheel", (e) => {
+    if (e.ctrlKey || e.metaKey) e.preventDefault();
+  }, { passive: false });
+  window.addEventListener("gesturestart", (e) => e.preventDefault());
+  window.addEventListener("gesturechange", (e) => e.preventDefault());
   window.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && (
+      ["+", "-", "=", "_", "0"].includes(e.key)
+      || ["Equal", "Minus", "Digit0", "NumpadAdd", "NumpadSubtract", "Numpad0"].includes(e.code)
+    )) {
+      e.preventDefault();
+      return;
+    }
     if (e.key === "Escape") {
       e.preventDefault();
       handleEscape(e);
@@ -2565,7 +2643,8 @@
   });
   window.addEventListener("keyup", (e) => keys.delete(e.key.toLowerCase()));
   window.addEventListener("blur", () => keys.clear());
-  canvas.addEventListener("mousemove", (e) => { mouse.x = e.clientX; mouse.y = e.clientY; });
+  canvas.addEventListener("mousemove", pointerToGame);
+  canvas.addEventListener("pointermove", pointerToGame);
   canvas.addEventListener("mousedown", (e) => {
     if (e.button === 0) mouse.down = true;
     if (e.button === 2) mouse.right = true;
