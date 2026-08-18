@@ -2478,31 +2478,39 @@
     }
     if (els.skillPoints) els.skillPoints.textContent = state.spectating ? "" : (free > 0 ? `x${free}` : "");
     let html = "";
+    const teamRows = [];
     if (state.mode === "tdm" || state.mode === "4tdm") {
       const ids = state.mode === "4tdm" ? TEAM4 : ["blue", "red"];
       for (const id of ids) {
         const sum = state.tanks.filter((t) => t.alive && t.team === id).reduce((n, t) => n + t.score, 0);
-        html += `<li class="team-tot"><span><i class="lb-dot" style="background:${TEAMS[id].color}"></i>${TEAMS[id].name} — ${formatScore(sum)}</span></li>`;
+        teamRows.push({ value: sum, color: TEAMS[id].color, label: `${TEAMS[id].name} — ${formatScore(sum)}` });
       }
     }
     if (state.mode === "tag") {
       const green = state.tanks.filter((t) => t.alive && !t.closer && t.team === "green").length;
       const redn = state.tanks.filter((t) => t.alive && !t.closer && t.team === "red").length;
-      html += `<li class="team-tot"><span><i class="lb-dot" style="background:${TEAMS.green.color}"></i>Green — ${green}</span></li>`;
-      html += `<li class="team-tot"><span><i class="lb-dot" style="background:${TEAMS.red.color}"></i>Red — ${redn}</span></li>`;
+      teamRows.push({ value: green, color: TEAMS.green.color, label: `Green — ${green}` });
+      teamRows.push({ value: redn, color: TEAMS.red.color, label: `Red — ${redn}` });
     }
     if (state.mode === "protect") {
       const g = mothershipOf("green");
       const r = mothershipOf("red");
-      html += `<li class="team-tot"><span><i class="lb-dot" style="background:${TEAMS.green.color}"></i>Green mothership — ${g ? Math.round((g.health / g.maxHealth) * 100) : 0}%</span></li>`;
-      html += `<li class="team-tot"><span><i class="lb-dot" style="background:${TEAMS.red.color}"></i>Red mothership — ${r ? Math.round((r.health / r.maxHealth) * 100) : 0}%</span></li>`;
+      const gp = g ? Math.round((g.health / Math.max(1, g.maxHealth)) * 100) : 0;
+      const rp = r ? Math.round((r.health / Math.max(1, r.maxHealth)) * 100) : 0;
+      teamRows.push({ value: gp, color: TEAMS.green.color, label: `Green mothership — ${gp}%` });
+      teamRows.push({ value: rp, color: TEAMS.red.color, label: `Red mothership — ${rp}%` });
     }
     if (state.mode === "domination") {
-      html += `<li class="team-tot"><span><i class="lb-dot" style="background:${TEAMS.blue.color}"></i>Blue points — ${state.doms.filter((d) => d.team === "blue").length}</span></li>`;
-      html += `<li class="team-tot"><span><i class="lb-dot" style="background:${TEAMS.red.color}"></i>Red points — ${state.doms.filter((d) => d.team === "red").length}</span></li>`;
+      const bp = state.doms.filter((d) => d.team === "blue").length;
+      const rp = state.doms.filter((d) => d.team === "red").length;
+      teamRows.push({ value: bp, color: TEAMS.blue.color, label: `Blue points — ${bp}` });
+      teamRows.push({ value: rp, color: TEAMS.red.color, label: `Red points — ${rp}` });
     }
+    teamRows.sort((a, b) => b.value - a.value);
+    html = teamRows.map((r) => `<li class="team-tot"><span><i class="lb-dot" style="background:${r.color}"></i>${r.label}</span></li>`).join("");
+    const teamMode = teamRows.length > 0;
     els.leaders.innerHTML = html + ranked.map((t) =>
-      `<li class="${t === state.player ? "you" : ""} ${t === state.hunted ? "hunted" : ""}"><div class="lb-fill" style="width:${clamp((t.score / top) * 100, 8, 100)}%"></div><span><i class="lb-dot" style="background:${t.color}"></i>${escapeHtml(t.name)}${t === state.hunted ? " · hunted" : ""} — ${escapeHtml(getDef(t).name)} — ${formatScore(t.score)}</span></li>`
+      `<li class="${t === state.player ? "you" : ""} ${t === state.hunted ? "hunted" : ""}">${teamMode ? "" : `<div class="lb-fill" style="width:${clamp((t.score / top) * 100, 8, 100)}%"></div>`}<span><i class="lb-dot" style="background:${t.color}"></i>${escapeHtml(t.name)}${t === state.hunted ? " · hunted" : ""} — ${escapeHtml(getDef(t).name)} — ${formatScore(t.score)}</span></li>`
     ).join("");
   }
 

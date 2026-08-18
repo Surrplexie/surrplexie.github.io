@@ -421,6 +421,10 @@ kbd {
   margin-bottom: 5px;
 }
 
+#leader-list li.team-tot .lb-fill {
+  display: none;
+}
+
 #leader-list .lb-fill {
   position: absolute;
   inset: 0 auto 0 0;
