@@ -1152,27 +1152,42 @@
     desc: "Stationary hexagonal gun that holds a point",
     body: 6,
     guns: [gun(22, 16, 1, 0, 0, 0, 0, { recoil: 0 })],
-    health: 22,
+    health: 44,
     speed: 0.01,
     fov: 1.15,
-    reload: 2.15,
-    bulletSpeed: 1.05,
-    bulletDamage: 3.1,
-    bulletPen: 3.2,
-    bulletSize: 1.85,
-    bodyDamage: 4.2,
+    reload: 2.48,
+    bulletSpeed: 1.08,
+    bulletDamage: 5.2,
+    bulletPen: 3.6,
+    bulletSize: 1.9,
+    bodyDamage: 5.4,
+    upgrades: [],
+    needLevel: 45,
+  });
+
+  def("dom_idle", {
+    name: "Dominator",
+    desc: "Captured dominator with no guns",
+    body: 6,
+    guns: [],
+    health: 44,
+    speed: 0.01,
+    fov: 1,
+    reload: 1,
+    bulletDamage: 1,
+    bodyDamage: 5.4,
     upgrades: [],
     needLevel: 45,
   });
 
   def("assault_guard", {
     name: "Trapper",
-    desc: "Healer-zone guard with stronger lingering traps",
+    desc: "Dominator-zone guard traps that block weak shots",
     guns: [0, 120, 240].flatMap((a) => G.trap(a)),
-    health: 1.28,
-    reload: 1.22,
-    bulletDamage: 1.28,
-    bulletPen: 1.15,
+    health: 1.32,
+    reload: 1.38,
+    bulletDamage: 1.32,
+    bulletPen: 1.7,
     bodyDamage: 1.15,
     upgrades: [],
     needLevel: 45,
@@ -1182,24 +1197,24 @@
     name: "Healer",
     desc: "Main spawn dominator that fires healing shells",
     guns: [0, 45, 90, 135, 180, 225, 270, 315].map((a) =>
-      gun(14, 7.2, 1, 0, 0, a, a / 360, { type: "heal", recoil: 0, size: 0.95, stats: { speed: 0.52, life: 0.72 } })
+      gun(12, 5.2, 1, 0, 0, a, a / 360, { type: "heal", recoil: 0, size: 0.42, stats: { speed: 0.48, life: 0.85 } })
     ),
-    health: 30,
+    health: 52,
     speed: 0.01,
     fov: 1.1,
-    reload: 0.82,
-    bulletSpeed: 0.7,
+    reload: 0.98,
+    bulletSpeed: 0.62,
     bulletDamage: 0.2,
-    bulletPen: 1,
-    bulletSize: 1.15,
-    bodyDamage: 3.4,
+    bulletPen: 1.35,
+    bulletSize: 0.55,
+    bodyDamage: 4.2,
     upgrades: [],
     needLevel: 45,
   });
 
   const skipAuto = new Set([
     "auto3", "auto5", "auto8", "auto2", "autosmasher", "autogunner", "autosniper", "engineer",
-    "mothership", "arena_closer", "dom_gun", "dom_heal", "assault_guard",
+    "mothership", "arena_closer", "dom_gun", "dom_idle", "dom_heal", "assault_guard",
   ]);
   for (const id of Object.keys(tanks)) {
     const t = tanks[id];

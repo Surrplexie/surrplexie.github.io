@@ -348,7 +348,11 @@
       bulletSize: (def.bulletSize || 1) * (m.size || 1),
       maxDrones: def.maxDrones || 0,
     };
-    if ((def.reload || 1) <= 0.55) out.reload = Math.max(0.12, out.reload * 1.28);
+    if ((def.reload || 1) <= 0.55) out.reload = Math.max(0.12, out.reload * 1.34);
+    if (tank && tank.dominator && !tank.destroyed) {
+      out.regen = Math.max(out.regen, 12);
+      out.maxHealth = Math.max(out.maxHealth, tank.mainBase ? 7600 : 6400);
+    }
     if (tank && tank.mothership) {
       out.maxHealth = Math.max(24000, out.maxHealth);
       out.regen = Math.max(48, out.regen);
@@ -842,11 +846,11 @@
     return p;
   }
 
-  function spawnHealerGuards(healer) {
-    if (!healer) return;
-    const n = irand(4, 6);
-    for (let i = 0; i < n; i++) {
-      const pos = openAround(healer.x, healer.y, 150, assaultZoneR(healer) * 0.72, 36);
+  function spawnDomGuards(dom, n) {
+    if (!dom) return;
+    const count = n == null ? irand(2, 4) : n;
+    for (let i = 0; i < count; i++) {
+      const pos = openAround(dom.x, dom.y, 140, assaultZoneR(dom) * 0.72, 36);
       const g = createTank({
         name: BOT_NAMES[irand(0, BOT_NAMES.length - 1)],
         ai: true,
@@ -857,7 +861,7 @@
         pos,
       });
       g.guard = true;
-      g.guardOf = healer;
+      g.guardOf = dom;
       g.aiJob = "guard";
       g.aiFocus = "gun";
       g.spawnProtect = 2;
@@ -936,7 +940,11 @@
       state.tanks.push(d);
       if (main) healer = d;
     }
-    spawnHealerGuards(healer);
+    spawnDomGuards(healer, irand(4, 6));
+    for (const d of assaultDoms()) {
+      if (d.mainBase) continue;
+      if (Math.random() < 0.48) spawnDomGuards(d, irand(2, 4));
+    }
     state.assaultHold = true;
     state.assaultWinAt = ASSAULT_WIN;
   }
@@ -961,12 +969,22 @@
     if (d.mainBase) assaultWin("blue", "Blue captured the main dominator.");
   }
 
+  function applyDominatorClass(d) {
+    if (!d || !d.dominator) return;
+    const keepHp = d.maxHealth || 0;
+    d.classId = d.team === "blue" ? "dom_idle" : (d.mainBase ? "dom_heal" : "dom_gun");
+    applyLevel(d);
+    if (keepHp > 0) d.maxHealth = keepHp;
+    d.r = d.mainBase ? 78 : 64;
+  }
+
   function claimDominator(d, team) {
     if (!d || !team || !TEAMS[team]) return;
     if (d.mainBase && team === "blue") {
       d.team = "blue";
       d.color = TEAMS.blue.color;
       d.destroyed = false;
+      applyDominatorClass(d);
       d.health = d.maxHealth;
       assaultWin("blue", "Blue captured the main dominator.");
       return;
@@ -976,6 +994,7 @@
     d.repairTeam = null;
     d.team = team;
     d.color = TEAMS[team].color;
+    applyDominatorClass(d);
     d.health = d.maxHealth;
     d.alive = true;
     burst(d.x, d.y, TEAMS[team].color, 16, 180);
@@ -2110,7 +2129,7 @@
     let br = (7.2 * st.bulletSize * sizeMul) * (0.85 + tank.r / 40);
     if (tank.mothership && kind !== "drone" && kind !== "swarm") br = 8.2 * st.bulletSize * sizeMul;
     if (tank.closer) br = 26;
-    if (kind === "heal") br = Math.max(8, br * 0.92);
+    if (kind === "heal") br = Math.max(3.1, br * 0.36);
     let orbit = rand(0, TAU);
     if (kind === "drone" || kind === "swarm") orbit = countOwned(kind, tank) * 2.39996;
     state.bullets.push({
@@ -2119,13 +2138,13 @@
       vx: Math.cos(ang) * speed + tank.vx * 0.15,
       vy: Math.sin(ang) * speed + tank.vy * 0.15,
       r: br,
-      health: st.bulletPen * (kind === "trap" ? 2.7 : kind === "drone" ? 2.2 : 1),
-      damage: st.bulletDamage * (gs.damage || (kind === "trap" ? 0.9 : kind === "swarm" ? 0.55 : 1)),
+      health: st.bulletPen * (kind === "trap" ? 2.62 : kind === "heal" ? 1.15 : kind === "drone" ? 2.2 : 1),
+      damage: st.bulletDamage * (gs.damage || (kind === "trap" ? 0.873 : kind === "swarm" ? 0.55 : 1)),
       life: lifeBase * (gs.life || 1),
-      color: kind === "heal" ? "#f14e54" : tank.color,
+      color: kind === "heal" ? "#8abc3f" : tank.color,
       owner: tank,
       kind,
-      angle: ang,
+      angle: kind === "heal" ? rand(0, TAU) : ang,
       orbit,
       age: 0,
       alive: true,
@@ -2133,7 +2152,7 @@
   }
 
   function wantsFire(tank) {
-    if (tank.dominator) return !tank.destroyed && !!tank.aiTarget && canSee(tank, tank.aiTarget);
+    if (tank.dominator) return !tank.destroyed && tank.team !== "blue" && !!tank.aiTarget && canSee(tank, tank.aiTarget);
     if (tank.mothership) return true;
     if (tank.spawnProtect > 0 && tank.ai) return false;
     if (tank.ai) {
@@ -2423,7 +2442,7 @@
       tank.vx = 0;
       tank.vy = 0;
       if (tank.homeX != null) { tank.x = tank.homeX; tank.y = tank.homeY; }
-      if (tank.destroyed) {
+      if (tank.destroyed || tank.team === "blue") {
         tank.aiTarget = null;
         return;
       }
@@ -3038,6 +3057,8 @@
           b.vy *= Math.pow(0.0001, dt);
         }
         b.angle += dt * 0.4;
+      } else if (b.kind === "heal") {
+        b.angle += dt * 5.6;
       } else if (b.kind === "missile") {
         const spd = Math.hypot(b.vx, b.vy) + 40 * dt;
         const a = Math.atan2(b.vy, b.vx);
@@ -3098,6 +3119,7 @@
       for (let j = i + 1; j < state.bullets.length; j++) {
         const b = state.bullets[j];
         if (!b.alive || a.owner === b.owner || sameTeam(a.owner, b.owner)) continue;
+        if (a.kind === "heal" || b.kind === "heal") continue;
         const aClose = a.owner && a.owner.closer;
         const bClose = b.owner && b.owner.closer;
         if (aClose && bClose) continue;
@@ -3117,8 +3139,8 @@
         }
         const ha = a.health;
         const hb = b.health;
-        a.health -= hb;
-        b.health -= ha;
+        a.health -= (a.kind === "trap" && b.kind !== "trap") ? hb * 0.42 : hb;
+        b.health -= (b.kind === "trap" && a.kind !== "trap") ? ha * 0.42 : ha;
         if (a.health <= 0) {
           a.alive = false;
           burst(a.x, a.y, a.color, 4, 80);
@@ -3583,6 +3605,7 @@
     c.save();
     c.globalAlpha = tank.fade == null ? 1 : tank.fade;
     for (let i = 0; i < guns.length; i++) {
+      if (tank.dominator && (tank.destroyed || tank.team === "blue")) break;
       drawGun(c, tank, guns[i], i, opts.highlightGun === i);
     }
     const sides = def.body || 0;
@@ -3793,6 +3816,8 @@
 
     for (const b of state.bullets) {
       if (b.kind === "trap") {
+        drawPoly(ctx, b.x, b.y, b.r, 4, b.angle, b.color);
+      } else if (b.kind === "heal") {
         drawPoly(ctx, b.x, b.y, b.r, 4, b.angle, b.color);
       } else if (b.kind === "drone") {
         drawPoly(ctx, b.x, b.y, b.r, 4, b.angle, b.color);
