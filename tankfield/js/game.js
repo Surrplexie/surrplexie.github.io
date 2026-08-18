@@ -1887,6 +1887,8 @@
   }
 
   function showDeath(tank) {
+    state.autoFire = false;
+    state.autoSpin = false;
     const best = Math.max(tank.score, Number(localStorage.getItem("tankfield-best") || 0));
     localStorage.setItem("tankfield-best", String(best));
     els.deathMsg.textContent = `Destroyed by ${tank.killedBy}.`;
