@@ -2477,41 +2477,48 @@
       els.arenaMode.textContent = state.closing ? "Arena closing" : `Domination · Blue ${b} – ${r} Red`;
     }
     if (els.skillPoints) els.skillPoints.textContent = state.spectating ? "" : (free > 0 ? `x${free}` : "");
-    let html = "";
-    const teamRows = [];
+    const teamRows = teamBoardRows();
+    if (teamRows) {
+      els.leaders.innerHTML = teamRows.map((r) =>
+        `<li class="team-tot" style="background:${r.color}"><span>${escapeHtml(r.label)}</span></li>`
+      ).join("");
+    } else {
+      els.leaders.innerHTML = ranked.map((t) =>
+        `<li class="${t === state.player ? "you" : ""} ${t === state.hunted ? "hunted" : ""}"><div class="lb-fill" style="width:${clamp((t.score / top) * 100, 8, 100)}%"></div><span><i class="lb-dot" style="background:${t.color}"></i>${escapeHtml(t.name)}${t === state.hunted ? " · hunted" : ""} — ${escapeHtml(getDef(t).name)} — ${formatScore(t.score)}</span></li>`
+      ).join("");
+    }
+  }
+
+  function teamBoardRows() {
+    const rows = [];
     if (state.mode === "tdm" || state.mode === "4tdm") {
       const ids = state.mode === "4tdm" ? TEAM4 : ["blue", "red"];
       for (const id of ids) {
-        const sum = state.tanks.filter((t) => t.alive && t.team === id).reduce((n, t) => n + t.score, 0);
-        teamRows.push({ value: sum, color: TEAMS[id].color, label: `${TEAMS[id].name} — ${formatScore(sum)}` });
+        const sum = state.tanks.filter((t) => t.alive && t.team === id && !t.closer).reduce((n, t) => n + t.score, 0);
+        rows.push({ color: TEAMS[id].color, label: `${TEAMS[id].name} — ${formatScore(sum)}`, sort: sum });
       }
+    } else if (state.mode === "tag") {
+      for (const id of ["green", "red"]) {
+        const n = state.tanks.filter((t) => t.alive && !t.closer && t.team === id).length;
+        rows.push({ color: TEAMS[id].color, label: `${TEAMS[id].name} — ${n}`, sort: n });
+      }
+    } else if (state.mode === "protect") {
+      for (const id of ["green", "red"]) {
+        const m = mothershipOf(id);
+        const hp = m && m.maxHealth ? m.health / m.maxHealth : 0;
+        rows.push({ color: TEAMS[id].color, label: `${TEAMS[id].name} mothership — ${Math.round(hp * 100)}%`, sort: hp });
+      }
+    } else if (state.mode === "domination") {
+      for (const id of ["blue", "red"]) {
+        const pts = state.doms.filter((d) => d.team === id).length;
+        const sum = state.tanks.filter((t) => t.alive && t.team === id && !t.closer).reduce((n, t) => n + t.score, 0);
+        rows.push({ color: TEAMS[id].color, label: `${TEAMS[id].name} — ${pts} pts · ${formatScore(sum)}`, sort: pts * 1e12 + sum });
+      }
+    } else {
+      return null;
     }
-    if (state.mode === "tag") {
-      const green = state.tanks.filter((t) => t.alive && !t.closer && t.team === "green").length;
-      const redn = state.tanks.filter((t) => t.alive && !t.closer && t.team === "red").length;
-      teamRows.push({ value: green, color: TEAMS.green.color, label: `Green — ${green}` });
-      teamRows.push({ value: redn, color: TEAMS.red.color, label: `Red — ${redn}` });
-    }
-    if (state.mode === "protect") {
-      const g = mothershipOf("green");
-      const r = mothershipOf("red");
-      const gp = g ? Math.round((g.health / Math.max(1, g.maxHealth)) * 100) : 0;
-      const rp = r ? Math.round((r.health / Math.max(1, r.maxHealth)) * 100) : 0;
-      teamRows.push({ value: gp, color: TEAMS.green.color, label: `Green mothership — ${gp}%` });
-      teamRows.push({ value: rp, color: TEAMS.red.color, label: `Red mothership — ${rp}%` });
-    }
-    if (state.mode === "domination") {
-      const bp = state.doms.filter((d) => d.team === "blue").length;
-      const rp = state.doms.filter((d) => d.team === "red").length;
-      teamRows.push({ value: bp, color: TEAMS.blue.color, label: `Blue points — ${bp}` });
-      teamRows.push({ value: rp, color: TEAMS.red.color, label: `Red points — ${rp}` });
-    }
-    teamRows.sort((a, b) => b.value - a.value);
-    html = teamRows.map((r) => `<li class="team-tot"><span><i class="lb-dot" style="background:${r.color}"></i>${r.label}</span></li>`).join("");
-    const teamMode = teamRows.length > 0;
-    els.leaders.innerHTML = html + ranked.map((t) =>
-      `<li class="${t === state.player ? "you" : ""} ${t === state.hunted ? "hunted" : ""}">${teamMode ? "" : `<div class="lb-fill" style="width:${clamp((t.score / top) * 100, 8, 100)}%"></div>`}<span><i class="lb-dot" style="background:${t.color}"></i>${escapeHtml(t.name)}${t === state.hunted ? " · hunted" : ""} — ${escapeHtml(getDef(t).name)} — ${formatScore(t.score)}</span></li>`
-    ).join("");
+    rows.sort((a, b) => b.sort - a.sort);
+    return rows;
   }
 
   function escapeHtml(s) {

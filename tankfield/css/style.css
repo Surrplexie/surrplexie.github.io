@@ -416,13 +416,18 @@ kbd {
 }
 
 #leader-list li.team-tot {
-  background: rgba(0, 0, 0, 0.32);
+  background: #888;
   font-weight: 700;
   margin-bottom: 5px;
+  height: 20px;
 }
 
 #leader-list li.team-tot .lb-fill {
   display: none;
+}
+
+#leader-list li.team-tot span {
+  color: #fff;
 }
 
 #leader-list .lb-fill {
