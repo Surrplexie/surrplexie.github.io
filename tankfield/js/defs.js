@@ -1212,9 +1212,211 @@
     needLevel: 45,
   });
 
+  def("elite_destroyer", {
+    name: "Elite Destroyer",
+    desc: "Pink crasher boss with three devastator guns",
+    body: 3,
+    guns: [0, 120, 240].map((a) => gun(8, 16, 1, 6, 0, a, 0, { recoil: 0.4 })),
+    health: 42,
+    speed: 0.22,
+    fov: 1.22,
+    reload: 2.35,
+    bulletSpeed: 0.92,
+    bulletDamage: 3.15,
+    bulletPen: 2.3,
+    bulletSize: 1.65,
+    bodyDamage: 3.6,
+    upgrades: [],
+    needLevel: 45,
+    mods: { size: 2.35, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 },
+  });
+
+  def("elite_gunner", {
+    name: "Elite Gunner",
+    desc: "Pink crasher boss with paired gunner barrels",
+    body: 3,
+    guns: [60, 300].flatMap((a) => [
+      gun(16, 5.2, 1, 0, 4.2, a, 0),
+      gun(16, 5.2, 1, 0, -4.2, a, 0.5),
+    ]),
+    health: 38,
+    speed: 0.24,
+    fov: 1.2,
+    reload: 0.52,
+    bulletDamage: 0.72,
+    bulletSize: 0.72,
+    bodyDamage: 3.2,
+    upgrades: [],
+    needLevel: 45,
+    mods: { size: 2.3, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 },
+  });
+
+  def("elite_sprayer", {
+    name: "Elite Sprayer",
+    desc: "Pink crasher boss that sprays from three faces",
+    body: 3,
+    guns: [0, 120, 240].map((a) => gun(13, 10, 1.35, 4, 0, a, a / 360, { spread: 0.2 })),
+    health: 40,
+    speed: 0.2,
+    fov: 1.18,
+    reload: 0.46,
+    bulletDamage: 0.78,
+    bulletSize: 0.85,
+    bodyDamage: 3.3,
+    upgrades: [],
+    needLevel: 45,
+    mods: { size: 2.32, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 },
+  });
+
+  def("elite_battleship", {
+    name: "Elite Battleship",
+    desc: "Pink crasher boss that launches swarms",
+    body: 3,
+    guns: [0, 120, 240].flatMap((a) => [
+      ...G.swarm(4.2, a, 0),
+      ...G.swarm(-4.2, a, 0.5),
+    ]),
+    health: 44,
+    speed: 0.18,
+    fov: 1.25,
+    reload: 0.7,
+    bulletDamage: 0.85,
+    maxDrones: 18,
+    bodyDamage: 3.4,
+    upgrades: [],
+    needLevel: 45,
+    mods: { size: 2.4, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 },
+  });
+
+  def("summoner", {
+    name: "Summoner",
+    desc: "Square mystical that floods drones",
+    body: 4,
+    guns: [0, 90, 180, 270].flatMap((a) => G.director(a)),
+    health: 48,
+    speed: 0.16,
+    fov: 1.15,
+    reload: 0.85,
+    bulletDamage: 0.95,
+    maxDrones: 28,
+    bodyDamage: 2.8,
+    upgrades: [],
+    needLevel: 45,
+    mods: { size: 2.45, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 },
+  });
+
+  def("nest_keeper", {
+    name: "Nest Keeper",
+    desc: "Pentagon nester with five guns",
+    body: 5,
+    guns: [0, 72, 144, 216, 288].map((a) => gun(18, 8.2, 1, 0, 0, a, a / 360)),
+    health: 52,
+    speed: 0.14,
+    fov: 1.2,
+    reload: 1.15,
+    bulletDamage: 1.45,
+    bodyDamage: 3.1,
+    upgrades: [],
+    needLevel: 45,
+    mods: { size: 2.55, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 },
+  });
+
+  def("terrestrial", {
+    name: "Terrestrial",
+    desc: "Huge pentagon siege boss",
+    body: 5,
+    guns: [
+      ...[0, 72, 144, 216, 288].map((a) => gun(20, 14, 1, 0, 0, a, a / 360, { recoil: 0.5 })),
+      ...[36, 108, 180, 252, 324].flatMap((a) => G.trap(a)),
+    ],
+    health: 88,
+    speed: 0.1,
+    fov: 1.28,
+    reload: 1.85,
+    bulletDamage: 2.6,
+    bulletPen: 2.2,
+    bulletSize: 1.45,
+    bodyDamage: 4.2,
+    upgrades: [],
+    needLevel: 45,
+    mods: { size: 3.15, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 },
+  });
+
+  def("celestial", {
+    name: "Celestial",
+    desc: "Hex siege boss with all-around fire",
+    body: 6,
+    guns: [0, 45, 90, 135, 180, 225, 270, 315].map((a) =>
+      gun(18, 12, 1, 0, 0, a, a / 360, { recoil: 0.25 })
+    ),
+    health: 120,
+    speed: 0.08,
+    fov: 1.32,
+    reload: 1.55,
+    bulletDamage: 2.9,
+    bulletPen: 2.4,
+    bulletSize: 1.5,
+    bodyDamage: 4.8,
+    upgrades: [],
+    needLevel: 45,
+    mods: { size: 3.55, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 },
+  });
+
+  def("eternal", {
+    name: "Eternal",
+    desc: "Final siege boss",
+    body: 3,
+    guns: [0, 120, 240].map((a) => gun(12, 18, 1, 4, 0, a, 0, { recoil: 0.7 })),
+    health: 175,
+    speed: 0.07,
+    fov: 1.4,
+    reload: 2.15,
+    bulletDamage: 4.4,
+    bulletPen: 3.2,
+    bulletSize: 2.1,
+    bodyDamage: 6.2,
+    upgrades: [],
+    needLevel: 45,
+    mods: { size: 4.1, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 },
+  });
+
+  def("sentry_gun", {
+    name: "Sentry",
+    desc: "Small armed crasher",
+    body: 3,
+    guns: G.machine(),
+    health: 2.4,
+    speed: 0.95,
+    fov: 1.1,
+    reload: 0.55,
+    bulletDamage: 0.7,
+    bodyDamage: 1.4,
+    upgrades: [],
+    needLevel: 45,
+    mods: { size: 0.85, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 },
+  });
+
+  def("sanctuary", {
+    name: "Sanctuary",
+    desc: "Blue trap sanctuary",
+    body: 6,
+    guns: [0, 45, 90, 135, 180, 225, 270, 315].flatMap((a) => G.trap(a)),
+    health: 58,
+    speed: 0.01,
+    fov: 1.12,
+    reload: 1.45,
+    bulletDamage: 1.15,
+    bulletPen: 1.6,
+    bodyDamage: 4.4,
+    upgrades: [],
+    needLevel: 45,
+  });
+
   const skipAuto = new Set([
     "auto3", "auto5", "auto8", "auto2", "autosmasher", "autogunner", "autosniper", "engineer",
     "mothership", "arena_closer", "dom_gun", "dom_idle", "dom_heal", "assault_guard",
+    "elite_destroyer", "elite_gunner", "elite_sprayer", "elite_battleship", "summoner",
+    "nest_keeper", "terrestrial", "celestial", "eternal", "sentry_gun", "sanctuary",
   ]);
   for (const id of Object.keys(tanks)) {
     const t = tanks[id];
