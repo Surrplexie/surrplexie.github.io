@@ -830,6 +830,7 @@
       aiFocus: "gun",
       aiTarget: null,
       aiJob: null,
+      aiHunt: Math.random() < 0.58 ? "mid" : "roam",
     };
     applyLevel(tank);
     tank.health = tank.maxHealth;
@@ -852,6 +853,13 @@
     return gained;
   }
 
+  function nestPos(spread = 640) {
+    return {
+      x: WORLD.w / 2 + rand(-spread, spread),
+      y: WORLD.h / 2 + rand(-spread, spread),
+    };
+  }
+
   function createShape(kind, pos) {
     const table = {
       square: { sides: 4, r: 18, hp: 18, score: 10, color: COLORS.square, spin: 0.6 },
@@ -864,7 +872,7 @@
     const p = pos || (kind === "alpha"
       ? { x: WORLD.w / 2, y: WORLD.h / 2 }
       : kind === "pentagon" || kind === "crasher"
-        ? { x: WORLD.w / 2 + rand(-560, 560), y: WORLD.h / 2 + rand(-560, 560) }
+        ? nestPos(kind === "crasher" ? 720 : 640)
         : randomInWorld(80));
     return {
       type: "shape", kind, sides: t.sides, x: p.x, y: p.y, vx: 0, vy: 0,
@@ -940,8 +948,8 @@
     state.shapes = [];
     for (let i = 0; i < 220; i++) state.shapes.push(createShape("square"));
     const starterTris = irand(1, 3);
-    for (let i = 0; i < starterTris; i++) state.shapes.push(createShape("triangle"));
-    state.shapes.push(createShape("pentagon"));
+    for (let i = 0; i < starterTris; i++)     state.shapes.push(createShape("triangle"));
+    for (let i = 0; i < 6; i++) state.shapes.push(createShape("pentagon", nestPos()));
     if (state.mode !== "protect" && state.mode !== "maze") state.shapes.push(createShape("alpha"));
     for (let i = 0; i < 2; i++) state.shapes.push(createShape("crasher"));
   }
@@ -1167,7 +1175,7 @@
     state.lastKiller = null;
     state.respawnAt = 0;
     state.alphaRespawnAt = 0;
-    state.pentagonAt = rand(30, 60);
+    state.pentagonAt = rand(6, 12);
     state.triangleAt = rand(60, 180);
     state.crasherAt = rand(60, 120);
     state.classDismissed = false;
@@ -1303,6 +1311,7 @@
               : awayFrom(WORLD.w / 2, WORLD.h / 2, 900),
         });
         bot.aiFocus = focus || ["gun", "gun", "farm", "ram"][irand(0, 3)];
+        bot.aiHunt = Math.random() < 0.58 ? "mid" : "roam";
         if (state.mode === "protect") {
           bot.aiJob = Math.random() < 0.48 ? "hunt" : Math.random() < 0.28 ? "defend" : "roam";
         }
@@ -1792,11 +1801,12 @@
       }
     }
     if (state.time >= state.pentagonAt) {
-      if (counts.pentagon < 10) {
-        state.shapes.push(createShape("pentagon"));
+      const n = irand(2, 5);
+      for (let i = 0; i < n && counts.pentagon < 24; i++) {
+        state.shapes.push(createShape("pentagon", nestPos()));
         counts.pentagon++;
       }
-      state.pentagonAt = state.time + rand(30, 60);
+      state.pentagonAt = state.time + rand(7, 16);
     }
     if (state.time >= state.triangleAt) {
       const n = irand(1, 5);
@@ -2074,20 +2084,22 @@
     const defending = state.mode === "protect" && ownMoth && tank.aiJob === "defend";
     const huntingMoth = state.mode === "protect" && foeMoth && tank.aiJob === "hunt";
     const ram = isRammer(tank);
-    const fightRange = ram ? 520 : 460;
+    const fightRange = ram ? 820 : 980;
+    const seeRange = state.mode === "tag" || state.mode === "protect" ? 2200 : 1800;
     let enemy = hunting
-      ? nearestSeen(tank, state.tanks, 780, (t) => isEnemyTank(tank, t))
+      ? nearestSeen(tank, state.tanks, 1600, (t) => isEnemyTank(tank, t))
       : huntingMoth
-        ? (nearestSeen(tank, state.tanks, 360, (t) => isEnemyTank(tank, t) && !t.mothership) || foeMoth)
-        : nearestSeen(tank, state.tanks, state.mode === "tag" || state.mode === "protect" ? 1400 : 780, (t) => isEnemyTank(tank, t));
+        ? (nearestSeen(tank, state.tanks, 520, (t) => isEnemyTank(tank, t) && !t.mothership) || foeMoth)
+        : nearestSeen(tank, state.tanks, seeRange, (t) => isEnemyTank(tank, t));
+    const heard = enemy ? null : nearest(tank, state.tanks, 3200, (t) => isEnemyTank(tank, t));
     if (hunting && mark && canSee(tank, mark)) {
-      const melee = nearestSeen(tank, state.tanks, 340, (t) => isEnemyTank(tank, t) && t !== mark);
+      const melee = nearestSeen(tank, state.tanks, 420, (t) => isEnemyTank(tank, t) && t !== mark);
       if (!melee) enemy = mark;
     }
     const closerNear = nearest(tank, state.tanks, 980, (t) => t.closer);
-    const shape = bestFarm(tank, ram ? 520 : 980);
+    const shape = bestFarm(tank, ram ? 640 : 1100);
     const hpPct = tank.maxHealth > 0 ? tank.health / tank.maxHealth : 1;
-    const low = hpPct < (ram ? 0.22 : 0.36);
+    const low = hpPct < (ram ? 0.16 : 0.22);
     const zone = zoneAt(tank.x, tank.y);
     const invading = !!(tank.team && zone && zone !== tank.team);
     const hunterNear = huntedSelf ? nearestSeen(tank, state.tanks, 640, (t) => t !== tank) : null;
@@ -2096,15 +2108,17 @@
     else if (huntedSelf && hunterNear && dist2(tank, hunterNear) < 480 * 480) tank.aiState = "flee";
     else if (low && enemy && state.mode !== "tag" && !huntingMoth) tank.aiState = "flee";
     else if ((hunting && mark && enemy === mark) || (state.mode === "tag" && enemy) || (huntingMoth && foeMoth)) tank.aiState = "attack";
-    else if (defending && enemy && dist2(tank, enemy) < 520 * 520) tank.aiState = "attack";
+    else if (defending && enemy && dist2(tank, enemy) < 720 * 720) tank.aiState = "attack";
     else if (defending) tank.aiState = "defend";
     else if (enemy && dist2(tank, enemy) < fightRange * fightRange) tank.aiState = "attack";
-    else if (shape) tank.aiState = "farm";
+    else if (heard && dist2(tank, heard) < 2600 * 2600) tank.aiState = "seek";
+    else if (shape && dist2(tank, shape) < 420 * 420) tank.aiState = "farm";
     else tank.aiState = "wander";
 
-    if (player && player.alive && isEnemyTank(tank, player) && canSee(tank, player) && tank.aiState !== "flee" && tank.aiState !== "home" && !(huntingMoth && dist2(tank, player) > 380 * 380)) {
+    if (player && player.alive && isEnemyTank(tank, player) && tank.aiState !== "flee" && tank.aiState !== "home" && !(huntingMoth && dist2(tank, player) > 520 * 520)) {
       const pd = dist2(tank, player);
-      if (pd < (ram ? 560 : 440) * (ram ? 560 : 440) && (hpPct > 0.38 || pd < 220 * 220)) {
+      const seen = canSee(tank, player);
+      if (pd < (ram ? 900 : 760) * (ram ? 900 : 760) && (hpPct > 0.28 || pd < 260 * 260) && (seen || pd < 500 * 500)) {
         tank.aiState = "attack";
         enemy = player;
       }
@@ -2123,13 +2137,14 @@
       }
       if (claim) {
         tank.aiState = "wander";
-        tank.wanderA = Math.atan2(claim.y - tank.y, claim.x - tank.x);
+        tank.roamX = claim.x;
+        tank.roamY = claim.y;
         tank.aiT = 2;
       }
     }
 
     const st = tankStats(tank);
-    tank.aiTarget = tank.aiState === "attack" ? enemy : tank.aiState === "farm" ? shape : tank.aiState === "defend" ? (enemy || ownMoth) : null;
+    tank.aiTarget = tank.aiState === "attack" ? enemy : tank.aiState === "farm" ? shape : tank.aiState === "defend" ? (enemy || ownMoth) : tank.aiState === "seek" ? heard : null;
 
     let tx = tank.x;
     let ty = tank.y;
@@ -2188,17 +2203,34 @@
       tx = steered.x;
       ty = steered.y;
       tank.angle = aimAt(tank, shape, st);
+    } else if (tank.aiState === "seek" && heard) {
+      const steered = steerAround(tank, heard.x, heard.y);
+      tx = steered.x;
+      ty = steered.y;
+      tank.angle = Math.atan2(heard.y - tank.y, heard.x - tank.x);
     } else if (tank.aiT <= 0) {
-      tank.aiT = rand(0.7, 2.4);
-      tank.wanderA = rand(0, TAU);
+      tank.aiT = rand(2.2, 5.5);
+      if (tank.aiHunt === "mid" || Math.random() < 0.42) {
+        const mid = nestPos(1100);
+        tank.roamX = mid.x;
+        tank.roamY = mid.y;
+      } else {
+        const p = randomInWorld(180);
+        tank.roamX = p.x;
+        tank.roamY = p.y;
+      }
     }
     if (tank.aiState === "wander") {
-      const aheadX = tank.x + Math.cos(tank.wanderA || 0) * 100;
-      const aheadY = tank.y + Math.sin(tank.wanderA || 0) * 100;
-      if (hitsWall(aheadX, aheadY, tank.r + 10)) tank.wanderA = (tank.wanderA || 0) + (tank.strafeDir || 1) * 1.15;
-      tx = tank.x + Math.cos(tank.wanderA || 0) * 200;
-      ty = tank.y + Math.sin(tank.wanderA || 0) * 200;
-      if (!tank.aiTarget) tank.angle = tank.wanderA || tank.angle;
+      if (tank.roamX == null || tank.roamY == null) {
+        const mid = nestPos(900);
+        tank.roamX = mid.x;
+        tank.roamY = mid.y;
+      }
+      if ((tank.roamX - tank.x) ** 2 + (tank.roamY - tank.y) ** 2 < 180 * 180) tank.aiT = 0;
+      const steered = steerAround(tank, tank.roamX, tank.roamY);
+      tx = steered.x;
+      ty = steered.y;
+      if (!tank.aiTarget) tank.angle = Math.atan2(ty - tank.y, tx - tank.x);
     }
     if ((state.mode === "tdm" || state.mode === "4tdm") && tank.team && tank.aiState !== "home") {
       const destZone = zoneAt(tx, ty);
@@ -3212,6 +3244,22 @@
     mctx.fillStyle = "#8e8e8e";
     for (const w of state.walls) {
       mctx.fillRect(mapX(w.x), mapY(w.y), (w.w / WORLD.w) * s, (w.h / WORLD.h) * s);
+    }
+    const paintZone = (team, x, y, w, h) => {
+      if (!TEAMS[team]) return;
+      mctx.fillStyle = TEAMS[team].color;
+      mctx.globalAlpha = 0.42;
+      mctx.fillRect(mapX(x), mapY(y), (w / WORLD.w) * s, (h / WORLD.h) * s);
+      mctx.globalAlpha = 1;
+    };
+    if (state.mode === "4tdm") {
+      paintZone("blue", 0, BASE_W, BASE_W, WORLD.h - BASE_W * 2);
+      paintZone("red", WORLD.w - BASE_W, BASE_W, BASE_W, WORLD.h - BASE_W * 2);
+      paintZone("green", BASE_W, 0, WORLD.w - BASE_W * 2, BASE_W);
+      paintZone("purple", BASE_W, WORLD.h - BASE_W, WORLD.w - BASE_W * 2, BASE_W);
+    } else if (state.mode === "tdm") {
+      paintZone("blue", 0, 0, BASE_W, WORLD.h);
+      paintZone("red", WORLD.w - BASE_W, 0, BASE_W, WORLD.h);
     }
     for (const d of state.doms) {
       mctx.beginPath();
