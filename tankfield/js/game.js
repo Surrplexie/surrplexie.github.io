@@ -342,20 +342,20 @@
       bulletSpeed: (7.2 + s.bulletSpeed * 1.15) * (def.bulletSpeed || 1),
       bulletPen: (1 + s.bulletPen * 0.55) * (def.bulletPen || 1),
       bulletDamage: (7 + s.bulletDamage * 3.1) * (def.bulletDamage || 1) * (m.damage || 1),
-      reload: Math.max(0.08, (0.42 - s.reload * 0.038) * (def.reload || 1) / (m.reload || 1)),
+      reload: Math.max(0.08, (0.42 - s.reload * 0.032) * (def.reload || 1) / (m.reload || 1)),
       moveSpeed: (BASE_MOVE + s.moveSpeed * 0.4 - Math.min(lvl, 30) * 0.008) * (def.speed || 1) * (m.speed || 1),
       fov: (def.fov || 1) * (m.fov || 1),
       bulletSize: (def.bulletSize || 1) * (m.size || 1),
       maxDrones: def.maxDrones || 0,
     };
     if ((def.reload || 1) <= 0.55) {
-      out.reload = Math.max(0.14, 0.42 * (def.reload || 1) / (m.reload || 1) * 1.16);
+      out.reload = Math.max(0.16, (0.42 - s.reload * 0.022) * (def.reload || 1) / (m.reload || 1) * 1.26);
       const maxed = Math.min(1, (s.bulletDamage + s.bulletPen + s.bulletSpeed) / 21);
-      const n = 1 - 0.14 * maxed;
+      const n = 1 - 0.22 * maxed;
       out.bulletDamage *= n;
       out.bulletPen *= n;
-      out.bulletSpeed *= 1 - 0.06 * maxed;
-      out.bulletSize *= 1 - 0.08 * maxed;
+      out.bulletSpeed *= 1 - 0.1 * maxed;
+      out.bulletSize *= 1 - 0.12 * maxed;
     }
     if (tank && tank.dominator && !tank.destroyed) {
       out.regen = Math.max(out.regen, 12);
@@ -2132,8 +2132,8 @@
     const speedMul = gs.speed || (kind === "trap" ? 0.45 : kind === "drone" || kind === "swarm" ? 0.7 : kind === "missile" ? 0.55 : 1);
     const speed = st.bulletSpeed * 58 * speedMul;
     applyRecoil(tank, gun, kind, st, W, ang);
-    const sizeMul = gun.size || gs.size || (kind === "swarm" ? 0.55 : kind === "trap" ? 1.15 : 1);
-    const lifeBase = kind === "trap" ? 9 : kind === "drone" || kind === "swarm" ? 999 : kind === "missile" ? 2.4 : 1.55 + st.fov * 0.15;
+    const sizeMul = gun.size || gs.size || (kind === "swarm" ? 0.55 : kind === "trap" ? 1.12 : 1);
+    const lifeBase = kind === "trap" ? 8 : kind === "drone" || kind === "swarm" ? 999 : kind === "missile" ? 2.4 : 1.55 + st.fov * 0.15;
     let br = (7.2 * st.bulletSize * sizeMul) * (0.85 + tank.r / 40);
     if (tank.mothership && kind !== "drone" && kind !== "swarm") br = 8.2 * st.bulletSize * sizeMul;
     if (tank.closer) br = 26;
@@ -2146,8 +2146,8 @@
       vx: Math.cos(ang) * speed + tank.vx * 0.15,
       vy: Math.sin(ang) * speed + tank.vy * 0.15,
       r: br,
-      health: st.bulletPen * (kind === "trap" ? 2.62 : kind === "heal" ? 1.15 : kind === "drone" ? 2.2 : 1),
-      damage: st.bulletDamage * (gs.damage || (kind === "trap" ? 0.873 : kind === "swarm" ? 0.55 : 1)),
+      health: st.bulletPen * (kind === "trap" ? 2.4 : kind === "heal" ? 1.15 : kind === "drone" ? 2.2 : 1),
+      damage: st.bulletDamage * (gs.damage || (kind === "trap" ? 0.8 : kind === "swarm" ? 0.55 : 1)),
       life: lifeBase * (gs.life || 1),
       color: kind === "heal" ? "#8abc3f" : tank.color,
       owner: tank,
