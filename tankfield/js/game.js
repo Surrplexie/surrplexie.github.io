@@ -2726,6 +2726,17 @@
   function stampGrowth(b, tank) {
     b.growSf = sizeFactorOf(tank);
     b.growR = tank.r || 20;
+    b.growScore = (tank && tank.score) || 0;
+    b.growLevel = (tank && tank.level) || 1;
+  }
+
+  function shotWeight(b) {
+    if (!b) return 1;
+    const owner = b.owner;
+    const sf = Math.max(0.35, b.growSf || (owner && sizeFactorOf(owner)) || 1);
+    const score = (b.growScore != null ? b.growScore : (owner && owner.score)) || 0;
+    const scoreW = Math.pow(1 + Math.max(0, score) / Math.max(1, xpForLevel(LEVEL_CAP)), 0.4);
+    return Math.max(0.5, sf * scoreW * Math.max(3, b.r || 4));
   }
 
   function restatGrowthShots(tank) {
@@ -2737,6 +2748,8 @@
       const persist = b.kind === "drone" || b.kind === "swarm" || b.kind === "minion" || b.kind === "trap" || b.kind === "pillbox";
       if (!persist) continue;
       const ratio = sf / Math.max(0.35, b.growSf);
+      b.growScore = tank.score || 0;
+      b.growLevel = tank.level || 1;
       if (Math.abs(ratio - 1) < 0.015) continue;
       b.damage *= Math.sqrt(ratio);
       b.health *= ratio;
@@ -2882,9 +2895,9 @@
     }
     out.HEALTH *= 7.3;
     if (kind === "heal") out.DAMAGE = Math.abs(out.DAMAGE);
-    if (state.mode === "growth" && calc !== "drone") {
+    if (state.mode === "growth") {
       out.HEALTH *= sizeFactor;
-      out.DAMAGE *= Math.sqrt(sizeFactor);
+      if (calc !== "drone") out.DAMAGE *= Math.sqrt(sizeFactor);
     }
     return out;
   }
@@ -4298,10 +4311,14 @@
           burst(a.x, a.y, a.color, 4, 80);
           break;
         }
-        const ha = a.health;
-        const hb = b.health;
-        a.health -= (a.kind === "trap" || a.kind === "pillbox") && b.kind !== "trap" && b.kind !== "pillbox" ? hb * 0.42 : hb;
-        b.health -= (b.kind === "trap" || b.kind === "pillbox") && a.kind !== "trap" && a.kind !== "pillbox" ? ha * 0.42 : ha;
+        const wa = shotWeight(a);
+        const wb = shotWeight(b);
+        let dmgToA = Math.max(0.15, b.damage || 0) * (wb / wa);
+        let dmgToB = Math.max(0.15, a.damage || 0) * (wa / wb);
+        if ((a.kind === "trap" || a.kind === "pillbox") && b.kind !== "trap" && b.kind !== "pillbox" && wb < wa * 1.25) dmgToA *= 0.42;
+        if ((b.kind === "trap" || b.kind === "pillbox") && a.kind !== "trap" && a.kind !== "pillbox" && wa < wb * 1.25) dmgToB *= 0.42;
+        a.health -= dmgToA;
+        b.health -= dmgToB;
         if (a.health <= 0) {
           a.alive = false;
           burst(a.x, a.y, a.color, 4, 80);
