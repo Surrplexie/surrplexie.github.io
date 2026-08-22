@@ -299,8 +299,13 @@
     return !!(a.team && b.team && a.team === b.team);
   }
 
+  function spawnProtected(ent) {
+    return !!(ent && (ent.spawnProtect || 0) > 0 && !ent.closer && !ent.mothership && !ent.dominator && !ent.boss);
+  }
+
   function isEnemyTank(self, other) {
     if (!other || other === self || !other.alive || other.type !== "tank") return false;
+    if (spawnProtected(other) && !(self && self.closer)) return false;
     if (other.dominator && other.destroyed) return false;
     if (self.dominator && other.dominator && !self.sanctuary && !other.sanctuary) return false;
     if (self.sanctuary && other.sanctuary) return self.team !== other.team;
@@ -3614,7 +3619,7 @@
         ? (nearestSeen(tank, state.tanks, 520, (t) => isEnemyTank(tank, t) && !t.mothership) || foeMoth)
         : nearestSeen(tank, state.tanks, seeRange, (t) => isEnemyTank(tank, t));
     const heard = maze || enemy ? null : nearest(tank, state.tanks, 3200, (t) => isEnemyTank(tank, t));
-    if (hunting && mark && canSee(tank, mark)) {
+    if (hunting && mark && !spawnProtected(mark) && canSee(tank, mark)) {
       const melee = nearestSeen(tank, state.tanks, 420, (t) => isEnemyTank(tank, t) && t !== mark);
       if (!melee) enemy = mark;
     }
@@ -3630,7 +3635,7 @@
     const low = hpPct < (ram ? 0.16 : 0.22);
     const zone = zoneAt(tank.x, tank.y);
     const invading = !!(tank.team && zone && zone !== tank.team);
-    const hunterNear = huntedSelf ? nearestSeen(tank, state.tanks, 640, (t) => t !== tank) : null;
+    const hunterNear = huntedSelf ? nearestSeen(tank, state.tanks, 640, (t) => t !== tank && !spawnProtected(t)) : null;
     if (closerNear) tank.aiState = "flee";
     else if (stormOut) tank.aiState = "storm";
     else if (invading || ((state.mode === "tdm" || state.mode === "4tdm") && tank.team && low)) tank.aiState = "home";
@@ -3926,6 +3931,7 @@
   }
 
   function shotHits(bullet, ent) {
+    if (ent && ent.type === "tank" && spawnProtected(ent) && !(bullet.owner && bullet.owner.closer)) return false;
     const r = bullet.r + ent.r;
     const nx = bullet.x - ent.x;
     const ny = bullet.y - ent.y;
@@ -4173,7 +4179,7 @@
         s.vx *= Math.pow(0.0004, dt);
         s.vy *= Math.pow(0.0004, dt);
       } else if (s.kind === "crasher") {
-        const prey = nearestSeen(s, state.tanks, 980, (t) => !t.spawnProtect && !zoneAt(t.x, t.y));
+        const prey = nearestSeen(s, state.tanks, 980, (t) => !spawnProtected(t) && !zoneAt(t.x, t.y));
         const tankCruise = BASE_MOVE * 62 / -Math.log(0.0008);
         const spd = tankCruise * 1.1;
         if (prey) {
