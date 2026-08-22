@@ -1698,6 +1698,30 @@
     })[mode] || "FFA";
   }
 
+  function teamMode(mode) {
+    const m = mode == null ? state.mode : mode;
+    return m === "tdm" || m === "4tdm" || m === "tag" || m === "protect" || m === "domination" || m === "assault" || m === "siege";
+  }
+
+  function healerAllowed(tank) {
+    if (teamMode()) return true;
+    return !!(tank && getDef(tank).healer);
+  }
+
+  function isHealerId(id) {
+    const child = TankCatalog.tanks[id];
+    return !!(child && child.healer);
+  }
+
+  function classUpgrades(def, tank) {
+    return (def.upgrades || []).filter((id) => {
+      const child = TankCatalog.tanks[id];
+      if (!child || (tank && tank.level < (child.needLevel || 15))) return false;
+      if (isHealerId(id) && !healerAllowed(tank)) return false;
+      return true;
+    });
+  }
+
   function pickStartTeam(mode) {
     if (mode === "siege") return "blue";
     if (mode === "tdm" || mode === "domination") return Math.random() < 0.5 ? "red" : "blue";
@@ -1983,10 +2007,7 @@
     while (!seen.has(bot.classId)) {
       seen.add(bot.classId);
       const def = TankCatalog.get(bot.classId);
-      let opts = (def.upgrades || []).filter((id) => {
-        const child = TankCatalog.tanks[id];
-        return child && bot.level >= (child.needLevel || 15);
-      });
+      let opts = classUpgrades(def, bot);
       if (!opts.length) break;
       if (bot.aiFocus === "ram") {
         const ram = opts.filter((id) => rammerIds.has(id));
@@ -4789,10 +4810,7 @@
     const p = menuTank();
     if (!p) return;
     const def = getDef(p);
-    const options = (def.upgrades || []).filter((id) => {
-      const child = TankCatalog.tanks[id];
-      return child && p.level >= (child.needLevel || 15);
-    });
+    const options = classUpgrades(def, p);
     state.classOptions = options;
     if (!options.length && state.mode !== "sandbox") {
       els.classes.classList.add("hidden");
@@ -4831,6 +4849,7 @@
   function pickClass(id) {
     const p = menuTank();
     if (!p || !p.alive) return;
+    if (isHealerId(id) && !healerAllowed(p)) return;
     p.classId = id;
     p.customDef = null;
     applyLevel(p);
@@ -5570,7 +5589,7 @@
     onehp: "Everyone for themselves · 1 HP · no shields · health stats do nothing · medium map · start at 45",
     royale: "1 min prep · then a shrinking storm · no respawns after · last tank wins · small shapes · mid map · start at 45",
     royalemaze: "Same as Battle Royale · random maze walls · mid map · start at 45",
-    sandbox: "Level 45 · pick any tank · bots included",
+    sandbox: "Level 45 · pick any tank · bots included · [T] swaps tanks without resetting",
   };
 
   function saveName(name) {
@@ -5682,13 +5701,30 @@
     getDef,
     drawPreview,
     botCount: () => menuBotCount,
-    applyToPlayer(def) {
-      if (!state.player) return;
-      state.player.customDef = TankCatalog.cloneDef(def);
-      state.player.classId = def.id || "custom";
-      applyLevel(state.player);
-      renderClassPanel();
+    applyToPlayer(def, opts = {}) {
+      const p = state.player;
+      if (!p || !p.alive || !def) return;
+      const prevId = p.classId;
+      const asCustom = !!(opts.custom || String(def.id || "").startsWith("custom"));
+      if (asCustom) {
+        p.customDef = TankCatalog.cloneDef(def);
+        p.classId = def.id || "custom";
+      } else {
+        p.customDef = null;
+        p.classId = def.id || "basic";
+      }
+      if (opts.maxStats) {
+        for (const st of STATS) p.stats[st.key] = STAT_MAX;
+      }
+      applyLevel(p);
+      if (p.classId !== prevId) clearOwnedShots(p);
+      p.health = clamp(p.health, 0, p.maxHealth);
+      p.shield = clamp(p.shield || 0, 0, p.maxShield || 0);
+      try { renderStats(); } catch (err) {}
+      try { renderClassPanel(); } catch (err) {}
+      if (def.name && p.classId !== prevId) note(`You are now ${def.name}.`);
     },
+    playing: () => running,
     applyLevel,
     COLORS,
     TEAM_COLORS,

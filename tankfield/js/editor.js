@@ -206,9 +206,31 @@
 
   function liveApply() {
     const game = window.TankfieldGame;
-    if (game.state.player && game.state.player.alive && !workshop.classList.contains("hidden")) {
-      game.applyToPlayer(current);
+    if (!game || typeof game.playing !== "function" || !game.playing()) return;
+    if (game.state.mode !== "sandbox") return;
+    if (!(game.state.player && game.state.player.alive)) return;
+    if (workshop.classList.contains("hidden")) return;
+    game.applyToPlayer(current, { custom: selectedCustom });
+  }
+
+  function playOrApply(maxStats) {
+    const game = window.TankfieldGame;
+    const name = document.getElementById("name-input").value.trim() || "Unnamed Tank";
+    if (game.playing() && game.state.mode === "sandbox" && game.state.player && game.state.player.alive) {
+      game.applyToPlayer(current, { maxStats: !!maxStats, custom: selectedCustom });
+      close();
+      return;
     }
+    game.startGame(name, { sandbox: true, customDef: current, maxStats: !!maxStats, botCount: game.botCount() });
+  }
+
+  function refreshPlayLabels() {
+    const game = window.TankfieldGame;
+    const ingame = !!(game && game.playing && game.playing() && game.state.mode === "sandbox" && game.state.player && game.state.player.alive);
+    const play = document.getElementById("play-tank");
+    const maxed = document.getElementById("play-maxed");
+    if (play) play.textContent = ingame ? "Use this tank" : "Play this tank";
+    if (maxed) maxed.textContent = ingame ? "Use maxed" : "Play maxed";
   }
 
   function bindPair(rangeId, onChange) {
@@ -328,14 +350,8 @@
       loadEntry("basic", false);
     });
   }
-  document.getElementById("play-tank").addEventListener("click", () => {
-    const name = document.getElementById("name-input").value.trim() || "Unnamed Tank";
-    window.TankfieldGame.startGame(name, { sandbox: true, customDef: current, botCount: window.TankfieldGame.botCount() });
-  });
-  document.getElementById("play-maxed").addEventListener("click", () => {
-    const name = document.getElementById("name-input").value.trim() || "Unnamed Tank";
-    window.TankfieldGame.startGame(name, { sandbox: true, customDef: current, maxStats: true, botCount: window.TankfieldGame.botCount() });
-  });
+  document.getElementById("play-tank").addEventListener("click", () => playOrApply(false));
+  document.getElementById("play-maxed").addEventListener("click", () => playOrApply(true));
   document.getElementById("close-workshop").addEventListener("click", close);
   document.getElementById("copy-json").addEventListener("click", async () => {
     try { await navigator.clipboard.writeText(JSON.stringify(current, null, 2)); }
@@ -378,6 +394,7 @@
     }
     renderList();
     syncFields();
+    refreshPlayLabels();
   }
 
   function close() {
