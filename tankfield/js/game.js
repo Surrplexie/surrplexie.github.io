@@ -3075,6 +3075,8 @@
     });
     stampGrowth(state.bullets[state.bullets.length - 1], owner);
   }
+
+  function steerChase(b, dt) {
     const t = droneTarget(b);
     if (!t) return;
     const dx = t.x - b.x;
@@ -5293,10 +5295,11 @@
       e.preventDefault();
       return;
     }
-    if (state.paused || state.spectating) {
-      if (k === "t" && running && !state.spectating) openWorkshop();
+    if (k === "t" && !state.spectating) {
+      openWorkshop();
       return;
     }
+    if (state.paused || state.spectating) return;
     if (k === "e" && running) {
       state.autoFire = !state.autoFire;
       note(state.autoFire ? "Autofire enabled." : "Autofire disabled.");
@@ -5305,7 +5308,6 @@
       state.autoSpin = !state.autoSpin;
       note(state.autoSpin ? "Autospin enabled." : "Autospin disabled.");
     }
-    if (k === "t" && running && window.TankWorkshop) window.TankWorkshop.open();
     const skippedLevel = k === "n" && running && !state.paused && (state.mode === "protect" || state.mode === "growth") && skipToLevelCap(menuTank());
     if (k === "h" && running && !state.paused && state.mode === "protect") {
       toggleMothershipControl();
