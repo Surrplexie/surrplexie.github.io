@@ -75,9 +75,9 @@
   const BASE_W = 560;
   const FFA_CLOSE_AT = 4 * 60 * 60;
   const ROYALE_PREP = 60;
-  const ROYALE_SHRINK = 165;
-  const ROYALE_END_R = 150;
-  const ROYALE_BURN = 0.04;
+  const ROYALE_SHRINK = 180;
+  const ROYALE_END_R = 0;
+  const ROYALE_BURN = 0.035;
   const DOM_HOLD = 8;
   const ASSAULT_WIN = 10 * 60;
   const TEAM4 = ["blue", "red", "green", "purple"];
@@ -200,6 +200,8 @@
     ghost: null,
     lastKiller: null,
     royaleRestartAt: 0,
+    stormX: null,
+    stormY: null,
     respawnAt: 0,
     walls: [],
     maze: null,
@@ -906,11 +908,39 @@
     const { cube, cols, rows, x0, y0 } = mazeGrid();
     const filled = Array.from({ length: rows }, () => Array(cols).fill(false));
     const inside = (r, c) => r > 1 && r < rows - 2 && c > 1 && c < cols - 2;
-    const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
     const key = (r, c) => r + "," + c;
+    const shapes = [
+      [[0, 0], [1, 0]],
+      [[0, 0], [0, 1]],
+      [[0, 0], [1, 1]],
+      [[0, 0], [1, -1]],
+      [[0, 0], [1, 0], [2, 0]],
+      [[0, 0], [1, 0], [1, 1]],
+      [[0, 0], [1, 0], [0, 1]],
+      [[0, 0], [0, 1], [1, 1]],
+      [[0, 0], [1, 0], [2, 1]],
+      [[0, 0], [1, 0], [2, 0], [1, 1]],
+      [[1, 0], [0, 1], [1, 1], [2, 1]],
+      [[0, 0], [1, 0], [1, 1], [2, 1]],
+      [[0, 0], [0, 1], [1, 1], [1, 2]],
+      [[0, 0], [1, 0], [2, 0], [2, 1]],
+      [[0, 0], [1, 0], [0, 1], [-1, 0]],
+      [[0, 0], [1, 0], [2, 0], [0, 1]],
+      [[0, 0], [1, 0], [-1, 1], [1, 1]],
+    ];
+    const rotShape = (cells, k, flip) => cells.map(([x, y]) => {
+      let a = flip ? -x : x;
+      let b = y;
+      for (let i = 0; i < (k & 3); i++) {
+        const t = a;
+        a = -b;
+        b = t;
+      }
+      return [a, b];
+    });
     const nearFilled = (r, c, skip) => {
-      for (let dr = -2; dr <= 2; dr++) {
-        for (let dc = -2; dc <= 2; dc++) {
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
           if (!dr && !dc) continue;
           const rr = r + dr;
           const cc = c + dc;
@@ -921,38 +951,33 @@
       }
       return false;
     };
-    const nClusters = Math.max(18, Math.floor((rows * cols) / 16));
-    for (let n = 0; n < nClusters; n++) {
-      let seedR = 0;
-      let seedC = 0;
-      let found = false;
-      for (let t = 0; t < 50; t++) {
-        seedR = irand(2, rows - 3);
-        seedC = irand(2, cols - 3);
-        if (!inside(seedR, seedC) || filled[seedR][seedC] || nearFilled(seedR, seedC, null)) continue;
-        found = true;
-        break;
-      }
-      if (!found) continue;
-      const [dr, dc] = dirs[irand(0, dirs.length - 1)];
-      const len = irand(2, 3);
-      const cells = [[seedR, seedC]];
-      const bend = Math.random() < 0.34;
-      const turn = dirs[irand(0, dirs.length - 1)];
-      for (let i = 1; i < len; i++) {
-        if (bend && i === 1) cells.push([seedR + turn[0], seedC + turn[1]]);
-        else cells.push([seedR + dr * i, seedC + dc * i]);
-      }
-      const skip = new Set(cells.map(([r, c]) => key(r, c)));
-      let ok = true;
-      for (const [r, c] of cells) {
-        if (!inside(r, c) || filled[r][c] || nearFilled(r, c, skip)) {
-          ok = false;
-          break;
+    const tryPlace = (cells0, tries) => {
+      for (let t = 0; t < tries; t++) {
+        const seedR = irand(2, rows - 3);
+        const seedC = irand(2, cols - 3);
+        const cells = cells0.map(([dc, dr]) => [seedR + dr, seedC + dc]);
+        const skip = new Set(cells.map(([r, c]) => key(r, c)));
+        let ok = true;
+        for (const [r, c] of cells) {
+          if (!inside(r, c) || filled[r][c] || nearFilled(r, c, skip)) {
+            ok = false;
+            break;
+          }
         }
+        if (!ok) continue;
+        for (const [r, c] of cells) filled[r][c] = true;
+        return true;
       }
-      if (!ok) continue;
-      for (const [r, c] of cells) filled[r][c] = true;
+      return false;
+    };
+    const nClusters = Math.max(90, Math.floor((rows * cols) / 5));
+    for (let n = 0; n < nClusters; n++) {
+      const raw = shapes[irand(0, shapes.length - 1)];
+      tryPlace(rotShape(raw, irand(0, 3), Math.random() < 0.5), 90);
+    }
+    const fillers = [[[0, 0], [1, 0]], [[0, 0], [1, 1]], [[0, 0], [1, 0], [1, 1]]];
+    for (let n = 0; n < Math.floor(nClusters * 0.45); n++) {
+      tryPlace(rotShape(fillers[irand(0, fillers.length - 1)], irand(0, 3), false), 40);
     }
     clearMazeBorder(filled, rows, cols);
     state.maze = { cube, x0, y0, cols, rows, filled };
@@ -1081,6 +1106,14 @@
     const s = String(t % 60).padStart(2, "0");
     if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${s}`;
     return `${m}:${s}`;
+  }
+
+  function formatStopwatch(sec) {
+    const t = Math.max(0, Number(sec) || 0);
+    const m = Math.floor(t / 60);
+    const s = Math.floor(t % 60);
+    const d = Math.floor((t * 10) % 10);
+    return `${m}:${String(s).padStart(2, "0")}.${d}`;
   }
 
   function assaultSpawn(team) {
@@ -1897,9 +1930,10 @@
   }
 
   function nestPos(spread = 640) {
+    const c = isRoyale() ? stormCenter() : { x: WORLD.w / 2, y: WORLD.h / 2 };
     return {
-      x: WORLD.w / 2 + rand(-spread, spread),
-      y: WORLD.h / 2 + rand(-spread, spread),
+      x: c.x + rand(-spread, spread),
+      y: c.y + rand(-spread, spread),
     };
   }
 
@@ -2240,6 +2274,9 @@
     state.camera.zoom = 1;
     state.lastKiller = null;
     state.royaleRestartAt = 0;
+    state.stormX = WORLD.w / 2;
+    state.stormY = WORLD.h / 2;
+    if (isRoyale(state.mode)) pickStormCenter();
     state.respawnAt = 0;
     state.alphaRespawnAt = 0;
     state.pentagonAt = rand(6, 12);
@@ -2550,8 +2587,22 @@
     return m === "royale" || m === "royalemaze";
   }
 
+  function pickStormCenter() {
+    const pad = Math.min(WORLD.w, WORLD.h) * 0.2;
+    state.stormX = rand(pad, WORLD.w - pad);
+    state.stormY = rand(pad, WORLD.h - pad);
+  }
+
+  function stormCenter() {
+    return {
+      x: state.stormX != null ? state.stormX : WORLD.w / 2,
+      y: state.stormY != null ? state.stormY : WORLD.h / 2,
+    };
+  }
+
   function royaleMaxR() {
-    return Math.hypot(WORLD.w, WORLD.h) * 0.5;
+    const c = stormCenter();
+    return Math.hypot(Math.max(c.x, WORLD.w - c.x), Math.max(c.y, WORLD.h - c.y));
   }
 
   function royaleRadius() {
@@ -2567,9 +2618,18 @@
 
   function royaleInside(ent, extra = 0) {
     if (!ent) return true;
-    const dx = ent.x - WORLD.w / 2;
-    const dy = ent.y - WORLD.h / 2;
+    const c = stormCenter();
+    const dx = ent.x - c.x;
+    const dy = ent.y - c.y;
     return Math.hypot(dx, dy) <= royaleRadius() + extra;
+  }
+
+  function royaleBurnRate() {
+    if (!royaleLocked()) return ROYALE_BURN;
+    const elapsed = Math.max(0, state.time - ROYALE_PREP);
+    const shrinkT = clamp(elapsed / ROYALE_SHRINK, 0, 1);
+    const after = Math.max(0, elapsed - ROYALE_SHRINK);
+    return ROYALE_BURN * (1 + shrinkT * 3.5 + after / 18);
   }
 
   function royaleContestants() {
@@ -3925,7 +3985,8 @@
       ty = steered.y;
       if (enemy) tank.angle = aimAt(tank, enemy, st);
     } else if (tank.aiState === "storm") {
-      const steered = steerAround(tank, WORLD.w / 2, WORLD.h / 2);
+      const safe = stormCenter();
+      const steered = steerAround(tank, safe.x, safe.y);
       tx = steered.x;
       ty = steered.y;
       if (enemy && canSee(tank, enemy)) tank.angle = aimAt(tank, enemy, st);
@@ -4361,7 +4422,7 @@
       if (tank.dominator && tank.destroyed) {
         tank.health = 0;
       } else if (invading || inStorm) {
-        let burn = (tank.maxHealth + (tank.maxShield || 0)) * (inStorm ? ROYALE_BURN : 0.32) * dt;
+        let burn = (tank.maxHealth + (tank.maxShield || 0)) * (inStorm ? royaleBurnRate() : 0.32) * dt;
         if ((tank.shield || 0) > 0) {
           const soak = Math.min(tank.shield, burn);
           tank.shield -= soak;
@@ -4715,9 +4776,10 @@
         }
       } else if (isRoyale()) {
         const alive = royaleContestants().length;
-        if (state.royaleRestartAt) els.closeTimer.textContent = `Next round ${Math.max(0, state.royaleRestartAt - state.time).toFixed(0)}s`;
-        else if (!royaleLocked()) els.closeTimer.textContent = `Storm in ${formatClock(ROYALE_PREP - state.time)} · ${alive} left`;
-        else els.closeTimer.textContent = `Storm · ${alive} left`;
+        const clock = formatStopwatch(state.time);
+        if (state.royaleRestartAt) els.closeTimer.textContent = `${clock} · Next round ${Math.max(0, state.royaleRestartAt - state.time).toFixed(0)}s`;
+        else if (!royaleLocked()) els.closeTimer.textContent = `${clock} · Storm in ${formatClock(ROYALE_PREP - state.time)} · ${alive} left`;
+        else els.closeTimer.textContent = `${clock} · Storm · ${alive} left`;
       } else els.closeTimer.textContent = "";
     }
     if (els.arenaMode && state.mode === "manhunt") {
@@ -5290,24 +5352,27 @@
       }
     }
     if (isRoyale()) {
-      const cx = WORLD.w / 2;
-      const cy = WORLD.h / 2;
-      const rr = Math.max(8, royaleRadius());
+      const c = stormCenter();
+      const cx = c.x;
+      const cy = c.y;
+      const rr = Math.max(0, royaleRadius());
       const stormOn = royaleLocked() && rr < royaleMaxR() - 2;
       if (stormOn) {
         ctx.save();
         ctx.beginPath();
         ctx.rect(0, 0, WORLD.w, WORLD.h);
-        ctx.arc(cx, cy, rr, 0, TAU);
+        if (rr > 4) ctx.arc(cx, cy, rr, 0, TAU);
         ctx.fillStyle = "rgba(210, 64, 42, 0.2)";
-        ctx.fill("evenodd");
+        ctx.fill(rr > 4 ? "evenodd" : "nonzero");
         ctx.restore();
       }
-      ctx.beginPath();
-      ctx.arc(cx, cy, rr, 0, TAU);
-      ctx.strokeStyle = stormOn ? "rgba(232, 72, 48, 0.85)" : "rgba(255, 140, 64, 0.4)";
-      ctx.lineWidth = stormOn ? 10 : 6;
-      ctx.stroke();
+      if (rr > 4) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, rr, 0, TAU);
+        ctx.strokeStyle = stormOn ? "rgba(232, 72, 48, 0.85)" : "rgba(255, 140, 64, 0.4)";
+        ctx.lineWidth = stormOn ? 10 : 6;
+        ctx.stroke();
+      }
     } else if (state.mode !== "protect" && state.mode !== "maze") {
       ctx.fillStyle = "rgba(118, 141, 252, 0.08)";
       ctx.beginPath();
@@ -5465,20 +5530,25 @@
       mctx.globalAlpha = 1;
     }
     if (isRoyale()) {
+      const c = stormCenter();
       const rr = (royaleRadius() / WORLD.w) * s;
       const stormOn = royaleLocked() && royaleRadius() < royaleMaxR() - 2;
+      const mx = mapX(c.x);
+      const my = mapY(c.y);
       if (stormOn) {
         mctx.beginPath();
         mctx.rect(0, 0, s, s);
-        mctx.arc(s / 2, s / 2, Math.max(3, rr), 0, TAU);
+        if (rr > 2) mctx.arc(mx, my, Math.max(2, rr), 0, TAU);
         mctx.fillStyle = "rgba(210, 64, 42, 0.32)";
-        mctx.fill("evenodd");
+        mctx.fill(rr > 2 ? "evenodd" : "nonzero");
       }
-      mctx.beginPath();
-      mctx.arc(s / 2, s / 2, Math.max(3, rr), 0, TAU);
-      mctx.strokeStyle = "rgba(232, 72, 48, 0.9)";
-      mctx.lineWidth = 2;
-      mctx.stroke();
+      if (rr > 2) {
+        mctx.beginPath();
+        mctx.arc(mx, my, Math.max(2, rr), 0, TAU);
+        mctx.strokeStyle = "rgba(232, 72, 48, 0.9)";
+        mctx.lineWidth = 2;
+        mctx.stroke();
+      }
     }
     const p = cameraFocus();
     const watching = state.spectating;
@@ -5658,8 +5728,8 @@
     siege: "Blue defends sanctuaries · waves of bosses · start at 45 · restore fallen sanctuaries by destroying them",
     growth: "FFA · grow past 45 to 1000 · start at 1 · bots start at 45 · [N] skip to 45 · arena closers after 4 hours",
     onehp: "Everyone for themselves · 1 HP · no shields · health stats do nothing · medium map · start at 45",
-    royale: "1 min prep · then a shrinking storm · no respawns after · last tank wins · small shapes · mid map · start at 45",
-    royalemaze: "Same as Battle Royale · scattered 2–3 block clusters · open map · start at 45",
+    royale: "1 min prep · shrinking storm to a random point · closes fully · damage ramps · last tank wins",
+    royalemaze: "Same as Battle Royale · L / Y / zig clusters · open map · storm closes fully",
     sandbox: "Level 45 · pick any tank · bots included · [T] swaps tanks without resetting",
   };
 
