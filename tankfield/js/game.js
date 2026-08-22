@@ -878,7 +878,7 @@
     return hit;
   }
 
-  function buildMaze() {
+  function mazeGrid() {
     const tankD = 56;
     const cube = tankD * 3;
     const pad = cube;
@@ -888,6 +888,83 @@
     if (rows % 2 === 0) rows -= 1;
     const x0 = (WORLD.w - cols * cube) / 2;
     const y0 = (WORLD.h - rows * cube) / 2;
+    return { cube, cols, rows, x0, y0 };
+  }
+
+  function clearMazeBorder(filled, rows, cols) {
+    for (let r = 0; r < rows; r++) {
+      filled[r][0] = false;
+      filled[r][cols - 1] = false;
+    }
+    for (let c = 0; c < cols; c++) {
+      filled[0][c] = false;
+      filled[rows - 1][c] = false;
+    }
+  }
+
+  function buildOpenBlocks() {
+    const { cube, cols, rows, x0, y0 } = mazeGrid();
+    const filled = Array.from({ length: rows }, () => Array(cols).fill(false));
+    const inside = (r, c) => r > 1 && r < rows - 2 && c > 1 && c < cols - 2;
+    const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+    const key = (r, c) => r + "," + c;
+    const nearFilled = (r, c, skip) => {
+      for (let dr = -2; dr <= 2; dr++) {
+        for (let dc = -2; dc <= 2; dc++) {
+          if (!dr && !dc) continue;
+          const rr = r + dr;
+          const cc = c + dc;
+          if (rr < 0 || cc < 0 || rr >= rows || cc >= cols) continue;
+          if (skip && skip.has(key(rr, cc))) continue;
+          if (filled[rr][cc]) return true;
+        }
+      }
+      return false;
+    };
+    const nClusters = Math.max(18, Math.floor((rows * cols) / 16));
+    for (let n = 0; n < nClusters; n++) {
+      let seedR = 0;
+      let seedC = 0;
+      let found = false;
+      for (let t = 0; t < 50; t++) {
+        seedR = irand(2, rows - 3);
+        seedC = irand(2, cols - 3);
+        if (!inside(seedR, seedC) || filled[seedR][seedC] || nearFilled(seedR, seedC, null)) continue;
+        found = true;
+        break;
+      }
+      if (!found) continue;
+      const [dr, dc] = dirs[irand(0, dirs.length - 1)];
+      const len = irand(2, 3);
+      const cells = [[seedR, seedC]];
+      const bend = Math.random() < 0.34;
+      const turn = dirs[irand(0, dirs.length - 1)];
+      for (let i = 1; i < len; i++) {
+        if (bend && i === 1) cells.push([seedR + turn[0], seedC + turn[1]]);
+        else cells.push([seedR + dr * i, seedC + dc * i]);
+      }
+      const skip = new Set(cells.map(([r, c]) => key(r, c)));
+      let ok = true;
+      for (const [r, c] of cells) {
+        if (!inside(r, c) || filled[r][c] || nearFilled(r, c, skip)) {
+          ok = false;
+          break;
+        }
+      }
+      if (!ok) continue;
+      for (const [r, c] of cells) filled[r][c] = true;
+    }
+    clearMazeBorder(filled, rows, cols);
+    state.maze = { cube, x0, y0, cols, rows, filled };
+    rebuildMazeWalls();
+  }
+
+  function buildMaze() {
+    if (state.mode === "royalemaze") {
+      buildOpenBlocks();
+      return;
+    }
+    const { cube, cols, rows, x0, y0 } = mazeGrid();
     const filled = Array.from({ length: rows }, () => Array(cols).fill(true));
     const inside = (r, c) => r > 0 && r < rows - 1 && c > 0 && c < cols - 1;
     const sr = 1 + 2 * irand(0, Math.floor((rows - 3) / 2));
@@ -928,14 +1005,7 @@
         if ((r - cr) * (r - cr) + (c - cc) * (c - cc) <= hole * hole) filled[r][c] = false;
       }
     }
-    for (let r = 0; r < rows; r++) {
-      filled[r][0] = false;
-      filled[r][cols - 1] = false;
-    }
-    for (let c = 0; c < cols; c++) {
-      filled[0][c] = false;
-      filled[rows - 1][c] = false;
-    }
+    clearMazeBorder(filled, rows, cols);
     state.maze = { cube, x0, y0, cols, rows, filled };
     rebuildMazeWalls();
   }
@@ -5345,11 +5415,12 @@
 
   function drawMinimap() {
     const s = mini.width;
-    mctx.fillStyle = "#cfcfcf";
+    mctx.clearRect(0, 0, s, s);
+    mctx.fillStyle = "rgba(210, 210, 210, 0.22)";
     mctx.fillRect(0, 0, s, s);
     const mapX = (x) => (x / WORLD.w) * s;
     const mapY = (y) => (y / WORLD.h) * s;
-    mctx.fillStyle = "#8e8e8e";
+    mctx.fillStyle = "rgba(72, 72, 72, 0.48)";
     for (const w of state.walls) {
       mctx.fillRect(mapX(w.x), mapY(w.y), (w.w / WORLD.w) * s, (w.h / WORLD.h) * s);
     }
@@ -5588,7 +5659,7 @@
     growth: "FFA · grow past 45 to 1000 · start at 1 · bots start at 45 · [N] skip to 45 · arena closers after 4 hours",
     onehp: "Everyone for themselves · 1 HP · no shields · health stats do nothing · medium map · start at 45",
     royale: "1 min prep · then a shrinking storm · no respawns after · last tank wins · small shapes · mid map · start at 45",
-    royalemaze: "Same as Battle Royale · random maze walls · mid map · start at 45",
+    royalemaze: "Same as Battle Royale · scattered 2–3 block clusters · open map · start at 45",
     sandbox: "Level 45 · pick any tank · bots included · [T] swaps tanks without resetting",
   };
 
