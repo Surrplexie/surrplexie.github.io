@@ -492,11 +492,6 @@
   function spentPoints(tank) { return STATS.reduce((n, st) => n + tank.stats[st.key], 0); }
 
   function detectBrowserZoom() {
-    const inner = Math.max(1, window.innerWidth);
-    const outer = window.outerWidth || inner;
-    let sizeZ = outer / inner;
-    if (!isFinite(sizeZ) || sizeZ < 0.15 || sizeZ > 8) sizeZ = 1;
-
     const dprNow = window.devicePixelRatio || 1;
     const pinch = (window.visualViewport && window.visualViewport.scale) || 1;
     const natives = [1, 1.25, 1.5, 1.75, 2, 2.5, 3];
@@ -514,10 +509,8 @@
     }
     if (natives.some((n) => Math.abs(dprNow - n) < 0.03)) dprZ = 1;
 
-    const sizeSaysZoom = Math.abs(sizeZ - 1) >= 0.06;
     let z = 1;
-    if (sizeSaysZoom) z = sizeZ;
-    else if (Math.abs(dprZ - 1) >= 0.06) z = dprZ;
+    if (Math.abs(dprZ - 1) >= 0.06) z = dprZ;
     if (Math.abs(pinch - 1) > 0.02) z *= pinch;
 
     let best = z;
@@ -541,11 +534,17 @@
   }
 
   function applyAntiZoom() {
-    pageZ = detectBrowserZoom();
     const root = document.documentElement;
     const body = document.body;
     if (!body) return;
-    clearZoomFix(root);
+    const menuUp = !running && els.start && !els.start.classList.contains("hidden");
+    if (menuUp) {
+      pageZ = 1;
+      clearZoomFix(root);
+      clearZoomFix(body);
+      return;
+    }
+    pageZ = detectBrowserZoom();
     clearZoomFix(root);
     if (Math.abs(pageZ - 1) < 0.02) {
       pageZ = 1;
@@ -2696,6 +2695,7 @@
     els.death.classList.add("hidden");
     els.hud.classList.add("hidden");
     els.start.classList.remove("hidden");
+    resize();
     const ws = document.getElementById("workshop");
     if (ws) ws.classList.add("hidden");
   }
@@ -5218,7 +5218,12 @@
     last = now;
     try {
       if (running && !state.paused) update(dt);
-      render();
+      if (running) render();
+      else {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.fillStyle = "#777b7e";
+        ctx.fillRect(0, 0, width, height);
+      }
     } catch (err) {
       console.error(err);
     }
@@ -5235,7 +5240,6 @@
   window.addEventListener("resize", resize);
   if (window.visualViewport) {
     window.visualViewport.addEventListener("resize", resize);
-    window.visualViewport.addEventListener("scroll", resize);
   }
   window.addEventListener("wheel", (e) => {
     if (e.ctrlKey || e.metaKey) {
@@ -5501,7 +5505,6 @@
   }
 
   resize();
-  populateWorld();
   initColorPicker();
   try {
     const savedName = localStorage.getItem("tankfield-name");
