@@ -1681,15 +1681,19 @@
     if (tank.closer) tank.r = 46;
     if (tank.dominator) tank.r = tank.sanctuary ? 58 + (tank.sancTier || 1) * 3 : (tank.mainBase ? 78 : 64);
     const st = tankStats(tank);
-    const ratio = tank.maxHealth > 0 ? tank.health / tank.maxHealth : 1;
+    const oldMax = tank.maxHealth || 0;
     const oldShield = tank.maxShield || 0;
+    const oldHp = tank.health;
     tank.maxHealth = st.maxHealth;
     tank.maxShield = st.maxShield || 0;
-    if (gained) tank.health = tank.maxHealth;
-    else tank.health = clamp(ratio * tank.maxHealth, 0, tank.maxHealth);
-    if (tank.shield == null || gained) tank.shield = tank.maxShield;
+    if (oldMax > 0 && oldHp != null) {
+      tank.health = clamp(oldHp + Math.max(0, tank.maxHealth - oldMax), 0, tank.maxHealth);
+    } else {
+      tank.health = tank.maxHealth;
+    }
+    if (tank.shield == null) tank.shield = tank.maxShield;
     else {
-      if (tank.maxShield > oldShield) tank.shield += tank.maxShield - oldShield;
+      tank.shield += Math.max(0, tank.maxShield - oldShield);
       tank.shield = clamp(tank.shield, 0, tank.maxShield);
     }
     return gained;
@@ -2716,6 +2720,36 @@
 
   function unitOf(tank) { return tank.r / 12; }
 
+  function shotRadius(tank, gun, sizeMul, kind) {
+    const u = unitOf(tank);
+    const W = (gun && gun.pos && gun.pos[1]) || 8;
+    const A = (gun && gun.pos && gun.pos[2] != null) ? gun.pos[2] : 1;
+    const muzzle = Math.max(1.6, W * Math.abs(A || 1) * u * 0.5);
+    let br = muzzle * Math.max(0.78, sizeMul || 1) * 1.08;
+    if (tank.mothership && kind !== "drone" && kind !== "swarm" && kind !== "minion") br = Math.max(br, 8.2 * (sizeMul || 1));
+    if (tank.closer) br = 26;
+    if (kind === "heal") br = Math.max(3.1, br * 0.36);
+    if (kind === "minion") br = Math.max(10, tank.r * 0.55);
+    if (kind === "pillbox") br = Math.max(8, muzzle * 1.05 * (sizeMul || 1));
+    if (kind === "trap") br = Math.max(br, muzzle * 0.92);
+    return br;
+  }
+
+  function muzzleSpawn(tank, gun, ang, br) {
+    const u = unitOf(tank);
+    const [L, , , X, Y] = gun.pos;
+    const px = -Math.sin(ang);
+    const py = Math.cos(ang);
+    const tipAlong = (X + L) * u;
+    const perp = Y * u;
+    const hullAlong = Math.sqrt(Math.max(0, tank.r * tank.r - perp * perp));
+    const along = Math.min(tipAlong, hullAlong) - Math.min(br * 0.18, tank.r * 0.06);
+    return {
+      x: tank.x + Math.cos(ang) * along + px * perp,
+      y: tank.y + Math.sin(ang) * along + py * perp,
+    };
+  }
+
   function gunAngle(tank, gun, index) {
     if (gun.type === "auto") return tank.turretAim[index] || tank.angle;
     return tank.angle + (gun.pos[5] * Math.PI) / 180;
@@ -2824,36 +2858,27 @@
   }
 
   function spawnShot(tank, gun, index, st) {
-    const u = unitOf(tank);
-    const [L, W, A, X, Y] = gun.pos;
+    const W = gun.pos[1];
     const shoot = gunShootSettings(tank, gun);
     const sprayRad = ((shoot.spray || 0) * (shoot.shudder || 1) * Math.PI) / 180;
     const jitter = sprayRad ? (Math.random() - 0.5) * 2 * sprayRad : 0;
     const ang = gunAngle(tank, gun, index) + jitter + rand(-(gun.spread || 0), gun.spread || 0);
-    const px = -Math.sin(ang);
-    const py = Math.cos(ang);
-    const ox = Math.cos(ang) * (X + L) * u + px * Y * u;
-    const oy = Math.sin(ang) * (X + L) * u + py * Y * u;
-    if (tank.team) {
-      const z = zoneAt(tank.x + ox, tank.y + oy);
-      if (z && z !== tank.team) return;
-    }
     const kind = gun.type === "auto" ? "bullet" : gun.type;
     const gs = gun.stats || {};
+    const sizeMul = gun.size || gs.size || shoot.size || 1;
+    const br = shotRadius(tank, gun, sizeMul, kind);
+    const spawn = muzzleSpawn(tank, gun, ang, br);
+    if (tank.team) {
+      const z = zoneAt(spawn.x, spawn.y);
+      if (z && z !== tank.team) return;
+    }
     const speed = Math.max(40, (shoot.launch || 4) * 70);
     applyRecoil(tank, gun, kind, shoot, W, ang);
-    const sizeMul = gun.size || gs.size || shoot.size || 1;
     let lifeBase = Math.max(0.45, 1.55 * shoot.RANGE);
     if (kind === "drone" || kind === "minion") lifeBase = 999;
     else if (kind === "swarm") lifeBase = Math.max(2.4, (shoot.RANGE || 2.5) * 3.2);
     else if (kind === "trap" || kind === "pillbox") lifeBase = Math.max(6, (shoot.RANGE || 5) * 3);
     else if (kind === "missile") lifeBase = 2.4;
-    let br = (7.2 * sizeMul) * (0.85 + tank.r / 40);
-    if (tank.mothership && kind !== "drone" && kind !== "swarm" && kind !== "minion") br = 8.2 * sizeMul;
-    if (tank.closer) br = 26;
-    if (kind === "heal") br = Math.max(3.1, br * 0.36);
-    if (kind === "minion") br = Math.max(10, tank.r * 0.55);
-    if (kind === "pillbox") br = Math.max(8, 9 * sizeMul);
     let orbit = rand(0, TAU);
     if (flockKind(kind)) orbit = countOwned(kind, tank) * 2.39996;
     let motion = "coast";
@@ -2863,8 +2888,8 @@
     const sides = gun.shape || (kind === "swarm" ? 3 : kind === "drone" ? 3 : kind === "trap" || kind === "pillbox" ? 4 : 0);
     const topSpeed = (kind === "trap" || kind === "pillbox") ? 0 : Math.max(50, (shoot.SPEED || 1) * 70);
     state.bullets.push({
-      x: tank.x + ox,
-      y: tank.y + oy,
+      x: spawn.x,
+      y: spawn.y,
       vx: Math.cos(ang) * speed + tank.vx * 0.15,
       vy: Math.sin(ang) * speed + tank.vy * 0.15,
       r: br,
@@ -2984,13 +3009,15 @@
     const ang = b.turretAim == null ? b.angle : b.turretAim;
     const speed = Math.max(40, (shoot.launch || 4) * 70);
     const sizeMul = shoot.size || 1;
+    const br = Math.max(3.2, b.r * 0.42 * sizeMul);
+    const along = Math.max(0, b.r - br * 0.2);
     b.gunCd = Math.max(0.12, (shoot.reload * (shoot.rld || 1) / ARRAS_TICK));
     state.bullets.push({
-      x: b.x + Math.cos(ang) * (b.r + 6),
-      y: b.y + Math.sin(ang) * (b.r + 6),
+      x: b.x + Math.cos(ang) * along,
+      y: b.y + Math.sin(ang) * along,
       vx: Math.cos(ang) * speed,
       vy: Math.sin(ang) * speed,
-      r: Math.max(3.4, (5.2 * sizeMul) * (0.85 + (owner.r || 22) / 40)),
+      r: br,
       health: Math.max(0.2, shoot.HEALTH),
       damage: Math.max(0.2, shoot.DAMAGE),
       pen: shoot.PENETRATION || 1,
