@@ -821,6 +821,34 @@
     return best;
   }
 
+  function shapeStandoff(tank, shape) {
+    const extra = shape.kind === "alpha" ? 150 : shape.kind === "pentagon" ? 96 : shape.kind === "crasher" ? 80 : 58;
+    return (tank.r || 22) + (shape.r || 12) + extra;
+  }
+
+  function peelOffShapes(tank, tx, ty) {
+    if (!tank || isRammer(tank)) return { x: tx, y: ty };
+    const necro = !!(getDef(tank) && getDef(tank).necro);
+    let x = tx;
+    let y = ty;
+    for (const s of state.shapes) {
+      if (!s.alive) continue;
+      if (necro && s.kind === "square") continue;
+      const minD = tank.r + s.r + (s.kind === "alpha" ? 40 : s.kind === "pentagon" ? 22 : 16);
+      const dx = tank.x - s.x;
+      const dy = tank.y - s.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      if (dist > minD + 90) continue;
+      const toward = (x - tank.x) * (s.x - tank.x) + (y - tank.y) * (s.y - tank.y) > 0;
+      if (dist < minD || (toward && dist < minD + 42)) {
+        const push = Math.max(36, minD + 28 - dist);
+        x += (dx / dist) * push;
+        y += (dy / dist) * push;
+      }
+    }
+    return { x, y };
+  }
+
   function bestFarm(from, maxDist) {
     let best = null;
     let bestV = -1;
@@ -3440,7 +3468,10 @@
     if (tank.spawnProtect > 0 && tank.ai) return false;
     if (tank.ai) {
       if (isRammer(tank)) return false;
-      if (tank.aiState !== "attack" && tank.aiState !== "farm" && tank.aiState !== "defend" && tank.aiState !== "heal") return false;
+      const combat = tank.aiState === "attack" || tank.aiState === "farm" || tank.aiState === "defend"
+        || tank.aiState === "heal" || tank.aiState === "flee" || tank.aiState === "home"
+        || tank.aiState === "storm" || tank.aiState === "seek";
+      if (!combat) return false;
       const t = tank.aiTarget;
       return !t || canSee(tank, t);
     }
@@ -4009,13 +4040,20 @@
     }
 
     const st = tankStats(tank);
-    tank.aiTarget = tank.aiState === "heal" ? healAlly : tank.aiState === "attack" ? enemy : tank.aiState === "farm" ? shape : tank.aiState === "defend" ? (enemy || ownMoth) : tank.aiState === "seek" ? heard : null;
-    if (tank.aiState === "attack" && enemy) {
+    const retreatLock = enemy || hunterNear || closerNear;
+    tank.aiTarget = tank.aiState === "heal" ? healAlly
+      : tank.aiState === "attack" ? enemy
+      : tank.aiState === "farm" ? shape
+      : tank.aiState === "defend" ? (enemy || ownMoth)
+      : tank.aiState === "seek" ? heard
+      : (tank.aiState === "flee" || tank.aiState === "home" || tank.aiState === "storm") ? (enemy || retreatLock)
+      : null;
+    if (enemy && (tank.aiState === "attack" || tank.aiState === "flee" || tank.aiState === "home" || tank.aiState === "storm")) {
       enemy.aggroN = (enemy.aggroN || 0) + 1;
       if (tank.aiLock !== enemy) {
         tank.aiLock = enemy;
         tank.aiLockUntil = state.time + rand(2.2, 5.8);
-      }
+      } else tank.aiLockUntil = Math.max(tank.aiLockUntil || 0, state.time + 1.2);
     }
 
     let tx = tank.x;
@@ -4025,13 +4063,15 @@
       const steered = steerAround(tank, home.x, home.y);
       tx = steered.x;
       ty = steered.y;
-      if (enemy) tank.angle = aimAt(tank, enemy, st);
+      const lock = tank.aiTarget || enemy;
+      if (lock && canSee(tank, lock)) tank.angle = aimAt(tank, lock, st);
     } else if (tank.aiState === "storm") {
       const safe = stormCenter();
       const steered = steerAround(tank, safe.x, safe.y);
       tx = steered.x;
       ty = steered.y;
-      if (enemy && canSee(tank, enemy)) tank.angle = aimAt(tank, enemy, st);
+      const lock = tank.aiTarget || enemy;
+      if (lock && canSee(tank, lock)) tank.angle = aimAt(tank, lock, st);
       else tank.angle = Math.atan2(ty - tank.y, tx - tank.x);
     } else if (tank.aiState === "attack" && enemy) {
       const ez = zoneAt(enemy.x, enemy.y);
@@ -4088,7 +4128,8 @@
       const parked = clampArena(steered.x + push.x * 2.2, steered.y + push.y * 2.2, 160);
       tx = parked.x;
       ty = parked.y;
-      if (enemy && canSee(tank, enemy)) tank.angle = aimAt(tank, enemy, st);
+      const lock = tank.aiTarget || enemy || from;
+      if (lock && canSee(tank, lock)) tank.angle = aimAt(tank, lock, st);
       else tank.angle = Math.atan2(from.y - tank.y, from.x - tank.x);
     } else if (tank.aiState === "heal" && healAlly) {
       const hold = holdPoint(tank, healAlly, Math.max(70, healAlly.r + 48));
@@ -4097,15 +4138,29 @@
       ty = steered.y;
       tank.angle = Math.atan2(healAlly.y - tank.y, healAlly.x - tank.x);
     } else if (tank.aiState === "farm" && shape) {
-      const steered = steerAround(tank, shape.x, shape.y);
-      tx = steered.x;
-      ty = steered.y;
       tank.angle = aimAt(tank, shape, st);
+      if (ram) {
+        const steered = steerAround(tank, shape.x, shape.y);
+        tx = steered.x;
+        ty = steered.y;
+      } else {
+        const want = shapeStandoff(tank, shape);
+        const dist = Math.hypot(shape.x - tank.x, shape.y - tank.y) || 1;
+        if (dist < want * 0.92) {
+          tx = tank.x + ((tank.x - shape.x) / dist) * 150;
+          ty = tank.y + ((tank.y - shape.y) / dist) * 150;
+        } else {
+          const hold = holdPoint(tank, shape, want);
+          const steered = steerAround(tank, hold.x, hold.y);
+          tx = steered.x;
+          ty = steered.y;
+        }
+      }
     } else if (tank.aiState === "seek" && heard) {
       const steered = steerAround(tank, heard.x, heard.y);
       tx = steered.x;
       ty = steered.y;
-      tank.angle = Math.atan2(heard.y - tank.y, heard.x - tank.x);
+      tank.angle = canSee(tank, heard) ? aimAt(tank, heard, st) : Math.atan2(heard.y - tank.y, heard.x - tank.x);
     } else if (tank.aiT <= 0) {
       tank.aiT = rand(2.2, 5.5);
       if (maze) {
@@ -4142,6 +4197,9 @@
         ty = tank.y;
       }
     }
+    const peeled = peelOffShapes(tank, tx, ty);
+    tx = peeled.x;
+    ty = peeled.y;
     const huntedBot = state.mode === "manhunt" && tank === state.hunted;
     const pace = huntedBot
       ? st.moveSpeed
