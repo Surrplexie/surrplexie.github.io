@@ -99,7 +99,16 @@
     "Hexa", "Pulse", "Nim", "Vex", "Orbit", "Kite", "Bolt", "Mara",
     "Pento", "Drift", "Nova", "Rook", "Jolt", "Sable", "Pike", "Wisp",
     "Axon", "Quark", "Fenn", "Cinder", "Halo", "Rift", "Nox", "Vera",
-    "Glyph", "Torch", "Lumen", "Brine",
+    "Glyph", "Torch", "Lumen", "Brine", "Ash", "Bram", "Cove", "Dusk",
+    "Echo", "Flint", "Glim", "Haze", "Ilex", "Jade", "Knell", "Lark",
+    "Moss", "Nyx", "Oath", "Prowl", "Quill", "Rune", "Thorn", "Umbra",
+    "Vale", "Wren", "Yarrow", "Zeal", "Aero", "Bane", "Crux", "Dax",
+    "Ember", "Fable", "Grit", "Iris", "Jinx", "Keel", "Loom", "Moth",
+    "Nadir", "Opal", "Prism", "Quinn", "Silt", "Talon", "Vesper", "Wynn",
+    "Xen", "Yarn", "Zest", "Arden", "Beryl", "Calyx", "Dune", "Elk",
+    "Frost", "Gale", "Husk", "Iota", "Jute", "Lynx", "Mica", "Noll",
+    "Onyx", "Pax", "Rill", "Sol", "Tusk", "Vela", "Weld", "Yew",
+    "Zane", "Bramble", "Crest", "Fawn",
   ];
 
   const canvas = document.getElementById("game");
@@ -1193,7 +1202,7 @@
     for (let i = 0; i < count; i++) {
       const pos = openAround(dom.x, dom.y, 140, assaultZoneR(dom) * 0.72, 36);
       const g = createTank({
-        name: BOT_NAMES[irand(0, BOT_NAMES.length - 1)],
+        name: uniqueBotName(),
         ai: true,
         classId: "assault_guard",
         team: "green",
@@ -1763,7 +1772,7 @@
   }
 
   const BOT_MIN = 1;
-  const BOT_MAX = 50;
+  const BOT_MAX = 100;
   const BOT_DEFAULT = 20;
 
   function clampBotCount(n) {
@@ -2045,8 +2054,8 @@
     const killer = payout.killer;
     const me = state.player;
     if (!killer || !me) return;
-    if (killer === me) note(`You killed ${victimLabel(victim)}${state.mode === "manhunt" && victim === state.hunted ? " · hunted 2× bounty" : ""}.`);
-    else note(`You assisted ${killer.name} in killing ${victimLabel(victim)}${state.mode === "manhunt" && victim === state.hunted ? " · hunted 2× bounty" : ""}.`);
+    if (killer === me) note(`You killed ${victimLabel(victim)}${state.mode === "manhunt" && victim === state.hunted ? " · hunted +50% bounty" : ""}.`);
+    else note(`You assisted ${killer.name} in killing ${victimLabel(victim)}${state.mode === "manhunt" && victim === state.hunted ? " · hunted +50% bounty" : ""}.`);
   }
 
   function populateWorld() {
@@ -2062,8 +2071,32 @@
     if (!smallOnly) for (let i = 0; i < 2; i++) state.shapes.push(createShape("crasher"));
   }
 
+  function takenNames() {
+    const used = new Set();
+    const add = (n) => {
+      const s = String(n || "").trim().toLowerCase();
+      if (s) used.add(s);
+    };
+    add(state.spawnName);
+    if (state.player) add(state.player.name);
+    for (const t of state.tanks) if (t) add(t.name);
+    return used;
+  }
+
+  function uniqueBotName(prefer) {
+    const used = takenNames();
+    const want = String(prefer || "").trim();
+    if (want && !used.has(want.toLowerCase())) return want;
+    const pool = BOT_NAMES.filter((n) => !used.has(n.toLowerCase()));
+    if (pool.length) return pool[irand(0, pool.length - 1)];
+    let i = 2;
+    while (used.has("bot " + i)) i++;
+    return "Bot " + i;
+  }
+
   function spawnBots() {
-    const names = BOT_NAMES.slice().sort(() => Math.random() - 0.5);
+    const used = takenNames();
+    const names = BOT_NAMES.filter((n) => !used.has(n.toLowerCase())).sort(() => Math.random() - 0.5);
     const mine = state.player && state.player.team;
     const teams = botTeamsFor(state.mode, mine, state.botCount);
     const nBots = clampBotCount(state.botCount);
@@ -2079,7 +2112,7 @@
           : null;
       const home = state.mode === "protect" ? mothershipOf(team) : null;
       const bot = createTank({
-        name: names[i % names.length],
+        name: names[i] || uniqueBotName(),
         ai: true,
         score,
         classId: "basic",
@@ -2424,7 +2457,7 @@
     const pool = tank.killScore
       ? tank.killScore
       : huntedKill
-        ? Math.max(40, deathScore * 2)
+        ? Math.max(30, Math.floor(deathScore * 1.5))
         : Math.max(20, Math.floor(deathScore * 0.9));
     const payout = applyKillScore(tank, pool, killer, tank.x, tank.y);
     const credited = payout.killer;
@@ -2432,7 +2465,7 @@
     if (credited) {
       state.lastKiller = credited;
       credited.kills = (credited.kills || 0) + 1;
-      if (huntedKill) floater(tank.x, tank.y - 24, "Hunted down · 2×");
+      if (huntedKill) floater(tank.x, tank.y - 24, "Hunted down · +50%");
     }
     notePlayerKill(tank, payout);
     if (tank.boss || tank.fodder) onSiegeEnemyKilled();
@@ -5850,7 +5883,7 @@
     ffa: "Everyone for themselves · start at 45 · arena closers after 4 hours",
     tdm: "Red vs blue · random team · start at 45",
     "4tdm": "Four bases · random team · start at 45",
-    manhunt: "Everyone hunts #1 · killing the hunted pays 2× their score · they respawn with 25% · hunted gets a small boost",
+    manhunt: "Everyone hunts #1 · killing the hunted pays +50% their score · they respawn with 25% · hunted gets a small boost",
     tag: "Shoot to convert · random team · start at 45",
     protect: "Two motherships roam · random team · start at 45 · [N] skip to 45 · [H] to take control",
     maze: "FFA inside generated walls · start at 45",
