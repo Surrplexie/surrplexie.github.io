@@ -2086,8 +2086,8 @@
     const killer = payout.killer;
     const me = state.player;
     if (!killer || !me) return;
-    if (killer === me) note(`You killed ${victimLabel(victim)}${state.mode === "manhunt" && victim === state.hunted ? " · hunted +50% bounty" : ""}.`);
-    else note(`You assisted ${killer.name} in killing ${victimLabel(victim)}${state.mode === "manhunt" && victim === state.hunted ? " · hunted +50% bounty" : ""}.`);
+    if (killer === me) note(`You killed ${victimLabel(victim)}${state.mode === "manhunt" && victim === state.hunted ? " · hunted +1% bounty" : ""}.`);
+    else note(`You assisted ${killer.name} in killing ${victimLabel(victim)}${state.mode === "manhunt" && victim === state.hunted ? " · hunted +1% bounty" : ""}.`);
   }
 
   function populateWorld() {
@@ -2496,7 +2496,7 @@
     const pool = tank.killScore
       ? tank.killScore
       : huntedKill
-        ? Math.max(30, Math.floor(deathScore * 1.5))
+        ? Math.max(30, Math.floor(deathScore * 1.01))
         : Math.max(20, Math.floor(deathScore * 0.9));
     const payout = applyKillScore(tank, pool, killer, tank.x, tank.y);
     const credited = payout.killer;
@@ -2504,7 +2504,7 @@
     if (credited) {
       state.lastKiller = credited;
       credited.kills = (credited.kills || 0) + 1;
-      if (huntedKill) floater(tank.x, tank.y - 24, "Hunted down · +50%");
+      if (huntedKill) floater(tank.x, tank.y - 24, "Hunted down · +1%");
     }
     notePlayerKill(tank, payout);
     if (tank.boss || tank.fodder) onSiegeEnemyKilled();
@@ -5950,7 +5950,7 @@
     ffa: "Everyone for themselves · start at 45 · fresh server after 4 hours",
     tdm: "Red vs blue · random team · start at 45 · fresh server after 4 hours",
     "4tdm": "Four bases · random team · start at 45 · fresh server after 4 hours",
-    manhunt: "Everyone hunts #1 · killing the hunted pays +50% their score · they respawn with 25% · hunted gets a small boost · fresh server after 4 hours",
+    manhunt: "Everyone hunts #1 · killing the hunted pays +1% their score · they respawn with 25% · hunted gets a small boost · fresh server after 4 hours",
     tag: "Shoot to convert · random team · start at 45 · win or 4 hours starts a fresh server",
     protect: "Two motherships roam · random team · start at 45 · [N] skip to 45 · [H] to take control · win or 4 hours starts a fresh server",
     maze: "FFA inside generated walls · start at 45 · fresh server after 4 hours",
@@ -5968,7 +5968,7 @@
     "assault-ar": "Assault · Arms Race class tree · Blue attacks Green · capture zones · Green wins in 10:00 if they hold 3/4 · win or 4 hours starts a fresh server",
     "tdm-ar": "Red vs blue · Arms Race class tree · random team · start at 45 · fresh server after 4 hours",
     "royalemaze-ar": "Royale Maze · Arms Race class tree · L / Y / zig clusters · storm closes fully · last tank wins · then a fresh server",
-    "manhunt-ar": "Manhunt · Arms Race class tree · killing the hunted pays +50% their score · they respawn with 25% · fresh server after 4 hours",
+    "manhunt-ar": "Manhunt · Arms Race class tree · killing the hunted pays +1% their score · they respawn with 25% · fresh server after 4 hours",
   };
 
   function saveName(name) {
