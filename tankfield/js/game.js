@@ -2419,17 +2419,18 @@
     tank.alive = false;
     clearOwnedShots(tank);
     burst(tank.x, tank.y, tank.color, 18, 220);
-    const huntedBonus = state.mode === "manhunt" && tank === state.hunted ? Math.max(80, Math.floor(tank.score * 0.2)) : 0;
-    const pool = tank.killScore
+    const wanted = state.mode === "manhunt" && tank === state.hunted;
+    const deathScore = tank.killScore
       ? tank.killScore
-      : Math.max(20, Math.floor(tank.score * 0.9)) + huntedBonus;
+      : Math.max(20, Math.floor(tank.score * 0.9));
+    const pool = wanted ? deathScore * 2 : deathScore;
     const payout = applyKillScore(tank, pool, killer, tank.x, tank.y);
     const credited = payout.killer;
     tank.killedBy = cause || (credited ? credited.name : killer ? killer.name : "a polygon");
     if (credited) {
       state.lastKiller = credited;
       credited.kills = (credited.kills || 0) + 1;
-      if (huntedBonus) floater(tank.x, tank.y - 24, "Hunted down");
+      if (wanted) floater(tank.x, tank.y - 24, "2× wanted");
     }
     notePlayerKill(tank, payout);
     if (tank.boss || tank.fodder) onSiegeEnemyKilled();
@@ -5847,7 +5848,7 @@
     ffa: "Everyone for themselves · start at 45 · arena closers after 4 hours",
     tdm: "Red vs blue · random team · start at 45",
     "4tdm": "Four bases · random team · start at 45",
-    manhunt: "Everyone hunts #1 · start at 45 · hunted gets a small boost",
+    manhunt: "Everyone hunts #1 · kill the wanted tank for 2× death score · hunted respawns with 25% · start at 45",
     tag: "Shoot to convert · random team · start at 45",
     protect: "Two motherships roam · random team · start at 45 · [N] skip to 45 · [H] to take control",
     maze: "FFA inside generated walls · start at 45",
