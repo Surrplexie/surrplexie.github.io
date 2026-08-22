@@ -74,6 +74,7 @@
   };
   const BASE_W = 560;
   const FFA_CLOSE_AT = 4 * 60 * 60;
+  const SERVER_RESET_DELAY = 5;
   const ROYALE_PREP = 60;
   const ROYALE_SHRINK = 180;
   const ROYALE_END_R = 0;
@@ -204,6 +205,7 @@
     closing: false,
     closeAt: 0,
     closersSpawned: false,
+    serverResetAt: 0,
     userPaused: false,
     spectating: false,
     spectateTarget: null,
@@ -1362,8 +1364,7 @@
 
   function assaultWin(team, msg) {
     if (state.mode !== "assault" || state.closing) return;
-    note(msg || (team === "blue" ? "Blue team wins!" : "Green team wins!"), 5000);
-    beginArenaClose();
+    beginArenaClose(msg || (team === "blue" ? "Blue team wins! Fresh server shortly." : "Green team wins! Fresh server shortly."));
   }
 
   function updateAssault(dt) {
@@ -1633,15 +1634,12 @@
   function siegeWin() {
     if (state.mode !== "siege" || state.closing || state.siegeWon) return;
     state.siegeWon = true;
-    note("Your team has won the game!", 5000);
-    beginArenaClose();
+    beginArenaClose("Your team has won the game! Fresh server shortly.");
   }
 
   function siegeLose() {
     if (state.mode !== "siege" || state.closing || state.siegeWon) return;
-    note("Your team has lost the game.", 5000);
-    note("Team boss has won the game!", 5000);
-    beginArenaClose();
+    beginArenaClose("Team boss has won. Fresh server shortly.");
   }
 
   function convertSanctuary(d, src) {
@@ -1769,7 +1767,9 @@
       state.domHold = lead;
       state.domHoldT = state.time;
     }
-    if (state.time - state.domHoldT >= DOM_HOLD) beginArenaClose();
+    if (state.time - state.domHoldT >= DOM_HOLD) {
+      beginArenaClose(`${TEAMS[lead].name} wins Domination! Fresh server shortly.`);
+    }
   }
 
   const BOT_MIN = 1;
@@ -1857,11 +1857,6 @@
 
   function isArmsMode() {
     return !!(state.armsRace || state.mode === "sandbox" || state.mode === "armsrace");
-  }
-
-  function usesFfaCloser(mode) {
-    const m = mode == null ? state.mode : mode;
-    return m === "ffa" || m === "onehp" || m === "growth" || m === "armsrace";
   }
 
   function armsWelcome() {
@@ -2390,6 +2385,7 @@
     state.closing = false;
     state.closeAt = 0;
     state.closersSpawned = false;
+    state.serverResetAt = 0;
     if (state.mode === "maze" || state.mode === "royalemaze") buildMaze();
     if (state.mode === "assault") buildAssaultArena();
     if (state.mode === "siege") buildSiegeArena();
@@ -2682,7 +2678,7 @@
   }
 
   function arenaLocked() {
-    return !!state.closersSpawned;
+    return !!state.closersSpawned || !!state.serverResetAt;
   }
 
   function respawnWait() {
@@ -2744,19 +2740,17 @@
   }
 
   function checkRoyale() {
-    if (!isRoyale() || state.royaleRestartAt) return;
+    if (!isRoyale() || state.closing || state.royaleRestartAt) return;
     const living = royaleContestants();
     if (state.time < 1.2 || living.length > 1) return;
     const winner = living[0];
     if (winner) {
-      note(`${winner.name} wins the round!`, 5000);
-      if (winner === state.player) note("You won. Next round starts shortly.", 5000);
-      else note("Next round starts shortly.", 5000);
+      if (winner === state.player) note("You won. Fresh server shortly.", 5000);
+      beginArenaClose(`${winner.name} wins the round! Fresh server shortly.`);
       floater(winner.x, winner.y - winner.r - 18, "Winner");
     } else {
-      note("No tanks remain. Next round starts shortly.", 5000);
+      beginArenaClose("No tanks remain. Fresh server shortly.");
     }
-    state.royaleRestartAt = state.time + 5;
   }
 
   function scatterRoyalePoint(placed) {
@@ -2835,11 +2829,11 @@
   function updateRespawnUi() {
     const deathOpen = els.death && !els.death.classList.contains("hidden");
     if (!deathOpen && !state.spectating) return;
-    const lock = arenaLocked();
+    const lock = arenaLocked() || state.closing;
     const wait = respawnWait();
     const ready = canRespawn();
     const secs = Math.ceil(wait);
-    const label = lock ? "Arena closing" : royaleLocked() ? "Next round" : wait > 0 ? `Respawn (${secs})` : "Respawn";
+    const label = lock ? "Fresh server" : royaleLocked() ? "Next round" : wait > 0 ? `Respawn (${secs})` : "Respawn";
     if (els.again) {
       els.again.disabled = !ready;
       els.again.textContent = label;
@@ -2849,7 +2843,7 @@
       els.spectateAgain.textContent = label;
     }
     if (els.deathWait) {
-      if (lock) els.deathWait.textContent = "Arena closers have spawned. This server is closing.";
+      if (lock) els.deathWait.textContent = "Fresh server starting shortly.";
       else if (royaleLocked()) els.deathWait.textContent = "No respawns after the storm starts. Next round begins when one tank remains.";
       else if (state.mode === "siege" && !liveSanctuaries().length) els.deathWait.textContent = "All sanctuaries are destroyed. You cannot respawn.";
       else if (wait > 0) els.deathWait.textContent = `(you may respawn in ${secs} second${secs === 1 ? "" : "s"})`;
@@ -3698,13 +3692,26 @@
     return true;
   }
 
-  function beginArenaClose() {
-    if (state.closing) return;
+  function restartServer() {
+    const opts = state.playOpts || {
+      mode: state.mode,
+      armsRace: state.armsRace,
+      botCount: state.botCount,
+      sandbox: state.mode === "sandbox",
+    };
+    startGame(state.spawnName, opts);
+  }
+
+  function beginArenaClose(msg) {
+    if (state.closing || state.serverResetAt) return;
     state.closing = true;
-    state.closeAt = state.time + 2.2;
+    state.serverResetAt = state.time + SERVER_RESET_DELAY;
+    if (isRoyale()) state.royaleRestartAt = state.serverResetAt;
     const p = state.player;
-    if (p && p.alive) floater(p.x, p.y - 28, "Arena closing");
-    note("The arena is closing.", 5000);
+    if (p && p.alive) floater(p.x, p.y - 28, "Fresh server");
+    let text = msg || "Starting a fresh server.";
+    if (!/fresh server/i.test(text)) text += " Fresh server shortly.";
+    note(text, 5000);
   }
 
   function checkTagVictory() {
@@ -3712,14 +3719,20 @@
     const living = state.tanks.filter((t) => t.alive && !t.closer);
     const teams = new Set(living.map((t) => t.team).filter(Boolean));
     if (living.length < 1 || teams.size !== 1) return;
-    beginArenaClose();
+    const team = [...teams][0];
+    const name = TEAMS[team] ? TEAMS[team].name : "A team";
+    beginArenaClose(`${name} wins Tag! Fresh server shortly.`);
   }
 
   function checkProtectClose() {
     if (state.mode !== "protect" || state.closing) return;
     const alive = state.tanks.filter((t) => t.mothership && t.alive);
     if (alive.length >= 2) return;
-    beginArenaClose();
+    const win = alive[0];
+    const name = win && win.team && TEAMS[win.team] ? TEAMS[win.team].name : "A team";
+    beginArenaClose(alive.length === 1
+      ? `${name} wins Protect! Fresh server shortly.`
+      : "Both motherships fell. Fresh server shortly.");
   }
 
   function spawnArenaClosers() {
@@ -4550,8 +4563,12 @@
   }
 
   function update(dt) {
+    if (state.serverResetAt && state.time >= state.serverResetAt) {
+      restartServer();
+      return;
+    }
     if (isRoyale() && state.royaleRestartAt && state.time >= state.royaleRestartAt) {
-      startGame(state.spawnName, state.playOpts || { mode: state.mode, armsRace: state.armsRace });
+      restartServer();
       return;
     }
     state.time += dt;
@@ -4563,11 +4580,10 @@
       beginRoyaleStorm();
     }
     if (isRoyale()) checkRoyale();
-    if (usesFfaCloser() && !state.closing && state.time >= FFA_CLOSE_AT) beginArenaClose();
+    if (!state.closing && state.time >= FFA_CLOSE_AT) beginArenaClose("4 hours up. Starting a fresh server.");
     updateDoms(dt);
     updateAssault(dt);
     updateSiege(dt);
-    if (state.closing && !state.closersSpawned && state.time >= state.closeAt) spawnArenaClosers();
     updateRespawnUi();
     if (!state.spectating) updatePlayer(dt);
     else updateGhost(dt);
@@ -4923,26 +4939,25 @@
     if (els.killsText) els.killsText.textContent = `Kills: ${p.kills || 0}`;
     if (els.killsFill) els.killsFill.style.width = `${clamp((p.kills || 0) * 10, 8, 100)}%`;
     if (els.closeTimer) {
-      if (state.closing) els.closeTimer.textContent = "Arena closing";
-      else if (usesFfaCloser()) {
-        const left = Math.max(0, Math.floor(FFA_CLOSE_AT - state.time));
-        const h = Math.floor(left / 3600);
-        const m = Math.floor((left % 3600) / 60);
-        const s = String(left % 60).padStart(2, "0");
-        els.closeTimer.textContent = h > 0
-          ? `Closer ${h}:${String(m).padStart(2, "0")}:${s}`
-          : `Closer ${m}:${s}`;
+      const resetLeft = state.serverResetAt
+        ? Math.max(0, state.serverResetAt - state.time)
+        : Math.max(0, FFA_CLOSE_AT - state.time);
+      const resetText = (state.closing || state.serverResetAt)
+        ? `Fresh server ${Math.ceil(resetLeft)}s`
+        : `Reset ${formatClock(resetLeft)}`;
+      if (state.closing || state.serverResetAt) {
+        els.closeTimer.textContent = resetText;
       } else if (state.mode === "domination" && state.domHold) {
         const left = Math.max(0, DOM_HOLD - (state.time - state.domHoldT));
-        els.closeTimer.textContent = `${TEAMS[state.domHold].name} hold ${left.toFixed(0)}s`;
+        els.closeTimer.textContent = `${TEAMS[state.domHold].name} hold ${left.toFixed(0)}s · ${resetText}`;
       } else if (state.mode === "assault") {
         const live = assaultLiveCount();
         const total = assaultDoms().length;
         const need = assaultNeed();
         if (state.assaultHold) {
-          els.closeTimer.textContent = `Green win ${formatClock(state.assaultWinAt - state.time)} · ${live}/${total}`;
+          els.closeTimer.textContent = `Green win ${formatClock(state.assaultWinAt - state.time)} · ${live}/${total} · ${resetText}`;
         } else {
-          els.closeTimer.textContent = `Hold ${live}/${need} to win`;
+          els.closeTimer.textContent = `Hold ${live}/${need} to win · ${resetText}`;
         }
       } else if (state.mode === "siege") {
         const wave = Math.max(0, (state.siegeWave || 0) + 1);
@@ -4950,20 +4965,22 @@
         const live = liveSanctuaries().length;
         const all = siegeSanctuaries().length;
         if (state.siegeLoseAt) {
-          els.closeTimer.textContent = `Lose ${formatClock(state.siegeLoseAt - state.time)} · ${live}/${all} sancs`;
+          els.closeTimer.textContent = `Lose ${formatClock(state.siegeLoseAt - state.time)} · ${live}/${all} sancs · ${resetText}`;
         } else if (state.siegeRemaining > 0) {
-          els.closeTimer.textContent = `Wave ${wave}/${total} · ${state.siegeRemaining} left`;
+          els.closeTimer.textContent = `Wave ${wave}/${total} · ${state.siegeRemaining} left · ${resetText}`;
         } else {
           const wait = Math.max(0, (state.siegeNextAt || 0) - state.time);
-          els.closeTimer.textContent = `Next wave ${wait.toFixed(0)}s · ${live}/${all} sancs`;
+          els.closeTimer.textContent = `Next wave ${wait.toFixed(0)}s · ${live}/${all} sancs · ${resetText}`;
         }
       } else if (isRoyale()) {
         const alive = royaleContestants().length;
         const clock = formatStopwatch(state.time);
-        if (state.royaleRestartAt) els.closeTimer.textContent = `${clock} · Next round ${Math.max(0, state.royaleRestartAt - state.time).toFixed(0)}s`;
+        if (state.royaleRestartAt) els.closeTimer.textContent = `${clock} · Fresh server ${Math.max(0, state.royaleRestartAt - state.time).toFixed(0)}s`;
         else if (!royaleLocked()) els.closeTimer.textContent = `${clock} · Storm in ${formatClock(ROYALE_PREP - state.time)} · ${alive} left`;
         else els.closeTimer.textContent = `${clock} · Storm · ${alive} left`;
-      } else els.closeTimer.textContent = "";
+      } else {
+        els.closeTimer.textContent = resetText;
+      }
     }
     if (els.arenaMode && state.mode === "manhunt") {
       const mark = state.hunted;
@@ -4975,7 +4992,7 @@
           : `${title} · hunt ${mark.name}`;
     }
     if (els.arenaMode && state.mode === "tag") {
-      if (state.closing) els.arenaMode.textContent = "Arena closing";
+      if (state.closing) els.arenaMode.textContent = "Fresh server";
       else {
         const green = state.tanks.filter((t) => t.alive && !t.closer && t.team === "green").length;
         const redn = state.tanks.filter((t) => t.alive && !t.closer && t.team === "red").length;
@@ -4983,7 +5000,7 @@
       }
     }
     if (els.arenaMode && state.mode === "protect") {
-      if (state.closing) els.arenaMode.textContent = "Arena closing";
+      if (state.closing) els.arenaMode.textContent = "Fresh server";
       else {
         const g = mothershipOf("green");
         const r = mothershipOf("red");
@@ -4996,14 +5013,14 @@
     if (els.arenaMode && state.mode === "domination") {
       const b = state.doms.filter((d) => d.team === "blue").length;
       const r = state.doms.filter((d) => d.team === "red").length;
-      els.arenaMode.textContent = state.closing ? "Arena closing" : `Domination · Blue ${b} – ${r} Red`;
+      els.arenaMode.textContent = state.closing ? "Fresh server" : `Domination · Blue ${b} – ${r} Red`;
     }
     if (els.arenaMode && state.mode === "assault") {
       const live = assaultLiveCount();
       const total = assaultDoms().length;
       const side = state.player && state.player.team ? TEAMS[state.player.team].name : "Assault";
       els.arenaMode.textContent = state.closing
-        ? "Arena closing"
+        ? "Fresh server"
         : `${modeLabel()} · ${side} · Green ${live}/${total}`;
     }
     if (els.arenaMode && state.mode === "siege") {
@@ -5012,19 +5029,19 @@
       const live = liveSanctuaries().length;
       const all = Math.max(1, siegeSanctuaries().length);
       els.arenaMode.textContent = state.closing
-        ? "Arena closing"
+        ? "Fresh server"
         : `Siege · Wave ${Math.min(wave, total)}/${total} · ${live}/${all} sancs`;
     }
     if (els.arenaMode && state.mode === "growth") {
       els.arenaMode.textContent = state.closing
-        ? "Arena closing"
+        ? "Fresh server"
         : (state.armsRace ? "Growth AR · cap 1000 · [N] lv45" : "Growth · cap 1000 · [N] lv45");
     }
     if (els.arenaMode && isRoyale()) {
       const alive = royaleContestants().length;
       const label = modeLabel(state.mode);
       els.arenaMode.textContent = state.royaleRestartAt
-        ? `${label} · next round`
+        ? `${label} · fresh server`
         : (!royaleLocked() ? `${label} · prep · ${alive} left` : `${label} · ${alive} left`);
     }
     if (els.skillPoints) els.skillPoints.textContent = state.spectating ? "" : (free > 0 ? `x${free}` : "");
@@ -5930,28 +5947,28 @@
   let menuMode = "ffa";
   let menuTeam = "blue";
   const MODE_HINT = {
-    ffa: "Everyone for themselves · start at 45 · arena closers after 4 hours",
-    tdm: "Red vs blue · random team · start at 45",
-    "4tdm": "Four bases · random team · start at 45",
-    manhunt: "Everyone hunts #1 · killing the hunted pays +50% their score · they respawn with 25% · hunted gets a small boost",
-    tag: "Shoot to convert · random team · start at 45",
-    protect: "Two motherships roam · random team · start at 45 · [N] skip to 45 · [H] to take control",
-    maze: "FFA inside generated walls · start at 45",
-    domination: "Capture 4 points · random team · start at 45",
-    assault: "Blue attacks Green · smaller maze · capture zones · start at 45 · Green wins in 10:00 if they hold 3/4",
-    siege: "Blue defends sanctuaries · waves of bosses · start at 45 · restore fallen sanctuaries by destroying them",
-    growth: "FFA · grow past 45 to 1000 · start at 1 · bots start at 45 · [N] skip to 45 · arena closers after 4 hours",
-    onehp: "Everyone for themselves · 1 HP · no shields · health stats do nothing · medium map · start at 45",
-    royale: "1 min prep · shrinking storm to a random point · closes fully · damage ramps · last tank wins",
-    royalemaze: "Same as Battle Royale · L / Y / zig clusters · open map · storm closes fully",
-    sandbox: "Level 45 · pick any tank · bots included · [T] swaps tanks without resetting",
-    armsrace: "FFA rules · expanded Arras class tree · hybrids, extra T4–T5 tanks at 45 · arena closers after 4 hours",
-    "growth-ar": "Growth · Arms Race class tree · start at 1 · bots at 45 · [N] skip to 45 · closers after 4 hours",
-    "protect-ar": "Mothership Protect · Arms Race class tree · random team · start at 45 · [N] skip · [H] to take control",
-    "assault-ar": "Assault · Arms Race class tree · Blue attacks Green · capture zones · Green wins in 10:00 if they hold 3/4",
-    "tdm-ar": "Red vs blue · Arms Race class tree · random team · start at 45",
-    "royalemaze-ar": "Royale Maze · Arms Race class tree · L / Y / zig clusters · storm closes fully · last tank wins",
-    "manhunt-ar": "Manhunt · Arms Race class tree · killing the hunted pays +50% their score · they respawn with 25%",
+    ffa: "Everyone for themselves · start at 45 · fresh server after 4 hours",
+    tdm: "Red vs blue · random team · start at 45 · fresh server after 4 hours",
+    "4tdm": "Four bases · random team · start at 45 · fresh server after 4 hours",
+    manhunt: "Everyone hunts #1 · killing the hunted pays +50% their score · they respawn with 25% · hunted gets a small boost · fresh server after 4 hours",
+    tag: "Shoot to convert · random team · start at 45 · win or 4 hours starts a fresh server",
+    protect: "Two motherships roam · random team · start at 45 · [N] skip to 45 · [H] to take control · win or 4 hours starts a fresh server",
+    maze: "FFA inside generated walls · start at 45 · fresh server after 4 hours",
+    domination: "Capture 4 points · random team · start at 45 · win or 4 hours starts a fresh server",
+    assault: "Blue attacks Green · smaller maze · capture zones · start at 45 · Green wins in 10:00 if they hold 3/4 · win or 4 hours starts a fresh server",
+    siege: "Blue defends sanctuaries · waves of bosses · start at 45 · restore fallen sanctuaries by destroying them · win or 4 hours starts a fresh server",
+    growth: "FFA · grow past 45 to 1000 · start at 1 · bots start at 45 · [N] skip to 45 · fresh server after 4 hours",
+    onehp: "Everyone for themselves · 1 HP · no shields · health stats do nothing · medium map · start at 45 · fresh server after 4 hours",
+    royale: "1 min prep · shrinking storm to a random point · closes fully · damage ramps · last tank wins · then a fresh server",
+    royalemaze: "Same as Battle Royale · L / Y / zig clusters · open map · storm closes fully · then a fresh server",
+    sandbox: "Level 45 · pick any tank · bots included · [T] swaps tanks without resetting · fresh server after 4 hours",
+    armsrace: "FFA rules · expanded Arras class tree · hybrids, extra T4–T5 tanks at 45 · fresh server after 4 hours",
+    "growth-ar": "Growth · Arms Race class tree · start at 1 · bots at 45 · [N] skip to 45 · fresh server after 4 hours",
+    "protect-ar": "Mothership Protect · Arms Race class tree · random team · start at 45 · [N] skip · [H] to take control · win or 4 hours starts a fresh server",
+    "assault-ar": "Assault · Arms Race class tree · Blue attacks Green · capture zones · Green wins in 10:00 if they hold 3/4 · win or 4 hours starts a fresh server",
+    "tdm-ar": "Red vs blue · Arms Race class tree · random team · start at 45 · fresh server after 4 hours",
+    "royalemaze-ar": "Royale Maze · Arms Race class tree · L / Y / zig clusters · storm closes fully · last tank wins · then a fresh server",
+    "manhunt-ar": "Manhunt · Arms Race class tree · killing the hunted pays +50% their score · they respawn with 25% · fresh server after 4 hours",
   };
 
   function saveName(name) {
