@@ -1696,6 +1696,7 @@
       tank.shield += Math.max(0, tank.maxShield - oldShield);
       tank.shield = clamp(tank.shield, 0, tank.maxShield);
     }
+    restatGrowthShots(tank);
     return gained;
   }
 
@@ -2718,6 +2719,36 @@
     if (running) setUserPaused(!state.userPaused);
   }
 
+  function sizeFactorOf(tank) {
+    if (!tank || tank.closer || tank.dominator) return 1;
+    const m = modsOf(getDef(tank));
+    const core = (tank.mothership ? 82 : 20) * (m.size || 1);
+    return Math.max(0.35, (tank.r || core) / core);
+  }
+
+  function stampGrowth(b, tank) {
+    b.growSf = sizeFactorOf(tank);
+    b.growR = tank.r || 20;
+  }
+
+  function restatGrowthShots(tank) {
+    if (state.mode !== "growth" || !tank || !state.bullets) return;
+    const sf = sizeFactorOf(tank);
+    const r = tank.r || 20;
+    for (const b of state.bullets) {
+      if (!b.alive || b.owner !== tank || b.growSf == null) continue;
+      const persist = b.kind === "drone" || b.kind === "swarm" || b.kind === "minion" || b.kind === "trap" || b.kind === "pillbox";
+      if (!persist) continue;
+      const ratio = sf / Math.max(0.35, b.growSf);
+      if (Math.abs(ratio - 1) < 0.015) continue;
+      b.damage *= Math.sqrt(ratio);
+      b.health *= ratio;
+      b.r *= r / Math.max(1, b.growR || r);
+      b.growSf = sf;
+      b.growR = r;
+    }
+  }
+
   function unitOf(tank) { return tank.r / 12; }
 
   function shotRadius(tank, gun, sizeMul, kind) {
@@ -2815,7 +2846,7 @@
     shoot.size *= m.size || 1;
     const kind = gun.type === "auto" ? "bullet" : gun.type;
     const proj = (window.TankCatalog && TankCatalog.PROJECTILE && TankCatalog.PROJECTILE[kind]) || TankCatalog.PROJECTILE.bullet;
-    const sizeFactor = Math.max(0.35, (tank.r || 22) / 22);
+    const sizeFactor = sizeFactorOf(tank);
     const out = {
       SPEED: shoot.maxSpeed * sk.spd,
       HEALTH: shoot.health * sk.str,
@@ -2854,6 +2885,10 @@
     }
     out.HEALTH *= 7.3;
     if (kind === "heal") out.DAMAGE = Math.abs(out.DAMAGE);
+    if (state.mode === "growth" && calc !== "drone") {
+      out.HEALTH *= sizeFactor;
+      out.DAMAGE *= Math.sqrt(sizeFactor);
+    }
     return out;
   }
 
@@ -2914,6 +2949,7 @@
       gunCd: kind === "minion" || kind === "pillbox" ? 0.4 : 0,
       turretAim: ang,
     });
+    stampGrowth(state.bullets[state.bullets.length - 1], tank);
   }
 
   function tryNecro(owner, shape, template) {
@@ -2972,6 +3008,7 @@
       gunCd: 0,
       turretAim: 0,
     });
+    stampGrowth(state.bullets[state.bullets.length - 1], owner);
     burst(shape.x, shape.y, owner.color, 7, 80);
     return true;
   }
@@ -3039,9 +3076,8 @@
       gunCd: 0,
       turretAim: ang,
     });
+    stampGrowth(state.bullets[state.bullets.length - 1], owner);
   }
-
-  function steerChase(b, dt) {
     const t = droneTarget(b);
     if (!t) return;
     const dx = t.x - b.x;
