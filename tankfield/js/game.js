@@ -2045,8 +2045,8 @@
     const killer = payout.killer;
     const me = state.player;
     if (!killer || !me) return;
-    if (killer === me) note(`You killed ${victimLabel(victim)}.`);
-    else note(`You assisted ${killer.name} in killing ${victimLabel(victim)}.`);
+    if (killer === me) note(`You killed ${victimLabel(victim)}${state.mode === "manhunt" && victim === state.hunted ? " · hunted 2× bounty" : ""}.`);
+    else note(`You assisted ${killer.name} in killing ${victimLabel(victim)}${state.mode === "manhunt" && victim === state.hunted ? " · hunted 2× bounty" : ""}.`);
   }
 
   function populateWorld() {
@@ -2419,18 +2419,20 @@
     tank.alive = false;
     clearOwnedShots(tank);
     burst(tank.x, tank.y, tank.color, 18, 220);
-    const wanted = state.mode === "manhunt" && tank === state.hunted;
-    const deathScore = tank.killScore
+    const deathScore = Math.max(0, Math.floor(tank.score || 0));
+    const huntedKill = state.mode === "manhunt" && tank === state.hunted;
+    const pool = tank.killScore
       ? tank.killScore
-      : Math.max(20, Math.floor(tank.score * 0.9));
-    const pool = wanted ? deathScore * 2 : deathScore;
+      : huntedKill
+        ? Math.max(40, deathScore * 2)
+        : Math.max(20, Math.floor(deathScore * 0.9));
     const payout = applyKillScore(tank, pool, killer, tank.x, tank.y);
     const credited = payout.killer;
     tank.killedBy = cause || (credited ? credited.name : killer ? killer.name : "a polygon");
     if (credited) {
       state.lastKiller = credited;
       credited.kills = (credited.kills || 0) + 1;
-      if (wanted) floater(tank.x, tank.y - 24, "2× wanted");
+      if (huntedKill) floater(tank.x, tank.y - 24, "Hunted down · 2×");
     }
     notePlayerKill(tank, payout);
     if (tank.boss || tank.fodder) onSiegeEnemyKilled();
@@ -5848,7 +5850,7 @@
     ffa: "Everyone for themselves · start at 45 · arena closers after 4 hours",
     tdm: "Red vs blue · random team · start at 45",
     "4tdm": "Four bases · random team · start at 45",
-    manhunt: "Everyone hunts #1 · kill the wanted tank for 2× death score · hunted respawns with 25% · start at 45",
+    manhunt: "Everyone hunts #1 · killing the hunted pays 2× their score · they respawn with 25% · hunted gets a small boost",
     tag: "Shoot to convert · random team · start at 45",
     protect: "Two motherships roam · random team · start at 45 · [N] skip to 45 · [H] to take control",
     maze: "FFA inside generated walls · start at 45",
