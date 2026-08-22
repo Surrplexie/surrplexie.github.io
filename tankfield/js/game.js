@@ -3038,9 +3038,46 @@
     return br;
   }
 
-  function muzzleSpawn(tank, gun, ang, br) {
+  function countAutoGuns(def) {
+    let n = 0;
+    for (const g of (def && def.guns) || []) if (g && g.type === "auto") n++;
+    return n;
+  }
+
+  function autoRingMount(tank, gun) {
+    return gun && gun.type === "auto" && countAutoGuns(getDef(tank)) >= 2;
+  }
+
+  function autoPivot(tank, gun, index) {
+    const u = unitOf(tank);
+    const X = (gun.pos && gun.pos[3]) || 0;
+    const Y = (gun.pos && gun.pos[4]) || 0;
+    const rest = tank.angle + (((gun.pos && gun.pos[5]) || 0) * Math.PI) / 180;
+    const ang = gunAngle(tank, gun, index);
+    const ring = autoRingMount(tank, gun);
+    const px = -Math.sin(ring ? rest : ang);
+    const py = Math.cos(ring ? rest : ang);
+    const along = ring ? tank.r * 0.5 + X * u : X * u;
+    return {
+      x: tank.x + Math.cos(ring ? rest : ang) * along + px * Y * u,
+      y: tank.y + Math.sin(ring ? rest : ang) * along + py * Y * u,
+      ang,
+      rest,
+      ring,
+    };
+  }
+
+  function muzzleSpawn(tank, gun, ang, br, index) {
     const u = unitOf(tank);
     const [L, , , X, Y] = gun.pos;
+    if (gun.type === "auto") {
+      const pivot = autoPivot(tank, gun, index);
+      const len = Math.max(2, (pivot.ring ? L * 0.62 : L) * u);
+      return {
+        x: pivot.x + Math.cos(ang) * len,
+        y: pivot.y + Math.sin(ang) * len,
+      };
+    }
     const px = -Math.sin(ang);
     const py = Math.cos(ang);
     const tipAlong = (X + L) * u;
@@ -3054,7 +3091,11 @@
   }
 
   function gunAngle(tank, gun, index) {
-    if (gun.type === "auto") return tank.turretAim[index] || tank.angle;
+    if (gun.type === "auto") {
+      const aim = tank.turretAim && tank.turretAim[index];
+      if (aim != null) return aim;
+      return tank.angle + (((gun.pos && gun.pos[5]) || 0) * Math.PI) / 180;
+    }
     return tank.angle + (gun.pos[5] * Math.PI) / 180;
   }
 
@@ -3174,7 +3215,7 @@
     const gs = gun.stats || {};
     const sizeMul = gun.size || gs.size || shoot.size || 1;
     const br = shotRadius(tank, gun, sizeMul, kind);
-    const spawn = muzzleSpawn(tank, gun, ang, br);
+    const spawn = muzzleSpawn(tank, gun, ang, br, index);
     if (tank.team) {
       const z = zoneAt(spawn.x, spawn.y);
       if (z && z !== tank.team) return;
@@ -3456,8 +3497,9 @@
       }
       let want = base;
       if (target) {
-        const lead = leadPoint(tank, target, tankStats(tank));
-        want = Math.atan2(lead.y - tank.y, lead.x - tank.x);
+        const pivot = autoPivot(tank, gun, i);
+        const lead = leadPoint(pivot, target, tankStats(tank));
+        want = Math.atan2(lead.y - pivot.y, lead.x - pivot.x);
       }
       const cur = tank.turretAim[i] == null ? base : tank.turretAim[i];
       let diff = want - cur;
@@ -5041,12 +5083,20 @@
   function drawGun(c, tank, gun, index, highlight) {
     const u = unitOf(tank);
     const [L, W, A, X, Y] = gun.pos;
-    const ang = gun.type === "auto" ? (tank.turretAim[index] || tank.angle) : tank.angle + (gun.pos[5] * Math.PI) / 180;
+    const auto = gun.type === "auto";
+    const pivot = auto ? autoPivot(tank, gun, index) : null;
+    const ang = auto ? pivot.ang : tank.angle + (gun.pos[5] * Math.PI) / 180;
+    const fill = highlight ? "#cde" : COLORS.barrel;
     c.save();
-    c.translate(tank.x, tank.y);
-    c.rotate(ang);
-    c.translate(X * u, Y * u);
-    const len = Math.max(2, L * u);
+    if (auto) {
+      c.translate(pivot.x, pivot.y);
+      c.rotate(ang);
+    } else {
+      c.translate(tank.x, tank.y);
+      c.rotate(ang);
+      c.translate(X * u, Y * u);
+    }
+    const len = Math.max(2, (auto && pivot.ring ? L * 0.62 : L) * u);
     const w0 = Math.max(1.5, W * u * 0.5);
     const w1 = Math.max(1.5, W * Math.abs(A) * u * 0.5);
     c.beginPath();
@@ -5055,7 +5105,7 @@
     c.lineTo(len, w1);
     c.lineTo(0, w0);
     c.closePath();
-    c.fillStyle = highlight ? "#cde" : COLORS.barrel;
+    c.fillStyle = fill;
     c.strokeStyle = COLORS.outline;
     c.lineWidth = 3;
     c.lineJoin = "round";
@@ -5068,6 +5118,13 @@
       c.lineTo(len + 6, w1 * 1.45);
       c.lineTo(len, w1 * 1.15);
       c.closePath();
+      c.fill();
+      c.stroke();
+    }
+    if (auto) {
+      const domeR = Math.max(4.2, Math.min(tank.r * (pivot.ring ? 0.3 : 0.45), W * u * (pivot.ring ? 0.58 : 0.9)));
+      c.beginPath();
+      c.arc(0, 0, domeR, 0, TAU);
       c.fill();
       c.stroke();
     }
@@ -5138,11 +5195,14 @@
   function drawTank(c, tank, opts = {}) {
     const def = tank.customDef || TankCatalog.get(tank.classId);
     const guns = def.guns || [];
+    const skipGuns = tank.dominator && (tank.destroyed || (tank.team === "blue" && !tank.sanctuary));
     c.save();
     c.globalAlpha = tank.fade == null ? 1 : tank.fade;
-    for (let i = 0; i < guns.length; i++) {
-      if (tank.dominator && (tank.destroyed || (tank.team === "blue" && !tank.sanctuary))) break;
-      drawGun(c, tank, guns[i], i, opts.highlightGun === i);
+    if (!skipGuns) {
+      for (let i = 0; i < guns.length; i++) {
+        if (guns[i].type === "auto") continue;
+        drawGun(c, tank, guns[i], i, opts.highlightGun === i);
+      }
     }
     const sides = def.body || 0;
     const fill = tank.bodyHitT > 0 ? "#fff" : tank.color;
@@ -5172,6 +5232,12 @@
       c.lineTo(tank.x, tank.y + s);
       c.stroke();
       c.restore();
+    }
+    if (!skipGuns) {
+      for (let i = 0; i < guns.length; i++) {
+        if (guns[i].type !== "auto") continue;
+        drawGun(c, tank, guns[i], i, opts.highlightGun === i);
+      }
     }
     if (!opts.hideName) {
       if (tank.dominator) {
@@ -5441,6 +5507,10 @@
         ctx.fillStyle = COLORS.barrel;
         ctx.strokeStyle = COLORS.outline;
         ctx.lineWidth = 2;
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(0, 0, Math.max(3.4, b.r * 0.42), 0, TAU);
         ctx.fill();
         ctx.stroke();
         ctx.restore();
