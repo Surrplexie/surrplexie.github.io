@@ -366,8 +366,15 @@
   function carryScore(score) {
     const base = startScore();
     const n = Math.max(0, Math.floor(Number(score) || 0));
-    if (n <= base) return base;
-    return Math.max(base, Math.floor(n * 0.25));
+    if (n <= 0) return base;
+    const kept = Math.floor(n * (irand(15, 20) / 100));
+    return Math.max(base, kept);
+  }
+
+  function killPoolFromScore(score, hunted) {
+    const n = Math.max(0, Math.floor(Number(score) || 0));
+    if (hunted) return Math.max(30, Math.floor(n * 0.95));
+    return Math.max(20, Math.floor(n * (irand(80, 90) / 100)));
   }
 
   function levelFromScore(score) {
@@ -2086,8 +2093,8 @@
     const killer = payout.killer;
     const me = state.player;
     if (!killer || !me) return;
-    if (killer === me) note(`You killed ${victimLabel(victim)}${state.mode === "manhunt" && victim === state.hunted ? " · hunted +1% bounty" : ""}.`);
-    else note(`You assisted ${killer.name} in killing ${victimLabel(victim)}${state.mode === "manhunt" && victim === state.hunted ? " · hunted +1% bounty" : ""}.`);
+    if (killer === me) note(`You killed ${victimLabel(victim)}${state.mode === "manhunt" && victim === state.hunted ? " · hunted 95%" : ""}.`);
+    else note(`You assisted ${killer.name} in killing ${victimLabel(victim)}${state.mode === "manhunt" && victim === state.hunted ? " · hunted 95%" : ""}.`);
   }
 
   function populateWorld() {
@@ -2495,16 +2502,14 @@
     const huntedKill = state.mode === "manhunt" && tank === state.hunted;
     const pool = tank.killScore
       ? tank.killScore
-      : huntedKill
-        ? Math.max(30, Math.floor(deathScore * 1.01))
-        : Math.max(20, Math.floor(deathScore * 0.9));
+      : killPoolFromScore(deathScore, huntedKill);
     const payout = applyKillScore(tank, pool, killer, tank.x, tank.y);
     const credited = payout.killer;
     tank.killedBy = cause || (credited ? credited.name : killer ? killer.name : "a polygon");
     if (credited) {
       state.lastKiller = credited;
       credited.kills = (credited.kills || 0) + 1;
-      if (huntedKill) floater(tank.x, tank.y - 24, "Hunted down · +1%");
+      if (huntedKill) floater(tank.x, tank.y - 24, "Hunted down · 95%");
     }
     notePlayerKill(tank, payout);
     if (tank.boss || tank.fodder) onSiegeEnemyKilled();
@@ -2535,14 +2540,14 @@
       checkProtectClose();
     } else if (!tank.closer && !tank.boss && !tank.fodder && !state.closing && !royaleLocked()) {
       const team = tank.team;
-      const kept = carryScore(tank.score);
+      const kept = carryScore(deathScore);
       const focus = tank.aiFocus;
       setTimeout(() => {
         if (!running || state.closing || royaleLocked()) return;
         const bot = createTank({
           name: tank.name,
           ai: true,
-          score: Math.max(xpForLevel(LEVEL_CAP), kept),
+          score: kept,
           classId: "basic",
           team,
           color: colorFor({ team }),
@@ -2640,7 +2645,7 @@
     const shares = [];
     let sum = 0;
     for (const [tank, amt] of totals) {
-      if (!tank.alive || tank.closer) continue;
+      if (!tank || tank.type !== "tank" || !tank.alive || tank.closer) continue;
       shares.push({ tank, amt });
       sum += amt;
     }
@@ -2771,7 +2776,7 @@
     const bot = createTank({
       name: old.name,
       ai: true,
-      score: Math.max(xpForLevel(LEVEL_CAP), carryScore(old.score)),
+      score: carryScore(old.score),
       classId: "basic",
       team: old.team,
       color: colorFor({ team: old.team }),
@@ -5947,10 +5952,10 @@
   let menuMode = "ffa";
   let menuTeam = "blue";
   const MODE_HINT = {
-    ffa: "Everyone for themselves · start at 45 · fresh server after 4 hours",
-    tdm: "Red vs blue · random team · start at 45 · fresh server after 4 hours",
+    ffa: "Everyone for themselves · start at 45 · kills pay 80–90% · respawn 15–20% · fresh server after 4 hours",
+    tdm: "Red vs blue · random team · start at 45 · kills pay 80–90% · respawn 15–20% · fresh server after 4 hours",
     "4tdm": "Four bases · random team · start at 45 · fresh server after 4 hours",
-    manhunt: "Everyone hunts #1 · killing the hunted pays +1% their score · they respawn with 25% · hunted gets a small boost · fresh server after 4 hours",
+    manhunt: "Everyone hunts #1 · hunted kill pays 95% · other kills 80–90% · respawn 15–20% · hunted gets a small boost · fresh server after 4 hours",
     tag: "Shoot to convert · random team · start at 45 · win or 4 hours starts a fresh server",
     protect: "Two motherships roam · random team · start at 45 · [N] skip to 45 · [H] to take control · win or 4 hours starts a fresh server",
     maze: "FFA inside generated walls · start at 45 · fresh server after 4 hours",
@@ -5966,9 +5971,9 @@
     "growth-ar": "Growth · Arms Race class tree · start at 1 · bots at 45 · [N] skip to 45 · fresh server after 4 hours",
     "protect-ar": "Mothership Protect · Arms Race class tree · random team · start at 45 · [N] skip · [H] to take control · win or 4 hours starts a fresh server",
     "assault-ar": "Assault · Arms Race class tree · Blue attacks Green · capture zones · Green wins in 10:00 if they hold 3/4 · win or 4 hours starts a fresh server",
-    "tdm-ar": "Red vs blue · Arms Race class tree · random team · start at 45 · fresh server after 4 hours",
+    "tdm-ar": "Red vs blue · Arms Race class tree · random team · start at 45 · kills pay 80–90% · respawn 15–20% · fresh server after 4 hours",
     "royalemaze-ar": "Royale Maze · Arms Race class tree · L / Y / zig clusters · storm closes fully · last tank wins · then a fresh server",
-    "manhunt-ar": "Manhunt · Arms Race class tree · killing the hunted pays +1% their score · they respawn with 25% · fresh server after 4 hours",
+    "manhunt-ar": "Manhunt · Arms Race class tree · hunted kill pays 95% · other kills 80–90% · respawn 15–20% · fresh server after 4 hours",
   };
 
   function saveName(name) {
