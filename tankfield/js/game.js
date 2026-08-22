@@ -3083,7 +3083,7 @@
     const dy = t.y - b.y;
     const dist = Math.hypot(dx, dy) || 1;
     b.angle = Math.atan2(dy, dx);
-    if (b.kind === "drone" && dist <= b.r * 2) return;
+    if (!t.repel && b.kind === "drone" && dist <= b.r * 2) return;
     const spd = b.topSpeed || 220;
     const tickK = Math.min(0.95, Math.max(0.02, (b.accel || 3.825) / ARRAS_TICK));
     const k = 1 - Math.pow(1 - tickK, ARRAS_TICK * dt);
@@ -3899,6 +3899,68 @@
     return true;
   }
 
+  function shotHits(bullet, ent) {
+    const r = bullet.r + ent.r;
+    const nx = bullet.x - ent.x;
+    const ny = bullet.y - ent.y;
+    if (nx * nx + ny * ny < r * r) return true;
+    const px = bullet.prevX == null ? bullet.x : bullet.prevX;
+    const py = bullet.prevY == null ? bullet.y : bullet.prevY;
+    const dx = bullet.x - px;
+    const dy = bullet.y - py;
+    const len2 = dx * dx + dy * dy;
+    if (len2 < 0.0001) return false;
+    let t = ((ent.x - px) * dx + (ent.y - py) * dy) / len2;
+    if (t < 0) t = 0;
+    else if (t > 1) t = 1;
+    const cx = px + dx * t - ent.x;
+    const cy = py + dy * t - ent.y;
+    return cx * cx + cy * cy < r * r;
+  }
+
+  function persistShot(bullet) {
+    return bullet.kind === "drone" || bullet.kind === "swarm" || bullet.kind === "minion" || bullet.kind === "trap" || bullet.kind === "pillbox";
+  }
+
+  function bounceShotOff(bullet, ent) {
+    const dx = bullet.x - ent.x;
+    const dy = bullet.y - ent.y;
+    const d = Math.hypot(dx, dy) || 0.0001;
+    const overlap = bullet.r + ent.r - d;
+    if (overlap > 0) {
+      bullet.x += (dx / d) * overlap;
+      bullet.y += (dy / d) * overlap;
+    }
+    const vn = (bullet.vx * dx + bullet.vy * dy) / d;
+    if (vn < 0) {
+      bullet.vx -= (dx / d) * vn;
+      bullet.vy -= (dy / d) * vn;
+    }
+  }
+
+  function applyShotHit(bullet, target) {
+    if (tryNecro(bullet.owner, target, bullet)) return;
+    const kick = target.kind === "alpha" ? 0.00008 : target.kind === "pentagon" ? 0.0022 : target.type === "tank" ? 0.01 : 0.01;
+    target.vx = (target.vx || 0) + bullet.vx * kick;
+    target.vy = (target.vy || 0) + bullet.vy * kick;
+    const lived = target.alive && target.health > 0;
+    damage(target, bullet.damage, bullet.owner);
+    if (bullet.owner && bullet.owner.closer) return;
+    const killed = lived && !target.alive;
+    if (persistShot(bullet)) {
+      if (!killed) bounceShotOff(bullet, target);
+      bullet.health -= (bullet.kind === "trap" || bullet.kind === "pillbox" || bullet.kind === "drone" || bullet.kind === "minion" ? 0.35 : 0.45) / Math.max(0.35, bullet.pen || 1);
+      if (bullet.health <= 0) bullet.alive = false;
+      return;
+    }
+    if (!killed) {
+      bullet.alive = false;
+      return;
+    }
+    bullet.health -= 1 / Math.max(0.35, bullet.pen || 1);
+    if (bullet.health <= 0) bullet.alive = false;
+  }
+
   function damage(target, amount, src) {
     if (!target.alive) return;
     if (target.dominator && target.destroyed) return;
@@ -3936,25 +3998,32 @@
   function droneTarget(b) {
     const owner = b.owner;
     if (!owner || !owner.alive) return null;
-    const spread = b.kind === "swarm" ? 24 : 34;
+    const spread = b.kind === "swarm" ? 7 : 10;
     const ox = Math.cos(b.orbit) * spread;
     const oy = Math.sin(b.orbit) * spread;
     if (!owner.ai) {
-      const manual = mouse.down || mouse.right;
+      const aim = screenToWorld(mouse.x, mouse.y);
+      if (mouse.right) {
+        const dx = b.x - aim.x;
+        const dy = b.y - aim.y;
+        const dist = Math.hypot(dx, dy) || 1;
+        const far = 1100;
+        return { x: b.x + (dx / dist) * far, y: b.y + (dy / dist) * far, repel: true };
+      }
+      const manual = mouse.down || keys.has(" ");
       if (manual || (state.autoFire && !(owner.spawnProtect > 0))) {
-        const aim = screenToWorld(mouse.x, mouse.y);
         return { x: aim.x + ox, y: aim.y + oy };
       }
       return {
-        x: owner.x + Math.cos(state.time * 1.7 + b.orbit) * 80,
-        y: owner.y + Math.sin(state.time * 1.7 + b.orbit) * 80,
+        x: owner.x + Math.cos(state.time * 1.7 + b.orbit) * 52,
+        y: owner.y + Math.sin(state.time * 1.7 + b.orbit) * 52,
       };
     }
     const prey = nearestSeen(owner, state.tanks.concat(state.shapes), 700, (o) => o !== owner && (o.type !== "tank" || isEnemyTank(owner, o)));
     if (prey) return { x: prey.x + ox, y: prey.y + oy };
     return {
-      x: owner.x + Math.cos(state.time * 1.7 + b.orbit) * 80,
-      y: owner.y + Math.sin(state.time * 1.7 + b.orbit) * 80,
+      x: owner.x + Math.cos(state.time * 1.7 + b.orbit) * 52,
+      y: owner.y + Math.sin(state.time * 1.7 + b.orbit) * 52,
     };
   }
 
@@ -3970,7 +4039,7 @@
         if (a.owner !== b.owner && !sameTeam(a.owner, b.owner)) continue;
         const dx = b.x - a.x;
         const dy = b.y - a.y;
-        const min = a.r + b.r + 8;
+        const min = (a.r + b.r) * (a.kind === "swarm" || b.kind === "swarm" ? 0.82 : 0.9);
         const d2 = dx * dx + dy * dy;
         if (d2 >= min * min) continue;
         const d = Math.sqrt(d2) || 0.0001;
@@ -4142,6 +4211,8 @@
         b.angle = a;
       }
       b.life -= dt;
+      b.prevX = b.x;
+      b.prevY = b.y;
       b.x += b.vx * dt;
       b.y += b.vy * dt;
       if (persist) {
@@ -4247,26 +4318,13 @@
       if (!bullet.alive) continue;
       for (const s of state.shapes) {
         if (!s.alive || !bullet.alive || bullet.kind === "heal") continue;
-        const dx = s.x - bullet.x;
-        const dy = s.y - bullet.y;
-        if (dx * dx + dy * dy < (s.r + bullet.r) ** 2) {
-          if (tryNecro(bullet.owner, s, bullet)) continue;
-          const kick = s.kind === "alpha" ? 0.00008 : s.kind === "pentagon" ? 0.0022 : 0.01;
-          s.vx += bullet.vx * kick;
-          s.vy += bullet.vy * kick;
-          damage(s, bullet.damage, bullet.owner);
-          if (!(bullet.owner && bullet.owner.closer)) {
-            bullet.health -= (bullet.kind === "trap" || bullet.kind === "pillbox" || bullet.kind === "drone" || bullet.kind === "minion" ? 0.35 : 1) / Math.max(0.35, bullet.pen || 1);
-            if (bullet.health <= 0) bullet.alive = false;
-          }
-        }
+        if (!shotHits(bullet, s)) continue;
+        applyShotHit(bullet, s);
       }
       for (const tank of state.tanks) {
         if (!tank.alive || tank === bullet.owner) continue;
         if (tank.dominator && tank.destroyed) continue;
-        const dx = tank.x - bullet.x;
-        const dy = tank.y - bullet.y;
-        if (dx * dx + dy * dy >= (tank.r + bullet.r) ** 2) continue;
+        if (!shotHits(bullet, tank)) continue;
         if (bullet.kind === "heal") {
           if (tank.dominator || !sameTeam(tank, bullet.owner)) continue;
           tank.health = Math.min(tank.maxHealth, tank.health + bullet.damage);
@@ -4274,13 +4332,7 @@
           continue;
         }
         if (sameTeam(tank, bullet.owner)) continue;
-        tank.vx += bullet.vx * 0.01;
-        tank.vy += bullet.vy * 0.01;
-        damage(tank, bullet.damage, bullet.owner);
-        if (!(bullet.owner && bullet.owner.closer)) {
-          bullet.health -= (bullet.kind === "trap" || bullet.kind === "pillbox" || bullet.kind === "drone" || bullet.kind === "minion" ? 0.45 : 1.2) / Math.max(0.35, bullet.pen || 1);
-          if (bullet.health <= 0) bullet.alive = false;
-        }
+        applyShotHit(bullet, tank);
       }
     }
 
