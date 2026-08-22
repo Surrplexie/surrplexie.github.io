@@ -330,11 +330,11 @@
   }
   document.getElementById("play-tank").addEventListener("click", () => {
     const name = document.getElementById("name-input").value.trim() || "Unnamed Tank";
-    window.TankfieldGame.startGame(name, { sandbox: true, customDef: current });
+    window.TankfieldGame.startGame(name, { sandbox: true, customDef: current, botCount: window.TankfieldGame.botCount() });
   });
   document.getElementById("play-maxed").addEventListener("click", () => {
     const name = document.getElementById("name-input").value.trim() || "Unnamed Tank";
-    window.TankfieldGame.startGame(name, { sandbox: true, customDef: current, maxStats: true });
+    window.TankfieldGame.startGame(name, { sandbox: true, customDef: current, maxStats: true, botCount: window.TankfieldGame.botCount() });
   });
   document.getElementById("close-workshop").addEventListener("click", close);
   document.getElementById("copy-json").addEventListener("click", async () => {

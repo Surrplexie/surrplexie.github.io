@@ -210,6 +210,49 @@ html, body {
   min-height: 18px;
 }
 
+.bot-row {
+  display: grid;
+  grid-template-columns: auto 1fr 56px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.16);
+  border-radius: 8px;
+}
+
+.bot-row-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #eee;
+}
+
+#bot-count {
+  width: 100%;
+  margin: 0;
+  accent-color: #8abc3f;
+}
+
+#bot-count-num {
+  width: 56px;
+  margin: 0;
+  padding: 6px 4px;
+  border: 0;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  background: #fff;
+  color: #111;
+  outline: none;
+}
+
+#bot-count-num:focus {
+  box-shadow: 0 0 0 3px rgba(138, 188, 63, 0.45);
+}
+
 #start #name-input {
   display: block;
   width: 100%;

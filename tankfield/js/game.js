@@ -112,6 +112,8 @@
     hud: document.getElementById("hud"),
     death: document.getElementById("death"),
     name: document.getElementById("name-input"),
+    botRange: document.getElementById("bot-count"),
+    botNum: document.getElementById("bot-count-num"),
     play: document.getElementById("play-btn"),
     workshopBtn: document.getElementById("workshop-btn"),
     again: document.getElementById("again-btn"),
@@ -161,6 +163,7 @@
   let last = 0;
   let running = false;
   let shake = 0;
+  let menuBotCount = 20;
 
   const state = {
     player: null,
@@ -175,6 +178,7 @@
     time: 0,
     spawnName: "Unnamed Tank",
     mode: "ffa",
+    botCount: 20,
     paused: false,
     playOpts: null,
     selectedColor: "#00b2e1",
@@ -1543,42 +1547,50 @@
     if (state.time - state.domHoldT >= DOM_HOLD) beginArenaClose();
   }
 
-  function botCountFor(mode) {
-    if (mode === "sandbox") return 0;
-    return 20;
+  const BOT_MIN = 1;
+  const BOT_MAX = 50;
+  const BOT_DEFAULT = 20;
+
+  function clampBotCount(n) {
+    const v = Math.round(Number(n));
+    if (!Number.isFinite(v)) return BOT_DEFAULT;
+    return Math.max(BOT_MIN, Math.min(BOT_MAX, v));
   }
 
-  function botTeamsFor(mode, mine) {
-    if (mode === "tdm" && mine) {
-      const other = mine === "blue" ? "red" : "blue";
-      return Array(9).fill(mine).concat(Array(11).fill(other));
+  function botCountFor() {
+    return menuBotCount;
+  }
+
+  function splitTwoTeams(n, mine, other) {
+    const allies = Math.max(0, Math.min(n, Math.round(n * 9 / 20)));
+    return Array(allies).fill(mine).concat(Array(n - allies).fill(other));
+  }
+
+  function splitFourTeams(n, mine) {
+    const order = [mine, ...TEAM4.filter((t) => t !== mine)];
+    const base = Math.floor(n / 4);
+    let rem = n - base * 4;
+    const out = [];
+    for (const team of order) {
+      const extra = rem > 0 ? 1 : 0;
+      rem -= extra;
+      for (let i = 0; i < base + extra; i++) out.push(team);
     }
-    if (mode === "4tdm" && mine) {
-      const teams = Array(5).fill(mine);
-      for (const team of TEAM4) {
-        if (team === mine) continue;
-        for (let i = 0; i < 5; i++) teams.push(team);
-      }
-      return teams;
-    }
-    if (mode === "domination" && mine) {
-      const other = mine === "blue" ? "red" : "blue";
-      return Array(9).fill(mine).concat(Array(11).fill(other));
-    }
-    if (mode === "assault" && mine) {
-      const other = mine === "blue" ? "green" : "blue";
-      return Array(9).fill(mine).concat(Array(11).fill(other));
-    }
-    if (mode === "tag" && mine) {
-      const other = mine === "green" ? "red" : "green";
-      return Array(9).fill(mine).concat(Array(11).fill(other));
-    }
+    return out;
+  }
+
+  function botTeamsFor(mode, mine, n) {
+    const count = clampBotCount(n != null ? n : botCountFor());
+    if (mode === "tdm" && mine) return splitTwoTeams(count, mine, mine === "blue" ? "red" : "blue");
+    if (mode === "4tdm" && mine) return splitFourTeams(count, mine);
+    if (mode === "domination" && mine) return splitTwoTeams(count, mine, mine === "blue" ? "red" : "blue");
+    if (mode === "assault" && mine) return splitTwoTeams(count, mine, mine === "blue" ? "green" : "blue");
+    if (mode === "tag" && mine) return splitTwoTeams(count, mine, mine === "green" ? "red" : "green");
     if (mode === "protect") {
       const own = mine || "green";
-      const other = own === "red" ? "green" : "red";
-      return Array(9).fill(own).concat(Array(11).fill(other));
+      return splitTwoTeams(count, own, own === "red" ? "green" : "red");
     }
-    if (mode === "siege") return Array(20).fill("blue");
+    if (mode === "siege") return Array(count).fill("blue");
     return [];
   }
 
@@ -1806,8 +1818,8 @@
   function spawnBots() {
     const names = BOT_NAMES.slice().sort(() => Math.random() - 0.5);
     const mine = state.player && state.player.team;
-    const teams = botTeamsFor(state.mode, mine);
-    const nBots = teams.length || botCountFor(state.mode);
+    const teams = botTeamsFor(state.mode, mine, state.botCount);
+    const nBots = clampBotCount(state.botCount);
     for (let i = 0; i < nBots; i++) {
       const team = teams[i] || null;
       const score = xpForLevel(LEVEL_CAP);
@@ -2019,6 +2031,7 @@
     state.spawnName = name || "Unnamed Tank";
     state.playOpts = opts;
     state.mode = opts.sandbox ? "sandbox" : (opts.mode || "ffa");
+    state.botCount = clampBotCount(opts.botCount != null ? opts.botCount : menuBotCount);
     applyWorldSize(state.mode);
     state.tanks = [];
     state.bullets = [];
@@ -5423,10 +5436,10 @@
     assault: "Blue attacks Green · smaller maze · capture zones · start at 45 · Green wins in 10:00 if they hold 3/4",
     siege: "Blue defends sanctuaries · waves of bosses · start at 45 · restore fallen sanctuaries by destroying them",
     growth: "FFA · grow past 45 to 1000 · start at 1 · bots start at 45 · [N] skip to 45 · arena closers after 4 hours",
-    onehp: "Everyone for themselves · 1 HP · no shields · health stats do nothing · 20 bots · medium map · start at 45",
+    onehp: "Everyone for themselves · 1 HP · no shields · health stats do nothing · medium map · start at 45",
     royale: "1 min prep · then a shrinking storm · no respawns after · last tank wins · small shapes · mid map · start at 45",
-    royalemaze: "Same as Battle Royale · random maze walls · 20 bots · mid map · start at 45",
-    sandbox: "Level 45 · pick any tank",
+    royalemaze: "Same as Battle Royale · random maze walls · mid map · start at 45",
+    sandbox: "Level 45 · pick any tank · bots included",
   };
 
   function saveName(name) {
@@ -5436,21 +5449,22 @@
   function playSelected() {
     const name = (els.name && els.name.value.trim()) || "Unnamed Tank";
     saveName(name);
-    if (menuMode === "sandbox") startGame(name, { sandbox: true, classId: "basic" });
-    else if (menuMode === "tdm") startGame(name, { mode: "tdm" });
-    else if (menuMode === "4tdm") startGame(name, { mode: "4tdm" });
-    else if (menuMode === "manhunt") startGame(name, { mode: "manhunt" });
-    else if (menuMode === "tag") startGame(name, { mode: "tag" });
-    else if (menuMode === "protect") startGame(name, { mode: "protect" });
-    else if (menuMode === "maze") startGame(name, { mode: "maze" });
-    else if (menuMode === "domination") startGame(name, { mode: "domination" });
-    else if (menuMode === "assault") startGame(name, { mode: "assault" });
-    else if (menuMode === "siege") startGame(name, { mode: "siege" });
-    else if (menuMode === "growth") startGame(name, { mode: "growth" });
-    else if (menuMode === "onehp") startGame(name, { mode: "onehp" });
-    else if (menuMode === "royale") startGame(name, { mode: "royale" });
-    else if (menuMode === "royalemaze") startGame(name, { mode: "royalemaze" });
-    else startGame(name, { mode: "ffa" });
+    const bots = menuBotCount;
+    if (menuMode === "sandbox") startGame(name, { sandbox: true, classId: "basic", botCount: bots });
+    else if (menuMode === "tdm") startGame(name, { mode: "tdm", botCount: bots });
+    else if (menuMode === "4tdm") startGame(name, { mode: "4tdm", botCount: bots });
+    else if (menuMode === "manhunt") startGame(name, { mode: "manhunt", botCount: bots });
+    else if (menuMode === "tag") startGame(name, { mode: "tag", botCount: bots });
+    else if (menuMode === "protect") startGame(name, { mode: "protect", botCount: bots });
+    else if (menuMode === "maze") startGame(name, { mode: "maze", botCount: bots });
+    else if (menuMode === "domination") startGame(name, { mode: "domination", botCount: bots });
+    else if (menuMode === "assault") startGame(name, { mode: "assault", botCount: bots });
+    else if (menuMode === "siege") startGame(name, { mode: "siege", botCount: bots });
+    else if (menuMode === "growth") startGame(name, { mode: "growth", botCount: bots });
+    else if (menuMode === "onehp") startGame(name, { mode: "onehp", botCount: bots });
+    else if (menuMode === "royale") startGame(name, { mode: "royale", botCount: bots });
+    else if (menuMode === "royalemaze") startGame(name, { mode: "royalemaze", botCount: bots });
+    else startGame(name, { mode: "ffa", botCount: bots });
   }
 
   function openWorkshop() {
@@ -5536,6 +5550,7 @@
     startGame,
     getDef,
     drawPreview,
+    botCount: () => menuBotCount,
     applyToPlayer(def) {
       if (!state.player) return;
       state.player.customDef = TankCatalog.cloneDef(def);
@@ -5578,12 +5593,45 @@
     const savedName = localStorage.getItem("tankfield-name");
     if (savedName && els.name) els.name.value = savedName.slice(0, 16);
   } catch (err) {}
-  document.querySelectorAll(".server-row").forEach((row) => {
-    const count = row.querySelector(".srv-count");
-    if (!count) return;
-    const n = botCountFor(row.dataset.mode);
-    count.textContent = n ? `${n} bots` : "solo";
-  });
+  function refreshBotCounts() {
+    const n = menuBotCount;
+    const label = n === 1 ? "1 bot" : `${n} bots`;
+    document.querySelectorAll(".server-row").forEach((row) => {
+      const count = row.querySelector(".srv-count");
+      if (count) count.textContent = label;
+    });
+  }
+
+  function setMenuBotCount(n) {
+    menuBotCount = clampBotCount(n);
+    if (els.botRange) els.botRange.value = String(menuBotCount);
+    if (els.botNum) els.botNum.value = String(menuBotCount);
+    refreshBotCounts();
+    try { localStorage.setItem("tankfield-bots", String(menuBotCount)); } catch (err) {}
+  }
+
+  function bindBotCount() {
+    if (els.botRange) {
+      els.botRange.addEventListener("input", () => setMenuBotCount(els.botRange.value));
+    }
+    if (els.botNum) {
+      els.botNum.addEventListener("input", () => {
+        const raw = els.botNum.value;
+        if (raw === "") return;
+        setMenuBotCount(raw);
+      });
+      els.botNum.addEventListener("change", () => setMenuBotCount(els.botNum.value || BOT_DEFAULT));
+      els.botNum.addEventListener("keydown", (e) => { if (e.key === "Enter") playSelected(); });
+    }
+  }
+  bindBotCount();
+  try {
+    const savedBots = localStorage.getItem("tankfield-bots");
+    if (savedBots != null) setMenuBotCount(savedBots);
+    else refreshBotCounts();
+  } catch (err) {
+    refreshBotCounts();
+  }
   state.camera.x = WORLD.w / 2;
   state.camera.y = WORLD.h / 2;
   last = performance.now();
