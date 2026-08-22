@@ -14,60 +14,108 @@
   }
 
   const g = {
-    basic: { reload: 10.5, recoil: 1.4, shudder: 0.1, damage: 0.75, speed: 4, spray: 15 },
+    blank: { reload: 1, recoil: 1, shudder: 1, size: 1, health: 1, damage: 1, pen: 1, speed: 1, maxSpeed: 1, range: 1, density: 1, spray: 1, resist: 1 },
+    basic: { reload: 10.5, recoil: 1.4, shudder: 0.1, damage: 0.75, speed: 5, spray: 15 },
     drone: { reload: 36, recoil: 0.25, shudder: 0.1, size: 0.6, speed: 1.5, spray: 0.1 },
     swarm: { reload: 23, recoil: 0.25, shudder: 0.05, size: 0.4, damage: 0.75, speed: 4, spray: 5 },
+    minion: { reload: 48, shudder: 0.1, size: 0.7, damage: 0.75, speed: 3, spray: 0.1 },
     trap: { reload: 23, shudder: 0.25, size: 0.7, damage: 0.75, speed: 3.25, resist: 3, spray: 0 },
+    single: { reload: 1.05, speed: 1.05 },
+    desmos: { reload: 1.1, range: 1.2, shudder: 0, spray: 0, damage: 0.75, speed: 0.5 },
     twin: { recoil: 0.5, shudder: 0.9, health: 0.9, damage: 0.7, spray: 1.2 },
+    doubleTwin: { damage: 1.1 },
+    tripleTwin: { health: 1.1 },
+    hewnDouble: { reload: 1.25, recoil: 1.5, health: 0.9, damage: 0.85, maxSpeed: 0.9 },
     tripleShot: { reload: 1.1, shudder: 0.8, health: 0.9, pen: 0.8, density: 0.8, spray: 0.5 },
-    triplet: { reload: 1.2, recoil: 2 / 3, shudder: 0.9, health: 0.85, damage: 0.85, pen: 0.9, spray: 0.9 },
-    autoTurret: { reload: 0.9, recoil: 0.75, shudder: 0.5, size: 0.8, health: 0.9, damage: 0.6, pen: 1.2, speed: 1.1, range: 0.8 },
+    spreadshotMain: { reload: 0.781, recoil: 0.25, shudder: 0.5, health: 0.5, speed: 1.923, maxSpeed: 2.436 },
+    spreadshot: { reload: 1.5, shudder: 0.25, speed: 0.7, maxSpeed: 0.7, spray: 0.25 },
+    triplet: { reload: 1.2, recoil: 0.666667, shudder: 0.9, health: 0.85, damage: 0.85, pen: 0.9, density: 1.1, spray: 0.9, resist: 0.95 },
+    turret: { reload: 2, health: 0.8, damage: 0.6, pen: 0.7, density: 0.1 },
+    autoTurret: { reload: 0.9, recoil: 0.75, shudder: 0.5, size: 0.8, health: 0.9, damage: 0.6, pen: 1.2, speed: 1.1, range: 0.8, density: 1.3, resist: 1.25 },
     sniper: { reload: 1.35, shudder: 0.25, damage: 0.8, pen: 1.1, speed: 1.5, maxSpeed: 1.5, density: 1.5, spray: 0.2, resist: 1.15 },
+    crossbow: { reload: 2, health: 0.6, damage: 0.6, pen: 0.8 },
     assassin: { reload: 1.65, shudder: 0.25, health: 1.15, pen: 1.1, speed: 1.18, maxSpeed: 1.18, density: 3, resist: 1.3 },
     hunter: { reload: 1.5, recoil: 0.7, size: 0.95, damage: 0.9, speed: 1.1, maxSpeed: 0.8, density: 1.2, resist: 1.15 },
-    hunterSecondary: { size: 0.9, health: 2, damage: 0.5, pen: 1.5 },
+    hunterSecondary: { size: 0.9, health: 2, damage: 0.5, pen: 1.5, density: 1.2, resist: 1.1 },
+    predator: { reload: 1.4, size: 0.8, health: 1.5, damage: 0.9, pen: 1.2, speed: 0.9, maxSpeed: 0.9 },
+    dual: { reload: 2, shudder: 0.8, health: 1.5, speed: 1.3, maxSpeed: 1.1, resist: 1.25 },
+    rifle: { reload: 0.8, recoil: 0.8, shudder: 1.5, health: 0.8, damage: 0.8, pen: 0.9, spray: 2 },
+    blunderbuss: { recoil: 0.1, shudder: 0.5, health: 0.4, damage: 0.2, pen: 0.4, spray: 0.5 },
+    railgun: { reload: 4.2, damage: 0.81, health: 3.06, resist: 2.3, density: 0.7, speed: 1.375, maxSpeed: 1.375 },
+    marksman: { pen: 2, damage: 0.12, health: 8.333333, reload: 1.75 },
     machineGun: { reload: 0.5, recoil: 0.8, shudder: 1.7, health: 0.7, damage: 0.7, maxSpeed: 0.8, spray: 2.5 },
-    minigun: { reload: 1.25, recoil: 0.6, size: 0.8, health: 0.55, damage: 0.45, pen: 1.25, speed: 1.33, spray: 0.5 },
-    gunner: { recoil: 0.25, shudder: 1.5, size: 1.2, health: 1.35, damage: 0.25, pen: 1.25, speed: 0.8, maxSpeed: 0.65, spray: 1.5 },
+    minigun: { reload: 1.25, recoil: 0.6, size: 0.8, health: 0.55, damage: 0.45, pen: 1.25, speed: 1.33, density: 1.25, spray: 0.5, resist: 1.1 },
+    streamliner: { reload: 1.1, recoil: 0.6, damage: 0.65, speed: 1.24 },
+    nailgun: { reload: 0.85, recoil: 2.5, size: 0.8, damage: 0.7, density: 2 },
+    pelleter: { reload: 1.25, recoil: 0.25, shudder: 1.5, size: 1.1, damage: 0.35, pen: 1.35, speed: 0.9, maxSpeed: 0.8, density: 1.5, spray: 1.5, resist: 1.2 },
+    gunner: { recoil: 0.25, shudder: 1.5, size: 1.2, health: 1.35, damage: 0.25, pen: 1.25, speed: 0.8, maxSpeed: 0.65, density: 1.5, spray: 1.5, resist: 1.2 },
+    machineGunner: { reload: 0.666667, recoil: 0.8, shudder: 2, damage: 0.75, speed: 1.2, maxSpeed: 0.8, spray: 2.5 },
+    blaster: { recoil: 1.2, shudder: 1.25, size: 1.1, health: 1.5, pen: 0.6, speed: 0.8, maxSpeed: 0.33, range: 0.6, density: 0.5, spray: 1.5, resist: 0.8 },
+    flamethrower: { reload: 1.75, recoil: 1.333333, shudder: 2, size: 0.25, health: 10, damage: 0.2, pen: 4, speed: 2, maxSpeed: 0, range: 3, density: 0.25 },
+    gatlingGun: { reload: 1.25, recoil: 1.333333, shudder: 0.8, health: 0.8, pen: 1.1, speed: 1.25, maxSpeed: 1.25, range: 1.1, density: 1.25, spray: 0.5, resist: 1.1 },
+    atomizer: { reload: 0.3, recoil: 0.8, size: 0.5, damage: 0.75, speed: 1.2, maxSpeed: 0.8, spray: 2.25 },
+    spam: { reload: 1.1, size: 1.05, damage: 1.1, speed: 0.9, maxSpeed: 0.7, resist: 1.05 },
+    gunnerDominator: { reload: 1.1, recoil: 0, shudder: 1.1, size: 0.5, health: 0.5, damage: 0.5, speed: 1.1, density: 0.9, spray: 1.2, resist: 0.8 },
     flankGuard: { recoil: 1.2, health: 1.02, damage: 0.81, pen: 0.9, maxSpeed: 0.85, density: 1.2 },
+    cyclone: { health: 1.3, damage: 1.3, pen: 1.1, speed: 1.5, maxSpeed: 1.15 },
     triAngle: { recoil: 0.9, health: 0.9, speed: 0.8, maxSpeed: 0.8, range: 0.6 },
     triAngleFront: { recoil: 0.2, speed: 1.3, maxSpeed: 1.1, range: 1.5 },
     thruster: { recoil: 1.5, shudder: 2, health: 0.5, damage: 0.5, pen: 0.7, spray: 0.5, resist: 0.7 },
     overseer: { reload: 1.25, size: 0.85, health: 0.7, damage: 0.8, maxSpeed: 0.9, density: 2 },
-    battleship: { health: 1.25, damage: 1.15, maxSpeed: 0.85, density: 1.1 },
+    overdrive: { reload: 2.5, health: 0.8, damage: 0.8, pen: 0.8, speed: 0.9, maxSpeed: 0.9, range: 0.9, spray: 1.2 },
+    commander: { reload: 1.5, health: 0.4, damage: 0.7 },
+    baseProtector: { reload: 0.7, size: 1.5, recoil: 0.000001, health: 100, speed: 2.3, maxSpeed: 1.1, range: 0.5, density: 5, resist: 10 },
+    battleship: { health: 1.25, damage: 1.15, maxSpeed: 0.85, resist: 1.1 },
+    carrier: { reload: 1.5, damage: 0.8, speed: 1.3, maxSpeed: 1.2, range: 1.2 },
+    bee: { reload: 1.3, size: 1.4, damage: 1.5, pen: 0.5, speed: 1.5, maxSpeed: 1.5, density: 0.25 },
+    sunchip: { reload: 4, size: 1.4, health: 0.5, damage: 0.4, pen: 0.6, density: 0.8 },
+    maleficitor: { reload: 0.25, size: 1.05, health: 1.15, damage: 1.15, pen: 1.15, speed: 0.8, maxSpeed: 0.8, density: 1.15 },
+    summoner: { reload: 0.3, size: 1.125, health: 0.5, damage: 0.345, pen: 0.4, density: 0.8 },
+    minionGun: { recoil: 0, shudder: 2, health: 0.4, damage: 0.4, pen: 1.2, range: 0.75, spray: 2 },
+    bigCheese: { reload: 1.5, size: 1.8, health: 2.5, speed: 1.25 },
+    mothership: { reload: 1.25, pen: 1.1, speed: 0.775, maxSpeed: 0.8, range: 15, resist: 1.15 },
+    satellite: { size: 0.8, reload: 3, damage: 1.875 },
+    spawner: { reload: 1.5, maxSpeed: 1.25 },
     pounder: { reload: 2, recoil: 1.6, damage: 2, speed: 0.85, maxSpeed: 0.8, density: 1.5, resist: 1.15 },
     destroyer: { reload: 2, recoil: 1.8, shudder: 0.5, health: 2, damage: 0.9, pen: 1.2, speed: 0.5, maxSpeed: 0.6, density: 2, resist: 3 },
     annihilator: { reload: 1, recoil: 1.35, damage: 0.86 },
-    artillery: { reload: 1.2, recoil: 0.7, health: 0.85, damage: 0.8, speed: 1.15, maxSpeed: 1.1, spray: 1.1 },
+    hive: { reload: 1.5, recoil: 0.8, size: 0.8, health: 0.7, damage: 0.3, maxSpeed: 0.6 },
+    artillery: { reload: 1.2, recoil: 0.7, size: 0.9, speed: 1.15, maxSpeed: 1.1, density: 1.5 },
+    mortar: { reload: 1.2, health: 1.1, speed: 0.8, maxSpeed: 0.8 },
+    shotgun: { reload: 8, recoil: 0.4, size: 1.5, damage: 0.4, pen: 0.8, speed: 1.8, maxSpeed: 0.6, density: 1.2, spray: 1.2 },
+    destroyerDominator: { reload: 6.5, recoil: 0, size: 0.975, health: 5, damage: 5, pen: 5, speed: 0.575, maxSpeed: 0.475, spray: 0.5 },
     launcher: { reload: 1.5, recoil: 1.5, shudder: 0.1, size: 0.72, health: 1.05, damage: 0.925, speed: 0.9, maxSpeed: 1.2, range: 1.1, resist: 1.5 },
+    skimmer: { recoil: 0.8, shudder: 0.8, size: 0.9, health: 1.35, damage: 0.8, pen: 2, speed: 0.85, maxSpeed: 0.85, resist: 1.1 },
+    snake: { reload: 0.4, shudder: 4, health: 1.5, damage: 0.9, pen: 1.2, speed: 0.1, maxSpeed: 0.35, density: 3, spray: 6, resist: 0.5 },
+    snakeskin: { reload: 0.6, shudder: 2, health: 0.5, damage: 0.5, speed: 2, maxSpeed: 0.2, range: 0.4, spray: 5 },
+    sidewinder: { reload: 1.5, recoil: 2, health: 1.5, damage: 0.9, speed: 0.15, maxSpeed: 0.5 },
+    rocketeer: { reload: 1.4, shudder: 0.9, size: 2, health: 1.5, damage: 1.4, pen: 1.4, speed: 0.3, range: 1.2, resist: 1.4 },
+    missileTrail: { reload: 0.6, recoil: 0.25, shudder: 2, damage: 0.9, pen: 0.7, speed: 0.4, range: 0.5 },
+    rocketeerMissileTrail: { reload: 0.5, recoil: 7, shudder: 1.5, size: 0.8, health: 0.8, damage: 0.7, speed: 0.9, maxSpeed: 0.8, spray: 5 },
     setTrap: { reload: 1.1, recoil: 2, shudder: 0.1, size: 1.5, health: 2, pen: 1.25, speed: 2.2, maxSpeed: 2.15, range: 1.25, resist: 1.25 },
-    nestKeeper: { reload: 3, size: 0.75, health: 1.05, damage: 1.05 },
-    summoner: { reload: 0.35, size: 0.9, health: 0.4, damage: 0.65 },
-    single: { reload: 1.05, speed: 1.05 },
-    doubleTwin: { damage: 1.1 },
-    tripleTwin: { health: 1.1 },
-    hewnDouble: { reload: 1.25, recoil: 1.5, health: 0.9, damage: 0.85, maxSpeed: 0.9 },
-    spreadshotMain: { reload: 0.781, recoil: 0.25, shudder: 0.5, health: 0.5, speed: 1.923, maxSpeed: 2.436 },
-    spreadshot: { reload: 1.5, shudder: 0.25, speed: 0.7, maxSpeed: 0.7, spray: 0.25 },
-    quintuplet: { reload: 1.5, recoil: 2 / 3, shudder: 0.9, pen: 0.9, density: 1.1, spray: 0.9, resist: 0.95 },
-    predator: { reload: 1.4, size: 0.8, health: 1.5, damage: 0.9, pen: 1.2, speed: 0.9, maxSpeed: 0.9 },
-    dual: { reload: 2, shudder: 0.8, health: 1.5, speed: 1.3, maxSpeed: 1.1, resist: 1.25 },
-    rifle: { reload: 0.8, recoil: 0.8, shudder: 1.5, health: 0.8, damage: 0.8, pen: 0.9, spray: 2 },
-    healer: { damage: -1, speed: 0.5, maxSpeed: 0.5, recoil: 0.5 },
-    moreReload: { reload: 1.16 },
-    streamliner: { reload: 1.1, recoil: 0.6, damage: 0.65, speed: 1.24 },
-    nailgun: { reload: 0.85, recoil: 2.5, size: 0.8, damage: 0.7, density: 2 },
-    pelleter: { reload: 1.25, recoil: 0.25, shudder: 1.5, size: 1.1, damage: 0.35, pen: 1.35, speed: 0.9, maxSpeed: 0.8, density: 1.5, spray: 1.5, resist: 1.2 },
-    cyclone: { health: 1.3, damage: 1.3, pen: 1.1, speed: 1.5, maxSpeed: 1.15 },
-    atomizer: { reload: 0.3, recoil: 0.8, size: 0.5, damage: 0.75, speed: 1.2, maxSpeed: 0.8, spray: 2.25 },
-    sunchip: { reload: 4, size: 1.4, health: 0.5, damage: 0.4, pen: 0.6, density: 0.8 },
-    lowPower: { shudder: 2, health: 0.5, damage: 0.5, pen: 0.7, spray: 0.5, resist: 0.7 },
+    construct: { reload: 1.3, size: 0.9, maxSpeed: 1.1 },
+    boomerang: { reload: 0.8, health: 0.5, damage: 0.5, speed: 0.75, maxSpeed: 0.75, range: 1.333333 },
+    nestKeeper: { reload: 3, size: 0.75, health: 1.05, damage: 1.05, pen: 1.1, speed: 0.5, maxSpeed: 0.5, range: 0.5, density: 1.1 },
+    hexaTrapper: { reload: 1.3, shudder: 1.25, speed: 0.8, range: 0.5 },
+    trapperDominator: { reload: 1.46, recoil: 0, shudder: 0.25, health: 1.25, damage: 1.45, pen: 1.6, speed: 0.5, maxSpeed: 2, range: 1.1, spray: 0.5 },
+    barricade: { reload: 0.75, damage: 0.79, range: 0.5 },
     weak: { reload: 2, health: 0.6, damage: 0.6, pen: 0.8, speed: 0.5, maxSpeed: 0.7, range: 0.25, density: 0.3 },
-    spam: { reload: 1.1, size: 1.05, damage: 1.1, speed: 0.9, maxSpeed: 0.7, resist: 1.05 },
-    minion: { reload: 48, shudder: 0.1, size: 0.7, damage: 0.75, speed: 3, spray: 0.1 },
-    minionGun: { recoil: 0, shudder: 2, health: 0.4, damage: 0.4, pen: 1.2, range: 0.75, spray: 2 },
-    spawner: { reload: 1.5, maxSpeed: 1.25 },
-  };
+    power: { shudder: 0.6, size: 1.2, pen: 1.25, speed: 2, maxSpeed: 1.7, density: 2, spray: 0.5, resist: 1.5 },
+    fake: { size: 0.00001, health: 0.0001, speed: 0, maxSpeed: 0, shudder: 0, spray: 0, recoil: 0, range: 0 },
+    op: { reload: 0.5, recoil: 1.3, health: 4, damage: 4, pen: 4, speed: 3, maxSpeed: 2, density: 5, spray: 2 },
+    healer: { damage: -1, speed: 0.5, maxSpeed: 0.5, recoil: 0.5 },
+    arenaCloser: { reload: 0.8, recoil: 0.25, health: 1000, damage: 1000, pen: 1000, speed: 2.5, maxSpeed: 1.15, range: 1.8, density: 4, spray: 0.25 },
+    halfrange: { range: 0.5 },
+    lowPower: { shudder: 2, health: 0.5, damage: 0.5, pen: 0.7, spray: 0.5, resist: 0.7 },
+    aura: { reload: 0.001, recoil: 0.001, shudder: 0.001, size: 6, speed: 0.001, maxSpeed: 0.001, spray: 0.001 },
+    noSpread: { shudder: 0, spray: 0 },
+    fast: { speed: 1.2 },
+    bacteria: { reload: 2, recoil: 0.25, shudder: 0.1, size: 0.62, speed: 2 },
+    productionist: { reload: 56, recoil: 0.25, shudder: 0.05, size: 0.7, damage: 0.75, speed: 4, range: 1.5, spray: 5 },
+    worstTank: { reload: 15, damage: 0.01, health: 0.01, pen: 0.01 },
+    bigBalls: { reload: 4, damage: 4, health: 2, speed: 0.85, maxSpeed: 0.85, size: 2.5 },
+    machineShot: { reload: 0.3, recoil: 0.8, shudder: 0.4, health: 0.7, damage: 0.7, speed: 4.5, maxSpeed: 5.9, spray: 19 },
+  };;
 
   const PROJECTILE = {
     bullet: { HEALTH: 0.165, DAMAGE: 6, RANGE: 90, SPEED: 3.75 },
@@ -213,131 +261,1891 @@
 
   const B = (...more) => ({ layers: [g.basic, ...more] });
 
+  // --- Arras CE playable tree (converted) ---
   def("basic", {
-    name: "Basic Tank",
-    desc: "A reliable all-rounder",
-    guns: G.basic(),
-    upgrades: ["twin", "sniper", "machinegun", "flank", "director", "pounder", "trapper", "smasher", "healer"],
-    needLevel: 1,
-  });
-
-  def("twin", {
-    name: "Twin",
-    desc: "Two barrels, staggered fire",
-    guns: G.twin(),
-    upgrades: ["tripleshot", "quad", "twinflank"],
-    needLevel: 15,
-  });
-
-  def("sniper", {
-    name: "Sniper",
-    desc: "Long range, hard hits",
-    guns: G.sniper(),
-    fov: 1.22,
-    upgrades: ["assassin", "hunter", "rifle", "trapper"],
-    needLevel: 15,
-  });
-
-  def("machinegun", {
-    name: "Machine Gun",
-    desc: "Wide barrel, messy spray",
-    guns: G.machine(),
-    upgrades: ["destroyer", "gunner"],
-    needLevel: 15,
-  });
-
-  def("flank", {
-    name: "Flank Guard",
-    desc: "Front and back coverage",
-    guns: G.flank(),
-    upgrades: ["triangle", "quad"],
-    needLevel: 15,
-  });
-
-  def("triangle", {
-    name: "Tri-Angle",
-    desc: "Rear guns that shove you forward",
+    name: "Basic",
+    desc: "",
     guns: [
-      gun(18, 8, 1, 0, 0, 0, 0, B(g.flankGuard, g.triAngle, g.triAngleFront)),
-      gun(16, 8, 1, 0, 0, 150, 0.33, B(g.flankGuard, g.triAngle, g.thruster)),
-      gun(16, 8, 1, 0, 0, 210, 0.66, B(g.flankGuard, g.triAngle, g.thruster)),
+      gun(18, 8, 1, 0, 0, 0, 0, { shoot: { reload: 10.5, recoil: 1.4, shudder: 0.1, size: 1, health: 1, damage: 0.75, pen: 1, speed: 5, maxSpeed: 1, range: 1, density: 1, spray: 15, resist: 1 } })
     ],
-    speed: 1.12,
-    upgrades: ["booster", "fighter"],
-    needLevel: 30,
+    upgrades: ["twin", "sniper", "machinegun", "flank", "director", "pounder", "trapper", "smasher", "healer"],
+    needLevel: 1
   });
 
   def("director", {
     name: "Director",
-    desc: "Controls a small drone flock",
-    body: 4,
-    guns: G.director(),
-    maxDrones: 6,
-    upgrades: ["overseer", "cruiser", "underseer", "spawner"],
+    desc: "",
+    guns: [
+      gun(5, 11, 1.3, 8, 0, 0, 0, { type: "drone", calculator: "drone", shoot: { reload: 36, recoil: 0.25, shudder: 0.1, size: 0.6, health: 1, damage: 1, pen: 1, speed: 1.5, maxSpeed: 1, range: 1, density: 1, spray: 0.1, resist: 1 } })
+    ],
+    upgrades: ["overseer", "cruiser", "underseer", "spawner", "manager", "bigcheese"],
     needLevel: 15,
+    fov: 1.1,
+    maxDrones: 6
+  });
+
+  def("flank", {
+    name: "Flank Guard",
+    desc: "",
+    guns: [
+      gun(18, 8, 1, 0, 0, 0, 0, { shoot: { reload: 10.5, recoil: 1.68, shudder: 0.1, size: 1, health: 1.02, damage: 0.6075, pen: 0.9, speed: 5, maxSpeed: 0.85, range: 1, density: 1.2, spray: 15, resist: 1 } }),
+      gun(18, 8, 1, 0, 0, 120, 0, { shoot: { reload: 10.5, recoil: 1.68, shudder: 0.1, size: 1, health: 1.02, damage: 0.6075, pen: 0.9, speed: 5, maxSpeed: 0.85, range: 1, density: 1.2, spray: 15, resist: 1 } }),
+      gun(18, 8, 1, 0, 0, 240, 0, { shoot: { reload: 10.5, recoil: 1.68, shudder: 0.1, size: 1, health: 1.02, damage: 0.6075, pen: 0.9, speed: 5, maxSpeed: 0.85, range: 1, density: 1.2, spray: 15, resist: 1 } })
+    ],
+    upgrades: ["hexatank", "triangle", "auto3", "trapguard", "tritrapper", "tripletwin", "quadruplex"],
+    needLevel: 15,
+    speed: 1.1
+  });
+
+  def("machinegun", {
+    name: "Machine Gun",
+    desc: "",
+    guns: [
+      gun(12, 10, 1.4, 8, 0, 0, 0, { shoot: { reload: 5.25, recoil: 1.12, shudder: 0.17, size: 0.92, health: 0.7, damage: 0.525, pen: 1, speed: 5, maxSpeed: 0.8, range: 1, density: 1, spray: 37.5, resist: 1 } })
+    ],
+    upgrades: ["artillery", "minigun", "gunner", "sprayer"],
+    needLevel: 15
   });
 
   def("pounder", {
     name: "Pounder",
-    desc: "Heavy shells, heavy recoil",
-    guns: G.pound(),
-    upgrades: ["destroyer", "builder", "artillery", "launcher"],
+    desc: "",
+    guns: [
+      gun(20.5, 12, 1, 0, 0, 0, 0, { shoot: { reload: 21, recoil: 2.24, shudder: 0.1, size: 1, health: 1, damage: 1.5, pen: 1, speed: 4.25, maxSpeed: 0.8, range: 1, density: 1.5, spray: 15, resist: 1.15 } })
+    ],
+    upgrades: ["destroyer", "builder", "artillery", "launcher", "shotgun", "eagle"],
+    needLevel: 15
+  });
+
+  def("sniper", {
+    name: "Sniper",
+    desc: "",
+    guns: [
+      gun(24, 8, 1, 0, 0, 0, 0, { shoot: { reload: 14.175, recoil: 1.4, shudder: 0.025, size: 1, health: 1, damage: 0.6, pen: 1.1, speed: 7.5, maxSpeed: 1.5, range: 1, density: 1.5, spray: 3, resist: 1.15 } })
+    ],
+    upgrades: ["assassin", "hunter", "minigun", "rifle", "marksman", "bushwhacker"],
     needLevel: 15,
+    fov: 1.2
   });
 
   def("trapper", {
     name: "Trapper",
-    desc: "Drops lingering traps",
-    guns: G.trap(),
-    upgrades: ["tritrapper", "megatrapper", "gunnertrapper", "overtrapper"],
+    desc: "",
+    guns: [
+      gun(15, 7, 1, 0, 0, 0, 0, { type: "deco" }),
+      gun(3, 7, 1.7, 15, 0, 0, 0, { type: "trap", calculator: "trap", shoot: { reload: 23, recoil: 1, shudder: 0.25, size: 0.7, health: 1, damage: 0.75, pen: 1, speed: 3.25, maxSpeed: 1, range: 1, density: 1, spray: 0, resist: 3 } })
+    ],
+    upgrades: ["builder", "tritrapper", "trapguard", "barricade", "overtrapper"],
+    needLevel: 15
+  });
+
+  def("twin", {
+    name: "Twin",
+    desc: "",
+    guns: [
+      gun(20, 8, 1, 0, 5.5, 0, 0, { shoot: { reload: 10.5, recoil: 0.7, shudder: 0.09, size: 1, health: 0.9, damage: 0.525, pen: 1, speed: 5, maxSpeed: 1, range: 1, density: 1, spray: 18, resist: 1 } }),
+      gun(20, 8, 1, 0, -5.5, 0, 0.5, { shoot: { reload: 10.5, recoil: 0.7, shudder: 0.09, size: 1, health: 0.9, damage: 0.525, pen: 1, speed: 5, maxSpeed: 1, range: 1, density: 1, spray: 18, resist: 1 } })
+    ],
+    upgrades: ["doubletwin", "tripleshot", "gunner", "hexatank", "helix", "dual", "bulwark", "musket"],
+    needLevel: 15
+  });
+
+  def("artillery", {
+    name: "Artillery",
+    desc: "",
+    guns: [
+      gun(17, 5, 1, 0, -5, -7, 0.25, { shoot: { reload: 15.75, recoil: 0.245, shudder: 0.15, size: 0.99, health: 1, damage: 0.2625, pen: 1.35, speed: 5.175, maxSpeed: 0.88, range: 1, density: 2.25, spray: 22.5, resist: 1.2 } }),
+      gun(17, 5, 1, 0, 5, 7, 0.75, { shoot: { reload: 15.75, recoil: 0.245, shudder: 0.15, size: 0.99, health: 1, damage: 0.2625, pen: 1.35, speed: 5.175, maxSpeed: 0.88, range: 1, density: 2.25, spray: 22.5, resist: 1.2 } }),
+      gun(19, 12, 1, 0, 0, 0, 0, { shoot: { reload: 25.2, recoil: 1.568, shudder: 0.1, size: 0.9, health: 1, damage: 1.5, pen: 1, speed: 4.8875, maxSpeed: 0.88, range: 1, density: 2.25, spray: 15, resist: 1.15 } })
+    ],
+    upgrades: ["mortar", "ordnance", "beekeeper", "fieldgun"],
+    needLevel: 30
+  });
+
+  def("assassin", {
+    name: "Assassin",
+    desc: "",
+    guns: [
+      gun(27, 8, 1, 0, 0, 0, 0, { shoot: { reload: 23.38875, recoil: 1.4, shudder: 0.00625, size: 1, health: 1.15, damage: 0.6, pen: 1.21, speed: 8.85, maxSpeed: 1.77, range: 1, density: 4.5, spray: 3, resist: 1.495 } }),
+      gun(13, 8, -2.2, 0, 0, 0, 0, { type: "deco" })
+    ],
+    upgrades: ["ranger", "falcon", "stalker", "autoassassin", "single", "deadeye"],
     needLevel: 30,
+    fov: 1.4,
+    speed: 0.85
   });
 
   def("auto3", {
     name: "Auto-3",
-    desc: "Three independently aiming guns",
-    auto: true,
-    guns: [0, 120, 240].map((a, i) => gun(16, 6, 1, 0, 0, a, i * 0.33, { type: "auto", layers: [g.basic, g.autoTurret] })),
-    upgrades: ["auto5", "auto8", "autosniper"],
-    needLevel: 15,
+    desc: "",
+    guns: [
+      gun(22, 10, 1, 0, 0, 0, 0, { type: "auto", shoot: { reload: 9.45, recoil: 1.26, shudder: 0.05, size: 0.8, health: 0.918, damage: 0.3645, pen: 1.08, speed: 5.5, maxSpeed: 0.85, range: 0.8, density: 1.56, spray: 15, resist: 1.25 } }),
+      gun(22, 10, 1, 0, 0, 120, 0, { type: "auto", shoot: { reload: 9.45, recoil: 1.26, shudder: 0.05, size: 0.8, health: 0.918, damage: 0.3645, pen: 1.08, speed: 5.5, maxSpeed: 0.85, range: 0.8, density: 1.56, spray: 15, resist: 1.25 } }),
+      gun(22, 10, 1, 0, 0, 240, 0, { type: "auto", shoot: { reload: 9.45, recoil: 1.26, shudder: 0.05, size: 0.8, health: 0.918, damage: 0.3645, pen: 1.08, speed: 5.5, maxSpeed: 0.85, range: 0.8, density: 1.56, spray: 15, resist: 1.25 } })
+    ],
+    upgrades: ["auto5", "mega3", "auto4", "banshee"],
+    needLevel: 30,
+    auto: true
   });
 
-  def("smasher", {
-    name: "Smasher",
-    desc: "No guns. Ram everything.",
-    guns: [],
-    smasher: true,
-    speed: 1.15,
-    health: 1.35,
-    bodyDamage: 2.2,
-    upgrades: ["landmine", "spike", "autosmasher"],
-    needLevel: 15,
+  def("barricade", {
+    name: "Barricade",
+    desc: "",
+    guns: [
+      gun(24, 8, 1, 0, 0, 0, 0, { type: "deco" }),
+      gun(4, 8, 1.3, 22, 0, 0, 0, { type: "trap", calculator: "trap", shoot: { reload: 21.5625, recoil: 0.6, shudder: 0.25, size: 0.56, health: 0.55, damage: 0.266625, pen: 1.25, speed: 4.3225, maxSpeed: 1, range: 0.5, density: 1.25, spray: 0, resist: 3.3 } }),
+      gun(4, 8, 1.3, 18, 0, 0, 0.3333, { type: "trap", calculator: "trap", shoot: { reload: 21.5625, recoil: 0.6, shudder: 0.25, size: 0.56, health: 0.55, damage: 0.266625, pen: 1.25, speed: 4.3225, maxSpeed: 1, range: 0.5, density: 1.25, spray: 0, resist: 3.3 } }),
+      gun(4, 8, 1.3, 14, 0, 0, 0.6667, { type: "trap", calculator: "trap", shoot: { reload: 21.5625, recoil: 0.6, shudder: 0.25, size: 0.56, health: 0.55, damage: 0.266625, pen: 1.25, speed: 4.3225, maxSpeed: 1, range: 0.5, density: 1.25, spray: 0, resist: 3.3 } })
+    ],
+    upgrades: [],
+    needLevel: 30,
+    fov: 1.15
+  });
+
+  def("bigcheese", {
+    name: "Big Cheese",
+    desc: "",
+    guns: [
+      gun(14, 17, 1.3, 2, 0, 0, 0, { type: "drone", calculator: "drone", shoot: { reload: 54, recoil: 0.25, shudder: 0.1, size: 1.08, health: 2.5, damage: 1, pen: 1, speed: 1.875, maxSpeed: 1, range: 1, density: 1, spray: 0.1, resist: 1 } })
+    ],
+    upgrades: [],
+    needLevel: 30,
+    fov: 1.1,
+    maxDrones: 1
+  });
+
+  def("builder", {
+    name: "Builder",
+    desc: "",
+    guns: [
+      gun(18, 12, 1, 0, 0, 0, 0, { type: "deco" }),
+      gun(2, 12, 1.1, 18, 0, 0, 0, { type: "trap", calculator: "trap", shoot: { reload: 25.3, recoil: 2, shudder: 0.025, size: 1.05, health: 2, damage: 0.75, pen: 1.25, speed: 7.15, maxSpeed: 2.15, range: 1.25, density: 1, spray: 0, resist: 3.75 } })
+    ],
+    upgrades: ["construct", "autobuilder", "engineer", "boomer", "assembler", "architect", "conqueror"],
+    needLevel: 30,
+    fov: 1.15,
+    speed: 0.8
+  });
+
+  def("bulwark", {
+    name: "Bulwark",
+    desc: "",
+    guns: [
+      gun(20, 8, 1, 0, 5.5, 0, 0, { shoot: { reload: 10.5, recoil: 1.008, shudder: 0.09, size: 1, health: 0.93636, damage: 0.344452, pen: 0.81, speed: 5, maxSpeed: 0.7225, range: 1, density: 1.44, spray: 18, resist: 1 } }),
+      gun(20, 8, 1, 0, -5.5, 0, 0.5, { shoot: { reload: 10.5, recoil: 1.008, shudder: 0.09, size: 1, health: 0.93636, damage: 0.344452, pen: 0.81, speed: 5, maxSpeed: 0.7225, range: 1, density: 1.44, spray: 18, resist: 1 } }),
+      gun(15, 8, 1, 0, 5.5, 185, 0, { type: "deco" }),
+      gun(15, 8, 1, 0, -5.5, -185, 0.5, { type: "deco" }),
+      gun(3.25, 8, 1.7, 14, 5.5, 185, 0, { type: "trap", calculator: "trap", shoot: { reload: 23, recoil: 0.5, shudder: 0.225, size: 0.7, health: 0.9, damage: 0.525, pen: 1, speed: 3.25, maxSpeed: 1, range: 1, density: 1, spray: 0, resist: 3 } }),
+      gun(3.25, 8, 1.7, 14, -5.5, -185, 0.5, { type: "trap", calculator: "trap", shoot: { reload: 23, recoil: 0.5, shudder: 0.225, size: 0.7, health: 0.9, damage: 0.525, pen: 1, speed: 3.25, maxSpeed: 1, range: 1, density: 1, spray: 0, resist: 3 } })
+    ],
+    upgrades: [],
+    needLevel: 30
+  });
+
+  def("bushwhacker", {
+    name: "Bushwhacker",
+    desc: "",
+    guns: [
+      gun(24, 8, 1, 0, 0, 0, 0, { shoot: { reload: 14.175, recoil: 2.016, shudder: 0.025, size: 1, health: 1.0404, damage: 0.39366, pen: 0.891, speed: 7.5, maxSpeed: 1.08375, range: 1, density: 2.16, spray: 3, resist: 1.15 } }),
+      gun(13, 8, 1, 0, 0, 180, 0, { type: "deco" }),
+      gun(4, 8, 1.7, 13, 0, 180, 0, { type: "trap", calculator: "trap", shoot: { reload: 23, recoil: 1, shudder: 0.25, size: 0.7, health: 1, damage: 0.75, pen: 1, speed: 3.25, maxSpeed: 1, range: 1, density: 1, spray: 0, resist: 3 } })
+    ],
+    upgrades: [],
+    needLevel: 30,
+    fov: 1.2
+  });
+
+  def("cruiser", {
+    name: "Cruiser",
+    desc: "",
+    guns: [
+      gun(9, 8.2, 0.6, 5, 4, 0, 0, { type: "swarm", calculator: "swarm", shoot: { reload: 23, recoil: 0.25, shudder: 0.05, size: 0.4, health: 1, damage: 0.75, pen: 1, speed: 4, maxSpeed: 1, range: 1, density: 1, spray: 5, resist: 1 } }),
+      gun(9, 8.2, 0.6, 5, -4, 0, 0.5, { type: "swarm", calculator: "swarm", shoot: { reload: 23, recoil: 0.25, shudder: 0.05, size: 0.4, health: 1, damage: 0.75, pen: 1, speed: 4, maxSpeed: 1, range: 1, density: 1, spray: 5, resist: 1 } })
+    ],
+    upgrades: ["carrier", "battleship", "fortress", "autocruiser", "commander"],
+    needLevel: 30,
+    fov: 1.2
+  });
+
+  def("destroyer", {
+    name: "Destroyer",
+    desc: "",
+    guns: [
+      gun(20.5, 14, 1, 0, 0, 0, 0, { shoot: { reload: 42, recoil: 4.032, shudder: 0.05, size: 1, health: 2, damage: 1.35, pen: 1.2, speed: 2.125, maxSpeed: 0.48, range: 1, density: 3, spray: 15, resist: 3.45 } })
+    ],
+    upgrades: ["conqueror", "annihilator", "hybrid", "construct"],
+    needLevel: 30
+  });
+
+  def("doubletwin", {
+    name: "Double Twin",
+    desc: "",
+    guns: [
+      gun(20, 8, 1, 0, 5.5, 0, 0, { shoot: { reload: 10.5, recoil: 0.7, shudder: 0.09, size: 1, health: 0.9, damage: 0.5775, pen: 1, speed: 5, maxSpeed: 1, range: 1, density: 1, spray: 18, resist: 1 } }),
+      gun(20, 8, 1, 0, 5.5, 180, 0, { shoot: { reload: 10.5, recoil: 0.7, shudder: 0.09, size: 1, health: 0.9, damage: 0.5775, pen: 1, speed: 5, maxSpeed: 1, range: 1, density: 1, spray: 18, resist: 1 } }),
+      gun(20, 8, 1, 0, -5.5, 0, 0.5, { shoot: { reload: 10.5, recoil: 0.7, shudder: 0.09, size: 1, health: 0.9, damage: 0.5775, pen: 1, speed: 5, maxSpeed: 1, range: 1, density: 1, spray: 18, resist: 1 } }),
+      gun(20, 8, 1, 0, -5.5, 180, 0.5, { shoot: { reload: 10.5, recoil: 0.7, shudder: 0.09, size: 1, health: 0.9, damage: 0.5775, pen: 1, speed: 5, maxSpeed: 1, range: 1, density: 1, spray: 18, resist: 1 } })
+    ],
+    upgrades: ["tripletwin", "hewn", "autodouble", "bentdouble"],
+    needLevel: 30
+  });
+
+  def("dual", {
+    name: "Dual",
+    desc: "",
+    guns: [
+      gun(18, 7, 1, 0, 5.5, 0, 0, { shoot: { reload: 21, recoil: 0.7, shudder: 0.144, size: 1, health: 0.675, damage: 0.2625, pen: 0.7, speed: 6.5, maxSpeed: 1.1, range: 1, density: 1, spray: 9, resist: 0.875 } }),
+      gun(18, 7, 1, 0, -5.5, 0, 0.5, { shoot: { reload: 21, recoil: 0.7, shudder: 0.144, size: 1, health: 0.675, damage: 0.2625, pen: 0.7, speed: 6.5, maxSpeed: 1.1, range: 1, density: 1, spray: 9, resist: 0.875 } }),
+      gun(16, 8.5, 1, 0, 5.5, 0, 0.25, { shoot: { reload: 21, recoil: 0.7, shudder: 0.072, size: 1, health: 1.35, damage: 0.525, pen: 1, speed: 6.5, maxSpeed: 1.1, range: 1, density: 1, spray: 18, resist: 1.25 } }),
+      gun(16, 8.5, 1, 0, -5.5, 0, 0.75, { shoot: { reload: 21, recoil: 0.7, shudder: 0.072, size: 1, health: 1.35, damage: 0.525, pen: 1, speed: 6.5, maxSpeed: 1.1, range: 1, density: 1, spray: 18, resist: 1.25 } })
+    ],
+    upgrades: [],
+    needLevel: 30,
+    fov: 1.1
+  });
+
+  def("eagle", {
+    name: "Eagle",
+    desc: "",
+    guns: [
+      gun(20.5, 12, 1, 0, 0, 0, 0, { shoot: { reload: 21, recoil: 0.48384, shudder: 0.1, size: 1, health: 0.918, damage: 1.215, pen: 0.9, speed: 4.42, maxSpeed: 0.5984, range: 0.9, density: 1.8, spray: 15, resist: 1.15 } }),
+      gun(16, 8, 1, 0, 0, 153, 0.1, { shoot: { reload: 10.5, recoil: 1.134, shudder: 0.2, size: 1, health: 0.459, damage: 0.30375, pen: 0.63, speed: 4, maxSpeed: 0.68, range: 0.6, density: 1.2, spray: 7.5, resist: 0.7 } }),
+      gun(16, 8, 1, 0, 0, -153, 0.1, { shoot: { reload: 10.5, recoil: 1.134, shudder: 0.2, size: 1, health: 0.459, damage: 0.30375, pen: 0.63, speed: 4, maxSpeed: 0.68, range: 0.6, density: 1.2, spray: 7.5, resist: 0.7 } }),
+      gun(18, 8, 1, 0, 0, 180, 0.6, { shoot: { reload: 10.5, recoil: 1.134, shudder: 0.2, size: 1, health: 0.459, damage: 0.30375, pen: 0.63, speed: 4, maxSpeed: 0.68, range: 0.6, density: 1.2, spray: 7.5, resist: 0.7 } })
+    ],
+    upgrades: [],
+    needLevel: 30
+  });
+
+  def("gunner", {
+    name: "Gunner",
+    desc: "",
+    guns: [
+      gun(12, 3.5, 1, 0, 7.25, 0, 0.5, { shoot: { reload: 10.5, recoil: 0.175, shudder: 0.135, size: 1.2, health: 1.215, damage: 0.13125, pen: 1.25, speed: 4.8, maxSpeed: 0.65, range: 1, density: 1.5, spray: 27, resist: 1.2 } }),
+      gun(12, 3.5, 1, 0, -7.25, 0, 0.75, { shoot: { reload: 10.5, recoil: 0.175, shudder: 0.135, size: 1.2, health: 1.215, damage: 0.13125, pen: 1.25, speed: 4.8, maxSpeed: 0.65, range: 1, density: 1.5, spray: 27, resist: 1.2 } }),
+      gun(16, 3.5, 1, 0, 3.75, 0, 0, { shoot: { reload: 10.5, recoil: 0.175, shudder: 0.135, size: 1.2, health: 1.215, damage: 0.13125, pen: 1.25, speed: 4.8, maxSpeed: 0.65, range: 1, density: 1.5, spray: 27, resist: 1.2 } }),
+      gun(16, 3.5, 1, 0, -3.75, 0, 0.25, { shoot: { reload: 10.5, recoil: 0.175, shudder: 0.135, size: 1.2, health: 1.215, damage: 0.13125, pen: 1.25, speed: 4.8, maxSpeed: 0.65, range: 1, density: 1.5, spray: 27, resist: 1.2 } })
+    ],
+    upgrades: ["autogunner", "nailgun", "auto4", "machinegunner", "gunnertrapper", "cyclone", "overgunner"],
+    needLevel: 30
   });
 
   def("healer", {
     name: "Healer",
-    desc: "Healing shells for teammates",
-    healer: true,
+    desc: "",
     guns: [
       gun(11, 9, -0.4, 9.5, 0, 0, 0, { type: "deco" }),
-      gun(18, 10, 1, 0, 0, 0, 0, { type: "heal", layers: [g.basic, g.healer] }),
+      gun(18, 10, 1, 0, 0, 0, 0, { type: "heal", shoot: { reload: 10.5, recoil: 0.7, shudder: 0.1, size: 1, health: 1, damage: -0.75, pen: 1, speed: 2.5, maxSpeed: 0.5, range: 1, density: 1, spray: 15, resist: 1 } })
     ],
-    upgrades: ["medic"],
+    upgrades: ["medic", "ambulance", "surgeon", "paramedic"],
     needLevel: 15,
+    healer: true
+  });
+
+  def("helix", {
+    name: "Helix",
+    desc: "",
+    guns: [
+      gun(20, 6, -1.5, 0, -5, 0, 0, { shoot: { reload: 11.55, recoil: 0.7, shudder: 0, size: 1, health: 0.9, damage: 0.39375, pen: 1, speed: 2.5, maxSpeed: 1, range: 1.2, density: 1, spray: 0, resist: 1 } }),
+      gun(20, 6, -1.5, 0, 5, 0, 0, { shoot: { reload: 11.55, recoil: 0.7, shudder: 0, size: 1, health: 0.9, damage: 0.39375, pen: 1, speed: 2.5, maxSpeed: 1, range: 1.2, density: 1, spray: 0, resist: 1 } }),
+      gun(16.5, 2, -9.25, 0, 0, 0, 0, { type: "deco" }),
+      gun(4, 5, -4, -9.5, -7, 90, 0, { type: "deco" }),
+      gun(4, 5, -4, -9.5, 7, -90, 0, { type: "deco" })
+    ],
+    upgrades: ["triplex", "quadruplex"],
+    needLevel: 30
+  });
+
+  def("hexatank", {
+    name: "Hexa Tank",
+    desc: "",
+    guns: [
+      gun(18, 8, 1, 0, 0, 0, 0, { shoot: { reload: 10.5, recoil: 2.016, shudder: 0.1, size: 1, health: 1.0404, damage: 0.492075, pen: 0.81, speed: 5, maxSpeed: 0.7225, range: 1, density: 1.44, spray: 15, resist: 1 } }),
+      gun(18, 8, 1, 0, 0, 60, 0.5, { shoot: { reload: 10.5, recoil: 2.016, shudder: 0.1, size: 1, health: 1.0404, damage: 0.492075, pen: 0.81, speed: 5, maxSpeed: 0.7225, range: 1, density: 1.44, spray: 15, resist: 1 } }),
+      gun(18, 8, 1, 0, 0, 120, 0, { shoot: { reload: 10.5, recoil: 2.016, shudder: 0.1, size: 1, health: 1.0404, damage: 0.492075, pen: 0.81, speed: 5, maxSpeed: 0.7225, range: 1, density: 1.44, spray: 15, resist: 1 } }),
+      gun(18, 8, 1, 0, 0, 180, 0.5, { shoot: { reload: 10.5, recoil: 2.016, shudder: 0.1, size: 1, health: 1.0404, damage: 0.492075, pen: 0.81, speed: 5, maxSpeed: 0.7225, range: 1, density: 1.44, spray: 15, resist: 1 } }),
+      gun(18, 8, 1, 0, 0, 240, 0, { shoot: { reload: 10.5, recoil: 2.016, shudder: 0.1, size: 1, health: 1.0404, damage: 0.492075, pen: 0.81, speed: 5, maxSpeed: 0.7225, range: 1, density: 1.44, spray: 15, resist: 1 } }),
+      gun(18, 8, 1, 0, 0, 300, 0.5, { shoot: { reload: 10.5, recoil: 2.016, shudder: 0.1, size: 1, health: 1.0404, damage: 0.492075, pen: 0.81, speed: 5, maxSpeed: 0.7225, range: 1, density: 1.44, spray: 15, resist: 1 } })
+    ],
+    upgrades: ["octo", "cyclone", "hexatrap"],
+    needLevel: 30
+  });
+
+  def("hunter", {
+    name: "Hunter",
+    desc: "",
+    guns: [
+      gun(24, 8, 1, 0, 0, 0, 0, { shoot: { reload: 21.2625, recoil: 0.98, shudder: 0.025, size: 0.855, health: 2, damage: 0.27, pen: 1.65, speed: 8.25, maxSpeed: 1.2, range: 1, density: 2.16, spray: 3, resist: 1.45475 } }),
+      gun(21, 11, 1, 0, 0, 0, 0.25, { shoot: { reload: 21.2625, recoil: 0.98, shudder: 0.025, size: 0.95, health: 1, damage: 0.54, pen: 1.1, speed: 8.25, maxSpeed: 1.2, range: 1, density: 1.8, spray: 3, resist: 1.3225 } })
+    ],
+    upgrades: ["predator", "xhunter", "poacher", "ordnance", "dual", "nimrod"],
+    needLevel: 30,
+    fov: 1.25,
+    speed: 0.9
+  });
+
+  def("launcher", {
+    name: "Launcher",
+    desc: "",
+    guns: [
+      gun(19.2, 13, 0.7, 0, 0, 0, 0, { type: "deco" }),
+      gun(17, 13, 1, 0, 0, 0, 0, { type: "missile", shoot: { reload: 31.5, recoil: 3.36, shudder: 0.01, size: 0.72, health: 1.05, damage: 1.3875, pen: 1, speed: 3.825, maxSpeed: 0.96, range: 1.1, density: 1.5, spray: 15, resist: 1.725 } })
+    ],
+    upgrades: ["skimmer", "twister", "swarmer", "sidewinder", "fieldgun"],
+    needLevel: 30,
+    fov: 1.1
+  });
+
+  def("manager", {
+    name: "Manager",
+    desc: "",
+    guns: [
+      gun(6, 12, 1.2, 8, 0, 0, 0, { type: "drone", calculator: "drone", shoot: { reload: 22.5, recoil: 0.25, shudder: 0.1, size: 0.51, health: 0.7, damage: 0.8, pen: 1, speed: 1.5, maxSpeed: 0.9, range: 1, density: 2, spray: 0.1, resist: 1 } })
+    ],
+    upgrades: [],
+    needLevel: 30,
+    fov: 1.1,
+    speed: 0.85,
+    maxDrones: 8
+  });
+
+  def("marksman", {
+    name: "Marksman",
+    desc: "",
+    guns: [
+      gun(13, 5, 2.2, 10, 0, 0, 0, { type: "deco" }),
+      gun(13, 5, 2.2, 5, 0, 0, 0, { type: "deco" }),
+      gun(13, 5, 2.2, 0, 0, 0, 0, { type: "deco" }),
+      gun(24, 8, 1, 0, 0, 0, 0, { shoot: { reload: 24.80625, recoil: 1.4, shudder: 0.025, size: 1, health: 8.333333, damage: 0.072, pen: 2.2, speed: 7.5, maxSpeed: 1.5, range: 1, density: 1.5, spray: 3, resist: 1.15 } })
+    ],
+    upgrades: ["deadeye", "nimrod", "revolver", "fork"],
+    needLevel: 30,
+    fov: 1.2
+  });
+
+  def("minigun", {
+    name: "Minigun",
+    desc: "",
+    guns: [
+      gun(21, 8, 1, 0, 0, 0, 0, { shoot: { reload: 13.125, recoil: 0.84, shudder: 0.1, size: 0.8, health: 0.55, damage: 0.3375, pen: 1.25, speed: 6.65, maxSpeed: 1, range: 1, density: 1.25, spray: 7.5, resist: 1.1 } }),
+      gun(19, 8, 1, 0, 0, 0, 0.3333, { shoot: { reload: 13.125, recoil: 0.84, shudder: 0.1, size: 0.8, health: 0.55, damage: 0.3375, pen: 1.25, speed: 6.65, maxSpeed: 1, range: 1, density: 1.25, spray: 7.5, resist: 1.1 } }),
+      gun(17, 8, 1, 0, 0, 0, 0.6667, { shoot: { reload: 13.125, recoil: 0.84, shudder: 0.1, size: 0.8, health: 0.55, damage: 0.3375, pen: 1.25, speed: 6.65, maxSpeed: 1, range: 1, density: 1.25, spray: 7.5, resist: 1.1 } })
+    ],
+    upgrades: ["streamliner", "nailgun", "cropduster", "barricade", "vulture"],
+    needLevel: 30,
+    fov: 1.2
+  });
+
+  def("musket", {
+    name: "Musket",
+    desc: "",
+    guns: [
+      gun(15.5, 7, 1, 0, 6.15, 0, 0, { type: "deco" }),
+      gun(15.5, 7, 1, 0, -6.15, 0, 0.5, { type: "deco" }),
+      gun(18, 7, 1, 0, 4.15, 0, 0, { shoot: { reload: 11.34, recoil: 0.56, shudder: 0.03375, size: 1, health: 0.72, damage: 0.336, pen: 0.99, speed: 7.5, maxSpeed: 1.5, range: 1, density: 1.5, spray: 7.2, resist: 1.15 } }),
+      gun(18, 7, 1, 0, -4.15, 0, 0.5, { shoot: { reload: 11.34, recoil: 0.56, shudder: 0.03375, size: 1, health: 0.72, damage: 0.336, pen: 0.99, speed: 7.5, maxSpeed: 1.5, range: 1, density: 1.5, spray: 7.2, resist: 1.15 } })
+    ],
+    upgrades: [],
+    needLevel: 30,
+    fov: 1.225
+  });
+
+  def("overseer", {
+    name: "Overseer",
+    desc: "",
+    guns: [
+      gun(6, 12, 1.2, 8, 0, 90, 0, { type: "drone", calculator: "drone", shoot: { reload: 45, recoil: 0.25, shudder: 0.1, size: 0.51, health: 0.7, damage: 0.8, pen: 1, speed: 1.5, maxSpeed: 0.9, range: 1, density: 2, spray: 0.1, resist: 1 } }),
+      gun(6, 12, 1.2, 8, 0, -90, 0, { type: "drone", calculator: "drone", shoot: { reload: 45, recoil: 0.25, shudder: 0.1, size: 0.51, health: 0.7, damage: 0.8, pen: 1, speed: 1.5, maxSpeed: 0.9, range: 1, density: 2, spray: 0.1, resist: 1 } })
+    ],
+    upgrades: ["overlord", "overtrapper", "overgunner", "banshee", "autooverseer", "overdrive", "commander"],
+    needLevel: 30,
+    fov: 1.1,
+    speed: 0.9,
+    maxDrones: 8
+  });
+
+  def("overtrapper", {
+    name: "Overtrapper",
+    desc: "",
+    guns: [
+      gun(14, 8, 1, 0, 0, 0, 0, { type: "deco" }),
+      gun(4, 8, 1.5, 14, 0, 0, 0, { type: "trap", calculator: "trap", shoot: { reload: 23, recoil: 1, shudder: 0.25, size: 0.7, health: 1, damage: 0.75, pen: 1, speed: 3.25, maxSpeed: 1, range: 1, density: 1, spray: 0, resist: 3 } }),
+      gun(6, 11, 1.2, 8, 0, 125, 0, { type: "drone", calculator: "drone", shoot: { reload: 45, recoil: 0.25, shudder: 0.1, size: 0.51, health: 0.7, damage: 0.8, pen: 1, speed: 1.5, maxSpeed: 0.9, range: 1, density: 2, spray: 0.1, resist: 1 } }),
+      gun(6, 11, 1.2, 8, 0, -125, 0, { type: "drone", calculator: "drone", shoot: { reload: 45, recoil: 0.25, shudder: 0.1, size: 0.51, health: 0.7, damage: 0.8, pen: 1, speed: 1.5, maxSpeed: 0.9, range: 1, density: 2, spray: 0.1, resist: 1 } })
+    ],
+    upgrades: [],
+    needLevel: 30,
+    fov: 1.2,
+    speed: 0.8,
+    maxDrones: 6
+  });
+
+  def("quadruplex", {
+    name: "Quadruplex",
+    desc: "",
+    guns: [
+      gun(20, 8, -1.5, 0, 0, 45, 0, { shoot: { reload: 23.1, recoil: 0.7, shudder: 0, size: 1, health: 0.9, damage: 0.39375, pen: 1, speed: 2.5, maxSpeed: 1, range: 1.2, density: 1, spray: 0, resist: 1 } }),
+      gun(20, 8, -1.5, 0, 0, -135, 0, { shoot: { reload: 23.1, recoil: 0.7, shudder: 0, size: 1, health: 0.9, damage: 0.39375, pen: 1, speed: 2.5, maxSpeed: 1, range: 1.2, density: 1, spray: 0, resist: 1 } }),
+      gun(20, 8, -1.5, 0, 0, -45, 0, { shoot: { reload: 23.1, recoil: 0.7, shudder: 0, size: 1, health: 0.9, damage: 0.39375, pen: 1, speed: 2.5, maxSpeed: 1, range: 1.2, density: 1, spray: 0, resist: 1 } }),
+      gun(20, 8, -1.5, 0, 0, 135, 0, { shoot: { reload: 23.1, recoil: 0.7, shudder: 0, size: 1, health: 0.9, damage: 0.39375, pen: 1, speed: 2.5, maxSpeed: 1, range: 1.2, density: 1, spray: 0, resist: 1 } }),
+      gun(5, 5, -4, -5.25, -7, 45, 0, { type: "deco" }),
+      gun(5, 5, -4, -5.25, -7, 135, 0, { type: "deco" }),
+      gun(5, 5, -4, -5.25, -7, 225, 0, { type: "deco" }),
+      gun(5, 5, -4, -5.25, -7, 315, 0, { type: "deco" }),
+      gun(5, 5, -4, -5.25, 7, -45, 0.5, { type: "deco" }),
+      gun(5, 5, -4, -5.25, 7, 45, 0.5, { type: "deco" }),
+      gun(5, 5, -4, -5.25, 7, 135, 0.5, { type: "deco" }),
+      gun(5, 5, -4, -5.25, 7, 225, 0.5, { type: "deco" })
+    ],
+    upgrades: [],
+    needLevel: 30
+  });
+
+  def("rifle", {
+    name: "Rifle",
+    desc: "",
+    guns: [
+      gun(20, 12, 1, 0, 0, 0, 0, { type: "deco" }),
+      gun(24, 7, 1, 0, 0, 0, 0, { shoot: { reload: 11.34, recoil: 1.12, shudder: 0.0375, size: 1, health: 0.8, damage: 0.48, pen: 0.99, speed: 7.5, maxSpeed: 1.5, range: 1, density: 1.5, spray: 6, resist: 1.15 } })
+    ],
+    upgrades: ["musket", "crossbow", "armsman", "revolver"],
+    needLevel: 30,
+    fov: 1.225
+  });
+
+  def("shotgun", {
+    name: "Shotgun",
+    desc: "",
+    guns: [
+      gun(4, 3, 1, 11, 3, 0, 0, { shoot: { reload: 42, recoil: 0.448, shudder: 0.17, size: 1.5, health: 0.7, damage: 0.21, pen: 0.8, speed: 9, maxSpeed: 0.48, range: 1, density: 1.2, spray: 45, resist: 1 } }),
+      gun(4, 3, 1, 11, -3, 0, 0, { shoot: { reload: 42, recoil: 0.448, shudder: 0.17, size: 1.5, health: 0.7, damage: 0.21, pen: 0.8, speed: 9, maxSpeed: 0.48, range: 1, density: 1.2, spray: 45, resist: 1 } }),
+      gun(1, 4, 1, 12, 1, 0, 0, { shoot: { reload: 42, recoil: 0.448, shudder: 0.17, size: 1.5, health: 0.7, damage: 0.21, pen: 0.8, speed: 9, maxSpeed: 0.48, range: 1, density: 1.2, spray: 45, resist: 1 } }),
+      gun(1, 4, 1, 12, -1, 0, 0, { shoot: { reload: 42, recoil: 0.448, shudder: 0.17, size: 1.5, health: 0.7, damage: 0.21, pen: 0.8, speed: 9, maxSpeed: 0.48, range: 1, density: 1.2, spray: 45, resist: 1 } }),
+      gun(1, 3, 1, 13, 1, 0, 0, { shoot: { reload: 42, recoil: 0.448, shudder: 0.17, size: 1.5, health: 0.7, damage: 0.21, pen: 0.8, speed: 9, maxSpeed: 0.48, range: 1, density: 1.2, spray: 45, resist: 1 } }),
+      gun(1, 3, 1, 13, -1, 0, 0, { shoot: { reload: 42, recoil: 0.448, shudder: 0.17, size: 1.5, health: 0.7, damage: 0.21, pen: 0.8, speed: 9, maxSpeed: 0.48, range: 1, density: 1.2, spray: 45, resist: 1 } }),
+      gun(1, 2, 1, 13, 2, 0, 0, { shoot: { reload: 42, recoil: 0.448, shudder: 0.17, size: 1.5, health: 0.7, damage: 0.21, pen: 0.8, speed: 9, maxSpeed: 0.48, range: 1, density: 1.2, spray: 45, resist: 1 } }),
+      gun(1, 2, 1, 13, -2, 0, 0, { shoot: { reload: 42, recoil: 0.448, shudder: 0.17, size: 1.5, health: 0.7, damage: 0.21, pen: 0.8, speed: 9, maxSpeed: 0.48, range: 1, density: 1.2, spray: 45, resist: 1 } }),
+      gun(4, 4, 1, 13, 0, 0, 0, { shoot: { reload: 42, recoil: 0.448, shudder: 0.17, size: 1.5, health: 0.7, damage: 0.21, pen: 0.8, speed: 9, maxSpeed: 0.48, range: 1, density: 1.2, spray: 45, resist: 1 } }),
+      gun(15, 14, 1, 6, 0, 0, 0, { shoot: { reload: 42, recoil: 0, shudder: 0, size: 0.000015, health: 0.00007, damage: 0.21, pen: 0.8, speed: 0, maxSpeed: 0, range: 0, density: 1.2, spray: 0, resist: 1 } }),
+      gun(8, 14, -1.3, 4, 0, 0, 0, { type: "deco" })
+    ],
+    upgrades: [],
+    needLevel: 30
+  });
+
+  def("smasher", {
+    name: "Smasher",
+    desc: "",
+    guns: [],
+    upgrades: ["megasmash", "spike", "autosmasher", "landmine"],
+    needLevel: 30,
+    speed: 1.15,
+    health: 1.35,
+    bodyDamage: 2.2,
+    smasher: true
+  });
+
+  def("spawner", {
+    name: "Spawner",
+    desc: "",
+    guns: [
+      gun(4.5, 10, 1, 10.5, 0, 0, 0, { type: "deco" }),
+      gun(1, 12, 1, 15, 0, 0, 0, { type: "minion", calculator: "drone", shoot: { reload: 72, recoil: 1, shudder: 0.1, size: 0.7, health: 1, damage: 0.75, pen: 1, speed: 3, maxSpeed: 1.25, range: 1, density: 1, spray: 0.1, resist: 1 } }),
+      gun(11.5, 12, 1, 0, 0, 0, 0, { type: "deco" })
+    ],
+    upgrades: ["factory", "autospawner"],
+    needLevel: 30,
+    fov: 1.1,
+    speed: 0.8,
+    maxDrones: 4
+  });
+
+  def("sprayer", {
+    name: "Sprayer",
+    desc: "",
+    guns: [
+      gun(23, 7, 1, 0, 0, 0, 0, { shoot: { reload: 6.5625, recoil: 0.322, shudder: 0.51, size: 1.1, health: 0.35, damage: 0.091875, pen: 0.945, speed: 4.5, maxSpeed: 0.64, range: 1, density: 1.5, spray: 28.125, resist: 0.84 } }),
+      gun(12, 10, 1.4, 8, 0, 0, 0, { shoot: { reload: 5.25, recoil: 1.12, shudder: 0.17, size: 1, health: 0.7, damage: 0.525, pen: 1, speed: 5, maxSpeed: 0.8, range: 1, density: 1, spray: 37.5, resist: 1 } })
+    ],
+    upgrades: ["redistributor", "phoenix", "atomizer", "focal"],
+    needLevel: 30
+  });
+
+  def("trapguard", {
+    name: "Trap Guard",
+    desc: "",
+    guns: [
+      gun(20, 8, 1, 0, 0, 0, 0, { shoot: { reload: 10.5, recoil: 2.016, shudder: 0.1, size: 1, health: 1.0404, damage: 0.492075, pen: 0.81, speed: 5, maxSpeed: 0.7225, range: 1, density: 1.44, spray: 15, resist: 1 } }),
+      gun(13, 8, 1, 0, 0, 180, 0, { type: "deco" }),
+      gun(4, 8, 1.7, 13, 0, 180, 0, { type: "trap", calculator: "trap", shoot: { reload: 23, recoil: 1, shudder: 0.25, size: 0.7, health: 1, damage: 0.75, pen: 1, speed: 3.25, maxSpeed: 1, range: 1, density: 1, spray: 0, resist: 3 } })
+    ],
+    upgrades: ["bushwhacker", "gunnertrapper", "bomber", "conqueror", "bulwark"],
+    needLevel: 30
+  });
+
+  def("triangle", {
+    name: "Tri-Angle",
+    desc: "",
+    guns: [
+      gun(18, 8, 1, 0, 0, 0, 0, { shoot: { reload: 10.5, recoil: 1.2096, shudder: 0.1, size: 1, health: 0.918, damage: 0.6075, pen: 0.9, speed: 5.2, maxSpeed: 0.748, range: 0.9, density: 1.2, spray: 15, resist: 1 } }),
+      gun(16, 8, 1, 0, 0, 150, 0.1, { shoot: { reload: 10.5, recoil: 2.268, shudder: 0.2, size: 1, health: 0.459, damage: 0.30375, pen: 0.63, speed: 4, maxSpeed: 0.68, range: 0.6, density: 1.2, spray: 7.5, resist: 0.7 } }),
+      gun(16, 8, 1, 0, 0, -150, 0.1, { shoot: { reload: 10.5, recoil: 2.268, shudder: 0.2, size: 1, health: 0.459, damage: 0.30375, pen: 0.63, speed: 4, maxSpeed: 0.68, range: 0.6, density: 1.2, spray: 7.5, resist: 0.7 } })
+    ],
+    upgrades: ["fighter", "booster", "falcon", "bomber", "autotriangle", "surfer", "eagle", "phoenix", "vulture"],
+    needLevel: 30,
+    health: 0.8
+  });
+
+  def("tritrapper", {
+    name: "Tri-Trapper",
+    desc: "",
+    guns: [
+      gun(15, 7, 1, 0, 0, 0, 0, { type: "deco" }),
+      gun(15, 7, 1, 0, 0, 120, 0, { type: "deco" }),
+      gun(15, 7, 1, 0, 0, 240, 0, { type: "deco" }),
+      gun(3, 7, 1.7, 15, 0, 0, 0, { type: "trap", calculator: "trap", shoot: { reload: 23, recoil: 1.2, shudder: 0.25, size: 0.7, health: 1.02, damage: 0.6075, pen: 0.9, speed: 3.25, maxSpeed: 0.85, range: 1, density: 1.2, spray: 0, resist: 3 } }),
+      gun(3, 7, 1.7, 15, 0, 120, 0, { type: "trap", calculator: "trap", shoot: { reload: 23, recoil: 1.2, shudder: 0.25, size: 0.7, health: 1.02, damage: 0.6075, pen: 0.9, speed: 3.25, maxSpeed: 0.85, range: 1, density: 1.2, spray: 0, resist: 3 } }),
+      gun(3, 7, 1.7, 15, 0, 240, 0, { type: "trap", calculator: "trap", shoot: { reload: 23, recoil: 1.2, shudder: 0.25, size: 0.7, health: 1.02, damage: 0.6075, pen: 0.9, speed: 3.25, maxSpeed: 0.85, range: 1, density: 1.2, spray: 0, resist: 3 } })
+    ],
+    upgrades: ["fortress", "hexatrap", "septatrapper", "architect"],
+    needLevel: 30
+  });
+
+  def("tripleshot", {
+    name: "Triple Shot",
+    desc: "",
+    guns: [
+      gun(19, 8, 1, 0, 2, 18, 0.5, { shoot: { reload: 11.55, recoil: 0.7, shudder: 0.072, size: 1, health: 0.81, damage: 0.525, pen: 0.8, speed: 5, maxSpeed: 1, range: 1, density: 0.8, spray: 9, resist: 1 } }),
+      gun(19, 8, 1, 0, -2, -18, 0.5, { shoot: { reload: 11.55, recoil: 0.7, shudder: 0.072, size: 1, health: 0.81, damage: 0.525, pen: 0.8, speed: 5, maxSpeed: 1, range: 1, density: 0.8, spray: 9, resist: 1 } }),
+      gun(22, 8, 1, 0, 0, 0, 0, { shoot: { reload: 11.55, recoil: 0.7, shudder: 0.072, size: 1, health: 0.81, damage: 0.525, pen: 0.8, speed: 5, maxSpeed: 1, range: 1, density: 0.8, spray: 9, resist: 1 } })
+    ],
+    upgrades: ["penta", "spread", "benthybrid", "bentdouble", "triplet", "triplex"],
+    needLevel: 30,
+    speed: 0.9
+  });
+
+  def("tripletwin", {
+    name: "Triple Twin",
+    desc: "",
+    guns: [
+      gun(20, 8, 1, 0, 5.5, 0, 0, { shoot: { reload: 11.55, recoil: 0.7, shudder: 0.09, size: 1.05, health: 0.99, damage: 0.63525, pen: 1, speed: 4.5, maxSpeed: 0.7, range: 1, density: 1, spray: 18, resist: 1.05 } }),
+      gun(20, 8, 1, 0, 5.5, 120, 0, { shoot: { reload: 11.55, recoil: 0.7, shudder: 0.09, size: 1.05, health: 0.99, damage: 0.63525, pen: 1, speed: 4.5, maxSpeed: 0.7, range: 1, density: 1, spray: 18, resist: 1.05 } }),
+      gun(20, 8, 1, 0, 5.5, 240, 0, { shoot: { reload: 11.55, recoil: 0.7, shudder: 0.09, size: 1.05, health: 0.99, damage: 0.63525, pen: 1, speed: 4.5, maxSpeed: 0.7, range: 1, density: 1, spray: 18, resist: 1.05 } }),
+      gun(20, 8, 1, 0, -5.5, 0, 0.5, { shoot: { reload: 11.55, recoil: 0.7, shudder: 0.09, size: 1.05, health: 0.99, damage: 0.63525, pen: 1, speed: 4.5, maxSpeed: 0.7, range: 1, density: 1, spray: 18, resist: 1.05 } }),
+      gun(20, 8, 1, 0, -5.5, 120, 0.5, { shoot: { reload: 11.55, recoil: 0.7, shudder: 0.09, size: 1.05, health: 0.99, damage: 0.63525, pen: 1, speed: 4.5, maxSpeed: 0.7, range: 1, density: 1, spray: 18, resist: 1.05 } }),
+      gun(20, 8, 1, 0, -5.5, 240, 0.5, { shoot: { reload: 11.55, recoil: 0.7, shudder: 0.09, size: 1.05, health: 0.99, damage: 0.63525, pen: 1, speed: 4.5, maxSpeed: 0.7, range: 1, density: 1, spray: 18, resist: 1.05 } })
+    ],
+    upgrades: [],
+    needLevel: 30
+  });
+
+  def("underseer", {
+    name: "Underseer",
+    desc: "",
+    body: 4,
+    guns: [
+      gun(6, 12, 1.2, 7.4, 0, 90, 0, { type: "drone", calculator: "drone", shoot: { reload: 115.2, recoil: 0.25, shudder: 0.1, size: 0.84, health: 0.5, damage: 0.4, pen: 0.6, speed: 1.5, maxSpeed: 1, range: 1, density: 0.8, spray: 0.1, resist: 1 } }),
+      gun(6, 12, 1.2, 7.4, 0, 270, 0, { type: "drone", calculator: "drone", shoot: { reload: 115.2, recoil: 0.25, shudder: 0.1, size: 0.84, health: 0.5, damage: 0.4, pen: 0.6, speed: 1.5, maxSpeed: 1, range: 1, density: 0.8, spray: 0.1, resist: 1 } })
+    ],
+    upgrades: ["necromancer", "maleficitor", "infestor"],
+    needLevel: 30,
+    fov: 1.1,
+    speed: 0.9,
+    maxDrones: 15
+  });
+
+  def("ambulance", {
+    name: "Ambulance",
+    desc: "",
+    guns: [
+      gun(11, 9, -0.4, 9.5, 0, 0, 0, { type: "deco" }),
+      gun(18, 10, 1, 0, 0, 0, 0, { type: "heal", shoot: { reload: 10.5, recoil: 0.6048, shudder: 0.1, size: 1, health: 0.918, damage: -0.6075, pen: 0.9, speed: 2.6, maxSpeed: 0.374, range: 0.9, density: 1.2, spray: 15, resist: 1 } }),
+      gun(16, 8, 1, 0, 0, 150, 0.1, { shoot: { reload: 10.5, recoil: 2.268, shudder: 0.2, size: 1, health: 0.459, damage: 0.30375, pen: 0.63, speed: 4, maxSpeed: 0.68, range: 0.6, density: 1.2, spray: 7.5, resist: 0.7 } }),
+      gun(16, 8, 1, 0, 0, -150, 0.1, { shoot: { reload: 10.5, recoil: 2.268, shudder: 0.2, size: 1, health: 0.459, damage: 0.30375, pen: 0.63, speed: 4, maxSpeed: 0.68, range: 0.6, density: 1.2, spray: 7.5, resist: 0.7 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    health: 0.8,
+    healer: true
+  });
+
+  def("annihilator", {
+    name: "Annihilator",
+    desc: "",
+    guns: [
+      gun(20.5, 19.5, 1, 0, 0, 0, 0, { shoot: { reload: 42, recoil: 5.4432, shudder: 0.05, size: 1, health: 2, damage: 1.161, pen: 1.2, speed: 2.125, maxSpeed: 0.48, range: 1, density: 3, spray: 15, resist: 3.45 } })
+    ],
+    upgrades: [],
+    needLevel: 45
+  });
+
+  def("architect", {
+    name: "Architect",
+    desc: "",
+    guns: [
+      gun(20, 16, 1, 0, 0, 0, 0, { type: "deco" }),
+      gun(2, 16, 1.1, 20, 0, 0, 0, { type: "trap", calculator: "trap", shoot: { reload: 22.77, recoil: 1.8, shudder: 0.0125, size: 0.84, health: 1.836, damage: 0.3645, pen: 1.35, speed: 7.865, maxSpeed: 1.8275, range: 1, density: 1.56, spray: 0, resist: 4.6875 } }),
+      gun(20, 16, 1, 0, 0, 120, 0, { type: "deco" }),
+      gun(2, 16, 1.1, 20, 0, 120, 0, { type: "trap", calculator: "trap", shoot: { reload: 22.77, recoil: 1.8, shudder: 0.0125, size: 0.84, health: 1.836, damage: 0.3645, pen: 1.35, speed: 7.865, maxSpeed: 1.8275, range: 1, density: 1.56, spray: 0, resist: 4.6875 } }),
+      gun(20, 16, 1, 0, 0, 240, 0, { type: "deco" }),
+      gun(2, 16, 1.1, 20, 0, 240, 0, { type: "trap", calculator: "trap", shoot: { reload: 22.77, recoil: 1.8, shudder: 0.0125, size: 0.84, health: 1.836, damage: 0.3645, pen: 1.35, speed: 7.865, maxSpeed: 1.8275, range: 1, density: 1.56, spray: 0, resist: 4.6875 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    speed: 1.1,
+    auto: true
+  });
+
+  def("armsman", {
+    name: "Armsman",
+    desc: "",
+    guns: [
+      gun(20, 12, 1, 0, 0, 0, 0, { type: "deco" }),
+      gun(24, 7, 1, 0, 0, 0, 0, { shoot: { reload: 11.34, recoil: 1.12, shudder: 0.0375, size: 1, health: 0.8, damage: 0.48, pen: 0.99, speed: 7.5, maxSpeed: 1.5, range: 1, density: 1.5, spray: 6, resist: 1.15 } }),
+      gun(6, 11, 1.2, 8, 0, 180, 0, { type: "drone", calculator: "drone", shoot: { reload: 45, recoil: 0.25, shudder: 0.1, size: 0.51, health: 0.7, damage: 0.8, pen: 1, speed: 1.5, maxSpeed: 0.9, range: 1, density: 2, spray: 0.1, resist: 1 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.225,
+    maxDrones: 3
+  });
+
+  def("assembler", {
+    name: "Assembler",
+    desc: "",
+    guns: [
+      gun(18, 12, 1, 0, 0, 0, 0, { type: "deco" }),
+      gun(2, 12, 1.1, 18, 0, 0, 0, { shoot: { reload: 25.3, recoil: 2, shudder: 0.025, size: 1.05, health: 2, damage: 0.75, pen: 1.25, speed: 7.15, maxSpeed: 2.15, range: 1.25, density: 1, spray: 0, resist: 3.75 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.15,
+    speed: 0.8,
+    maxDrones: 8,
+    auto: true
+  });
+
+  def("atomizer", {
+    name: "Atomizer",
+    desc: "",
+    guns: [
+      gun(6, 7, 1.4, 18, 0, 0, 0, { shoot: { reload: 1.96875, recoil: 0.2576, shudder: 0.51, size: 0.55, health: 0.35, damage: 0.068906, pen: 0.945, speed: 5.4, maxSpeed: 0.512, range: 1, density: 1.5, spray: 63.28125, resist: 0.84 } }),
+      gun(12, 10, 1.4, 8, 0, 0, 0, { shoot: { reload: 5.25, recoil: 1.12, shudder: 0.17, size: 1, health: 0.7, damage: 0.525, pen: 1, speed: 5, maxSpeed: 0.8, range: 1, density: 1, spray: 37.5, resist: 1 } })
+    ],
+    upgrades: [],
+    needLevel: 45
+  });
+
+  def("auto4", {
+    name: "Auto-4",
+    desc: "",
+    guns: [
+      gun(16, 4, 1, 0, -3.5, 45, 0, { type: "auto", shoot: { reload: 11.8125, recoil: 0.13125, shudder: 0.0405, size: 1.056, health: 0.81, damage: 0.11025, pen: 2.025, speed: 6.93, maxSpeed: 0.952, range: 0.8, density: 3.9, spray: 13.5, resist: 2.25 } }),
+      gun(16, 4, 1, 0, 3.5, 45, 0.5, { type: "auto", shoot: { reload: 11.8125, recoil: 0.13125, shudder: 0.0405, size: 1.056, health: 0.81, damage: 0.11025, pen: 2.025, speed: 6.93, maxSpeed: 0.952, range: 0.8, density: 3.9, spray: 13.5, resist: 2.25 } }),
+      gun(16, 4, 1, 0, -3.5, 135, 0, { type: "auto", shoot: { reload: 11.8125, recoil: 0.13125, shudder: 0.0405, size: 1.056, health: 0.81, damage: 0.11025, pen: 2.025, speed: 6.93, maxSpeed: 0.952, range: 0.8, density: 3.9, spray: 13.5, resist: 2.25 } }),
+      gun(16, 4, 1, 0, 3.5, 135, 0.5, { type: "auto", shoot: { reload: 11.8125, recoil: 0.13125, shudder: 0.0405, size: 1.056, health: 0.81, damage: 0.11025, pen: 2.025, speed: 6.93, maxSpeed: 0.952, range: 0.8, density: 3.9, spray: 13.5, resist: 2.25 } }),
+      gun(16, 4, 1, 0, -3.5, 225, 0, { type: "auto", shoot: { reload: 11.8125, recoil: 0.13125, shudder: 0.0405, size: 1.056, health: 0.81, damage: 0.11025, pen: 2.025, speed: 6.93, maxSpeed: 0.952, range: 0.8, density: 3.9, spray: 13.5, resist: 2.25 } }),
+      gun(16, 4, 1, 0, 3.5, 225, 0.5, { type: "auto", shoot: { reload: 11.8125, recoil: 0.13125, shudder: 0.0405, size: 1.056, health: 0.81, damage: 0.11025, pen: 2.025, speed: 6.93, maxSpeed: 0.952, range: 0.8, density: 3.9, spray: 13.5, resist: 2.25 } }),
+      gun(16, 4, 1, 0, -3.5, 315, 0, { type: "auto", shoot: { reload: 11.8125, recoil: 0.13125, shudder: 0.0405, size: 1.056, health: 0.81, damage: 0.11025, pen: 2.025, speed: 6.93, maxSpeed: 0.952, range: 0.8, density: 3.9, spray: 13.5, resist: 2.25 } }),
+      gun(16, 4, 1, 0, 3.5, 315, 0.5, { type: "auto", shoot: { reload: 11.8125, recoil: 0.13125, shudder: 0.0405, size: 1.056, health: 0.81, damage: 0.11025, pen: 2.025, speed: 6.93, maxSpeed: 0.952, range: 0.8, density: 3.9, spray: 13.5, resist: 2.25 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    auto: true
+  });
+
+  def("auto5", {
+    name: "Auto-5",
+    desc: "",
+    guns: [
+      gun(22, 10, 1, 0, 0, 0, 0, { type: "auto", shoot: { reload: 9.45, recoil: 1.26, shudder: 0.05, size: 0.8, health: 0.918, damage: 0.3645, pen: 1.08, speed: 5.5, maxSpeed: 0.85, range: 0.8, density: 1.56, spray: 15, resist: 1.25 } }),
+      gun(22, 10, 1, 0, 0, 72, 0, { type: "auto", shoot: { reload: 9.45, recoil: 1.26, shudder: 0.05, size: 0.8, health: 0.918, damage: 0.3645, pen: 1.08, speed: 5.5, maxSpeed: 0.85, range: 0.8, density: 1.56, spray: 15, resist: 1.25 } }),
+      gun(22, 10, 1, 0, 0, 144, 0, { type: "auto", shoot: { reload: 9.45, recoil: 1.26, shudder: 0.05, size: 0.8, health: 0.918, damage: 0.3645, pen: 1.08, speed: 5.5, maxSpeed: 0.85, range: 0.8, density: 1.56, spray: 15, resist: 1.25 } }),
+      gun(22, 10, 1, 0, 0, 216, 0, { type: "auto", shoot: { reload: 9.45, recoil: 1.26, shudder: 0.05, size: 0.8, health: 0.918, damage: 0.3645, pen: 1.08, speed: 5.5, maxSpeed: 0.85, range: 0.8, density: 1.56, spray: 15, resist: 1.25 } }),
+      gun(22, 10, 1, 0, 0, 288, 0, { type: "auto", shoot: { reload: 9.45, recoil: 1.26, shudder: 0.05, size: 0.8, health: 0.918, damage: 0.3645, pen: 1.08, speed: 5.5, maxSpeed: 0.85, range: 0.8, density: 1.56, spray: 15, resist: 1.25 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    auto: true
+  });
+
+  def("autoassassin", {
+    name: "Auto-Assassin",
+    desc: "",
+    guns: [
+      gun(27, 8, 1, 0, 0, 0, 0, { shoot: { reload: 23.38875, recoil: 1.4, shudder: 0.00625, size: 1, health: 1.15, damage: 0.6, pen: 1.21, speed: 8.85, maxSpeed: 1.77, range: 1, density: 4.5, spray: 3, resist: 1.495 } }),
+      gun(13, 8, -2.2, 0, 0, 0, 0, { type: "deco" }),
+      gun(22, 10, 1, 0, 0, 180, 0, { type: "auto", shoot: { reload: 26.25, recoil: 0.4025, shudder: 0.09, size: 1.32, health: 0.8, damage: 0.1575, pen: 1.18125, speed: 9, maxSpeed: 1.36, range: 1, density: 0.3, spray: 11.25, resist: 1.8 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.4,
+    speed: 0.85,
+    auto: true
+  });
+
+  def("autobuilder", {
+    name: "Auto-Builder",
+    desc: "",
+    guns: [
+      gun(18, 12, 1, 0, 0, 0, 0, { type: "deco" }),
+      gun(2, 12, 1.1, 18, 0, 0, 0, { type: "trap", calculator: "trap", shoot: { reload: 25.3, recoil: 2, shudder: 0.025, size: 1.05, health: 2, damage: 0.75, pen: 1.25, speed: 7.15, maxSpeed: 2.15, range: 1.25, density: 1, spray: 0, resist: 3.75 } }),
+      gun(22, 10, 1, 0, 0, 180, 0, { type: "auto", shoot: { reload: 26.25, recoil: 0.4025, shudder: 0.09, size: 1.32, health: 0.8, damage: 0.1575, pen: 1.18125, speed: 9, maxSpeed: 1.36, range: 1, density: 0.3, spray: 11.25, resist: 1.8 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.15,
+    speed: 0.8,
+    auto: true
+  });
+
+  def("autocruiser", {
+    name: "Auto-Cruiser",
+    desc: "",
+    guns: [
+      gun(9, 8.2, 0.6, 5, 4, 0, 0, { type: "swarm", calculator: "swarm", shoot: { reload: 23, recoil: 0.25, shudder: 0.05, size: 0.4, health: 1, damage: 0.75, pen: 1, speed: 4, maxSpeed: 1, range: 1, density: 1, spray: 5, resist: 1 } }),
+      gun(9, 8.2, 0.6, 5, -4, 0, 0.5, { type: "swarm", calculator: "swarm", shoot: { reload: 23, recoil: 0.25, shudder: 0.05, size: 0.4, health: 1, damage: 0.75, pen: 1, speed: 4, maxSpeed: 1, range: 1, density: 1, spray: 5, resist: 1 } }),
+      gun(22, 10, 1, 0, 0, 180, 0, { type: "auto", shoot: { reload: 26.25, recoil: 0.4025, shudder: 0.09, size: 1.32, health: 0.8, damage: 0.1575, pen: 1.18125, speed: 9, maxSpeed: 1.36, range: 1, density: 0.3, spray: 11.25, resist: 1.8 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.2,
+    auto: true
+  });
+
+  def("autodouble", {
+    name: "Auto-Double",
+    desc: "",
+    guns: [
+      gun(20, 8, 1, 0, 5.5, 0, 0, { shoot: { reload: 10.5, recoil: 0.7, shudder: 0.09, size: 1, health: 0.9, damage: 0.5775, pen: 1, speed: 5, maxSpeed: 1, range: 1, density: 1, spray: 18, resist: 1 } }),
+      gun(20, 8, 1, 0, 5.5, 180, 0, { shoot: { reload: 10.5, recoil: 0.7, shudder: 0.09, size: 1, health: 0.9, damage: 0.5775, pen: 1, speed: 5, maxSpeed: 1, range: 1, density: 1, spray: 18, resist: 1 } }),
+      gun(20, 8, 1, 0, -5.5, 0, 0.5, { shoot: { reload: 10.5, recoil: 0.7, shudder: 0.09, size: 1, health: 0.9, damage: 0.5775, pen: 1, speed: 5, maxSpeed: 1, range: 1, density: 1, spray: 18, resist: 1 } }),
+      gun(20, 8, 1, 0, -5.5, 180, 0.5, { shoot: { reload: 10.5, recoil: 0.7, shudder: 0.09, size: 1, health: 0.9, damage: 0.5775, pen: 1, speed: 5, maxSpeed: 1, range: 1, density: 1, spray: 18, resist: 1 } }),
+      gun(22, 10, 1, 0, 0, 180, 0, { type: "auto", shoot: { reload: 26.25, recoil: 0.4025, shudder: 0.09, size: 1.32, health: 0.8, damage: 0.1575, pen: 1.18125, speed: 9, maxSpeed: 1.36, range: 1, density: 0.3, spray: 11.25, resist: 1.8 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    auto: true
+  });
+
+  def("autogunner", {
+    name: "Auto-Gunner",
+    desc: "",
+    guns: [
+      gun(12, 3.5, 1, 0, 7.25, 0, 0.5, { shoot: { reload: 10.5, recoil: 0.175, shudder: 0.135, size: 1.2, health: 1.215, damage: 0.13125, pen: 1.25, speed: 4.8, maxSpeed: 0.65, range: 1, density: 1.5, spray: 27, resist: 1.2 } }),
+      gun(12, 3.5, 1, 0, -7.25, 0, 0.75, { shoot: { reload: 10.5, recoil: 0.175, shudder: 0.135, size: 1.2, health: 1.215, damage: 0.13125, pen: 1.25, speed: 4.8, maxSpeed: 0.65, range: 1, density: 1.5, spray: 27, resist: 1.2 } }),
+      gun(16, 3.5, 1, 0, 3.75, 0, 0, { shoot: { reload: 10.5, recoil: 0.175, shudder: 0.135, size: 1.2, health: 1.215, damage: 0.13125, pen: 1.25, speed: 4.8, maxSpeed: 0.65, range: 1, density: 1.5, spray: 27, resist: 1.2 } }),
+      gun(16, 3.5, 1, 0, -3.75, 0, 0.25, { shoot: { reload: 10.5, recoil: 0.175, shudder: 0.135, size: 1.2, health: 1.215, damage: 0.13125, pen: 1.25, speed: 4.8, maxSpeed: 0.65, range: 1, density: 1.5, spray: 27, resist: 1.2 } }),
+      gun(22, 10, 1, 0, 0, 180, 0, { type: "auto", shoot: { reload: 26.25, recoil: 0.4025, shudder: 0.09, size: 1.32, health: 0.8, damage: 0.1575, pen: 1.18125, speed: 9, maxSpeed: 1.36, range: 1, density: 0.3, spray: 11.25, resist: 1.8 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    auto: true
+  });
+
+  def("autooverseer", {
+    name: "Auto-Overseer",
+    desc: "",
+    guns: [
+      gun(6, 12, 1.2, 8, 0, 90, 0, { type: "drone", calculator: "drone", shoot: { reload: 45, recoil: 0.25, shudder: 0.1, size: 0.51, health: 0.7, damage: 0.8, pen: 1, speed: 1.5, maxSpeed: 0.9, range: 1, density: 2, spray: 0.1, resist: 1 } }),
+      gun(6, 12, 1.2, 8, 0, -90, 0, { type: "drone", calculator: "drone", shoot: { reload: 45, recoil: 0.25, shudder: 0.1, size: 0.51, health: 0.7, damage: 0.8, pen: 1, speed: 1.5, maxSpeed: 0.9, range: 1, density: 2, spray: 0.1, resist: 1 } }),
+      gun(22, 10, 1, 0, 0, 180, 0, { type: "auto", shoot: { reload: 26.25, recoil: 0.4025, shudder: 0.09, size: 1.32, health: 0.8, damage: 0.1575, pen: 1.18125, speed: 9, maxSpeed: 1.36, range: 1, density: 0.3, spray: 11.25, resist: 1.8 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.1,
+    speed: 0.9,
+    maxDrones: 8,
+    auto: true
+  });
+
+  def("autosmasher", {
+    name: "Auto-Smasher",
+    desc: "",
+    guns: [
+      gun(16, 6, 1, 0, 0, 0, 0, { type: "auto", layers: [g.basic, g.autoTurret] })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    speed: 1.12,
+    health: 1.3,
+    bodyDamage: 2.05,
+    smasher: true,
+    auto: true
+  });
+
+  def("autospawner", {
+    name: "Auto-Spawner",
+    desc: "",
+    guns: [
+      gun(4.5, 10, 1, 10.5, 0, 0, 0, { type: "deco" }),
+      gun(1, 12, 1, 15, 0, 0, 0, { type: "minion", calculator: "drone", shoot: { reload: 72, recoil: 1, shudder: 0.1, size: 0.7, health: 1, damage: 0.75, pen: 1, speed: 3, maxSpeed: 1.25, range: 1, density: 1, spray: 0.1, resist: 1 } }),
+      gun(11.5, 12, 1, 0, 0, 0, 0, { type: "deco" }),
+      gun(22, 10, 1, 0, 0, 180, 0, { type: "auto", shoot: { reload: 26.25, recoil: 0.4025, shudder: 0.09, size: 1.32, health: 0.8, damage: 0.1575, pen: 1.18125, speed: 9, maxSpeed: 1.36, range: 1, density: 0.3, spray: 11.25, resist: 1.8 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.1,
+    speed: 0.8,
+    maxDrones: 4,
+    auto: true
+  });
+
+  def("autotriangle", {
+    name: "Auto-Tri-Angle",
+    desc: "",
+    guns: [
+      gun(18, 8, 1, 0, 0, 0, 0, { shoot: { reload: 10.5, recoil: 1.2096, shudder: 0.1, size: 1, health: 0.918, damage: 0.6075, pen: 0.9, speed: 5.2, maxSpeed: 0.748, range: 0.9, density: 1.2, spray: 15, resist: 1 } }),
+      gun(16, 8, 1, 0, 0, 150, 0.1, { shoot: { reload: 10.5, recoil: 2.268, shudder: 0.2, size: 1, health: 0.459, damage: 0.30375, pen: 0.63, speed: 4, maxSpeed: 0.68, range: 0.6, density: 1.2, spray: 7.5, resist: 0.7 } }),
+      gun(16, 8, 1, 0, 0, -150, 0.1, { shoot: { reload: 10.5, recoil: 2.268, shudder: 0.2, size: 1, health: 0.459, damage: 0.30375, pen: 0.63, speed: 4, maxSpeed: 0.68, range: 0.6, density: 1.2, spray: 7.5, resist: 0.7 } }),
+      gun(22, 10, 1, 0, 0, 180, 0, { type: "auto", shoot: { reload: 26.25, recoil: 0.4025, shudder: 0.09, size: 1.32, health: 0.8, damage: 0.1575, pen: 1.18125, speed: 9, maxSpeed: 1.36, range: 1, density: 0.3, spray: 11.25, resist: 1.8 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    health: 0.8,
+    auto: true
+  });
+
+  def("banshee", {
+    name: "Banshee",
+    desc: "",
+    guns: [
+      gun(6, 11, 1.2, 8, 0, 180, 0, { type: "drone", calculator: "drone", shoot: { reload: 45, recoil: 0.25, shudder: 0.1, size: 0.51, health: 0.7, damage: 0.8, pen: 1, speed: 1.5, maxSpeed: 0.9, range: 1, density: 2, spray: 0.1, resist: 1 } }),
+      gun(6, 11, 1.2, 8, 0, 300, 0, { type: "drone", calculator: "drone", shoot: { reload: 45, recoil: 0.25, shudder: 0.1, size: 0.51, health: 0.7, damage: 0.8, pen: 1, speed: 1.5, maxSpeed: 0.9, range: 1, density: 2, spray: 0.1, resist: 1 } }),
+      gun(6, 11, 1.2, 8, 0, 420, 0, { type: "drone", calculator: "drone", shoot: { reload: 45, recoil: 0.25, shudder: 0.1, size: 0.51, health: 0.7, damage: 0.8, pen: 1, speed: 1.5, maxSpeed: 0.9, range: 1, density: 2, spray: 0.1, resist: 1 } }),
+      gun(26, 10, 1, 0, 0, 0, 0, { type: "auto", shoot: { reload: 14.175, recoil: 1.26, shudder: 0.05, size: 0.8, health: 0.918, damage: 0.3645, pen: 1.08, speed: 5.5, maxSpeed: 0.85, range: 0.8, density: 1.56, spray: 15, resist: 1.25 } }),
+      gun(26, 10, 1, 0, 0, 120, 0, { type: "auto", shoot: { reload: 14.175, recoil: 1.26, shudder: 0.05, size: 0.8, health: 0.918, damage: 0.3645, pen: 1.08, speed: 5.5, maxSpeed: 0.85, range: 0.8, density: 1.56, spray: 15, resist: 1.25 } }),
+      gun(26, 10, 1, 0, 0, 240, 0, { type: "auto", shoot: { reload: 14.175, recoil: 1.26, shudder: 0.05, size: 0.8, health: 0.918, damage: 0.3645, pen: 1.08, speed: 5.5, maxSpeed: 0.85, range: 0.8, density: 1.56, spray: 15, resist: 1.25 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.1,
+    speed: 0.8,
+    maxDrones: 6,
+    auto: true
+  });
+
+  def("battleship", {
+    name: "Battleship",
+    desc: "",
+    guns: [
+      gun(9, 8.2, 0.6, 5, 4, 90, 0, { type: "swarm", calculator: "swarm", shoot: { reload: 23, recoil: 0.25, shudder: 0.05, size: 0.4, health: 1.25, damage: 0.8625, pen: 1, speed: 4, maxSpeed: 0.85, range: 1, density: 1, spray: 5, resist: 1.1 } }),
+      gun(9, 8.2, 0.6, 5, -4, -90, 0.5, { type: "swarm", calculator: "swarm", shoot: { reload: 23, recoil: 0.25, shudder: 0.05, size: 0.4, health: 1.25, damage: 0.8625, pen: 1, speed: 4, maxSpeed: 0.85, range: 1, density: 1, spray: 5, resist: 1.1 } }),
+      gun(9, 8.2, 0.6, 5, 4, 270, 0, { type: "swarm", calculator: "swarm", shoot: { reload: 23, recoil: 0.25, shudder: 0.05, size: 0.4, health: 1, damage: 0.75, pen: 1, speed: 4, maxSpeed: 1, range: 1, density: 1, spray: 5, resist: 1 } }),
+      gun(9, 8.2, 0.6, 5, -4, -270, 0.5, { type: "swarm", calculator: "swarm", shoot: { reload: 23, recoil: 0.25, shudder: 0.05, size: 0.4, health: 1, damage: 0.75, pen: 1, speed: 4, maxSpeed: 1, range: 1, density: 1, spray: 5, resist: 1 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.2
+  });
+
+  def("beekeeper", {
+    name: "Beekeeper",
+    desc: "",
+    guns: [
+      gun(14, 5, 1, 0, -5, -7, 0.25, { type: "swarm", calculator: "drone", shoot: { reload: 29.9, recoil: 0.25, shudder: 0.05, size: 0.56, health: 1, damage: 1.125, pen: 0.5, speed: 6, maxSpeed: 1.5, range: 1, density: 0.25, spray: 5, resist: 1 } }),
+      gun(14, 5, 1, 0, 5, 7, 0.75, { type: "swarm", calculator: "drone", shoot: { reload: 29.9, recoil: 0.25, shudder: 0.05, size: 0.56, health: 1, damage: 1.125, pen: 0.5, speed: 6, maxSpeed: 1.5, range: 1, density: 0.25, spray: 5, resist: 1 } }),
+      gun(19, 12, 1, 0, 0, 0, 0, { shoot: { reload: 25.2, recoil: 1.568, shudder: 0.1, size: 0.9, health: 1, damage: 1.5, pen: 1, speed: 4.8875, maxSpeed: 0.88, range: 1, density: 2.25, spray: 15, resist: 1.15 } })
+    ],
+    upgrades: [],
+    needLevel: 45
+  });
+
+  def("bentdouble", {
+    name: "Bent Double",
+    desc: "",
+    guns: [
+      gun(19, 8, 1, 0, 2, 18, 0.5, { shoot: { reload: 11.55, recoil: 0.7, shudder: 0.072, size: 1, health: 0.81, damage: 0.5775, pen: 0.8, speed: 5, maxSpeed: 1, range: 1, density: 0.8, spray: 9, resist: 1 } }),
+      gun(19, 8, 1, 0, 2, 198, 0.5, { shoot: { reload: 11.55, recoil: 0.7, shudder: 0.072, size: 1, health: 0.81, damage: 0.5775, pen: 0.8, speed: 5, maxSpeed: 1, range: 1, density: 0.8, spray: 9, resist: 1 } }),
+      gun(19, 8, 1, 0, -2, -18, 0.5, { shoot: { reload: 11.55, recoil: 0.7, shudder: 0.072, size: 1, health: 0.81, damage: 0.5775, pen: 0.8, speed: 5, maxSpeed: 1, range: 1, density: 0.8, spray: 9, resist: 1 } }),
+      gun(19, 8, 1, 0, -2, 162, 0.5, { shoot: { reload: 11.55, recoil: 0.7, shudder: 0.072, size: 1, health: 0.81, damage: 0.5775, pen: 0.8, speed: 5, maxSpeed: 1, range: 1, density: 0.8, spray: 9, resist: 1 } }),
+      gun(22, 8, 1, 0, 0, 0, 0, { shoot: { reload: 11.55, recoil: 0.7, shudder: 0.072, size: 1, health: 0.81, damage: 0.5775, pen: 0.8, speed: 5, maxSpeed: 1, range: 1, density: 0.8, spray: 9, resist: 1 } }),
+      gun(22, 8, 1, 0, 0, 180, 0, { shoot: { reload: 11.55, recoil: 0.7, shudder: 0.072, size: 1, health: 0.81, damage: 0.5775, pen: 0.8, speed: 5, maxSpeed: 1, range: 1, density: 0.8, spray: 9, resist: 1 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    speed: 0.9
+  });
+
+  def("benthybrid", {
+    name: "Bent Hybrid",
+    desc: "",
+    guns: [
+      gun(19, 8, 1, 0, 2, 18, 0.5, { shoot: { reload: 11.55, recoil: 0.7, shudder: 0.072, size: 1, health: 0.81, damage: 0.525, pen: 0.8, speed: 5, maxSpeed: 1, range: 1, density: 0.8, spray: 9, resist: 1 } }),
+      gun(19, 8, 1, 0, -2, -18, 0.5, { shoot: { reload: 11.55, recoil: 0.7, shudder: 0.072, size: 1, health: 0.81, damage: 0.525, pen: 0.8, speed: 5, maxSpeed: 1, range: 1, density: 0.8, spray: 9, resist: 1 } }),
+      gun(22, 8, 1, 0, 0, 0, 0, { shoot: { reload: 11.55, recoil: 0.7, shudder: 0.072, size: 1, health: 0.81, damage: 0.525, pen: 0.8, speed: 5, maxSpeed: 1, range: 1, density: 0.8, spray: 9, resist: 1 } }),
+      gun(6, 11, 1.2, 8, 0, 180, 0, { type: "drone", calculator: "drone", shoot: { reload: 45, recoil: 0.25, shudder: 0.1, size: 0.51, health: 0.7, damage: 0.8, pen: 1, speed: 1.5, maxSpeed: 0.9, range: 1, density: 2, spray: 0.1, resist: 1 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    speed: 0.9,
+    maxDrones: 3
+  });
+
+  def("bomber", {
+    name: "Bomber",
+    desc: "",
+    guns: [
+      gun(20, 8, 1, 0, 0, 0, 0, { shoot: { reload: 10.5, recoil: 0.3024, shudder: 0.1, size: 1, health: 0.918, damage: 0.6075, pen: 0.9, speed: 5.2, maxSpeed: 0.748, range: 0.9, density: 1.2, spray: 15, resist: 1 } }),
+      gun(18, 8, 1, 0, 0, 130, 0.1, { shoot: { reload: 10.5, recoil: 1.512, shudder: 0.1, size: 1, health: 0.918, damage: 0.6075, pen: 0.9, speed: 4, maxSpeed: 0.68, range: 0.6, density: 1.2, spray: 15, resist: 1 } }),
+      gun(18, 8, 1, 0, 0, -130, 0.1, { shoot: { reload: 10.5, recoil: 1.512, shudder: 0.1, size: 1, health: 0.918, damage: 0.6075, pen: 0.9, speed: 4, maxSpeed: 0.68, range: 0.6, density: 1.2, spray: 15, resist: 1 } }),
+      gun(13, 8, 1, 0, 0, 180, 0, { type: "deco" }),
+      gun(4, 8, 1.7, 13, 0, 180, 0, { type: "trap", calculator: "trap", shoot: { reload: 23, recoil: 1, shudder: 0.25, size: 0.7, health: 1, damage: 0.75, pen: 1, speed: 3.25, maxSpeed: 1, range: 1, density: 1, spray: 0, resist: 3 } })
+    ],
+    upgrades: [],
+    needLevel: 45
+  });
+
+  def("boomer", {
+    name: "Boomer",
+    desc: "",
+    guns: [
+      gun(18, 10, 1, 0, 0, 0, 0, { type: "deco" }),
+      gun(13, 10, -1.9, 0, 0, 0, 0, { type: "deco" }),
+      gun(2, 10, 1.3, 18, 0, 0, 0, { shoot: { reload: 20.24, recoil: 2, shudder: 0.025, size: 1.05, health: 1, damage: 0.375, pen: 1.25, speed: 5.3625, maxSpeed: 1.6125, range: 1.666667, density: 1, spray: 0, resist: 3.75 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.15,
+    speed: 0.8
+  });
+
+  def("booster", {
+    name: "Booster",
+    desc: "",
+    guns: [
+      gun(18, 8, 1, 0, 0, 0, 0, { shoot: { reload: 10.5, recoil: 1.2096, shudder: 0.1, size: 1, health: 0.918, damage: 0.6075, pen: 0.9, speed: 5.2, maxSpeed: 0.748, range: 0.9, density: 1.2, spray: 15, resist: 1 } }),
+      gun(14, 8, 1, 0, 0, 135, 0.6, { shoot: { reload: 10.5, recoil: 2.268, shudder: 0.2, size: 1, health: 0.459, damage: 0.30375, pen: 0.63, speed: 4, maxSpeed: 0.68, range: 0.6, density: 1.2, spray: 7.5, resist: 0.7 } }),
+      gun(14, 8, 1, 0, 0, -135, 0.6, { shoot: { reload: 10.5, recoil: 2.268, shudder: 0.2, size: 1, health: 0.459, damage: 0.30375, pen: 0.63, speed: 4, maxSpeed: 0.68, range: 0.6, density: 1.2, spray: 7.5, resist: 0.7 } }),
+      gun(16, 8, 1, 0, 0, 150, 0.1, { shoot: { reload: 10.5, recoil: 2.268, shudder: 0.2, size: 1, health: 0.459, damage: 0.30375, pen: 0.63, speed: 4, maxSpeed: 0.68, range: 0.6, density: 1.2, spray: 7.5, resist: 0.7 } }),
+      gun(16, 8, 1, 0, 0, -150, 0.1, { shoot: { reload: 10.5, recoil: 2.268, shudder: 0.2, size: 1, health: 0.459, damage: 0.30375, pen: 0.63, speed: 4, maxSpeed: 0.68, range: 0.6, density: 1.2, spray: 7.5, resist: 0.7 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    health: 0.4
+  });
+
+  def("carrier", {
+    name: "Carrier",
+    desc: "",
+    guns: [
+      gun(9, 8.2, 0.6, 5, 2, 30, 0.5, { type: "swarm", calculator: "swarm", shoot: { reload: 34.5, recoil: 0.25, shudder: 0.05, size: 0.4, health: 1.25, damage: 0.69, pen: 1, speed: 5.2, maxSpeed: 1.02, range: 1.2, density: 1, spray: 5, resist: 1.1 } }),
+      gun(9, 8.2, 0.6, 5, -2, -30, 0.5, { type: "swarm", calculator: "swarm", shoot: { reload: 34.5, recoil: 0.25, shudder: 0.05, size: 0.4, health: 1.25, damage: 0.69, pen: 1, speed: 5.2, maxSpeed: 1.02, range: 1.2, density: 1, spray: 5, resist: 1.1 } }),
+      gun(9, 8.2, 0.6, 5, 0, 0, 0, { type: "swarm", calculator: "swarm", shoot: { reload: 34.5, recoil: 0.25, shudder: 0.05, size: 0.4, health: 1.25, damage: 0.69, pen: 1, speed: 5.2, maxSpeed: 1.02, range: 1.2, density: 1, spray: 5, resist: 1.1 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.2
+  });
+
+  def("commander", {
+    name: "Commander",
+    desc: "",
+    guns: [
+      gun(6, 12, 1.2, 8, 0, 0, 0, { type: "drone", calculator: "drone", shoot: { reload: 36, recoil: 0.25, shudder: 0.1, size: 0.6, health: 1, damage: 1, pen: 1, speed: 1.5, maxSpeed: 1, range: 1, density: 1, spray: 0.1, resist: 1 } }),
+      gun(6, 12, 1.2, 8, 0, 120, 0, { type: "drone", calculator: "drone", shoot: { reload: 36, recoil: 0.25, shudder: 0.1, size: 0.6, health: 1, damage: 1, pen: 1, speed: 1.5, maxSpeed: 1, range: 1, density: 1, spray: 0.1, resist: 1 } }),
+      gun(6, 12, 1.2, 8, 0, 240, 0, { type: "drone", calculator: "drone", shoot: { reload: 36, recoil: 0.25, shudder: 0.1, size: 0.6, health: 1, damage: 1, pen: 1, speed: 1.5, maxSpeed: 1, range: 1, density: 1, spray: 0.1, resist: 1 } }),
+      gun(9, 8.2, 0.6, 5, 0, 180, 0, { type: "swarm", calculator: "swarm", shoot: { reload: 34.5, recoil: 0.25, shudder: 0.05, size: 0.4, health: 0.4, damage: 0.525, pen: 1, speed: 4, maxSpeed: 1, range: 1, density: 1, spray: 5, resist: 1 } }),
+      gun(9, 8.2, 0.6, 5, 0, 300, 0.3333, { type: "swarm", calculator: "swarm", shoot: { reload: 34.5, recoil: 0.25, shudder: 0.05, size: 0.4, health: 0.4, damage: 0.525, pen: 1, speed: 4, maxSpeed: 1, range: 1, density: 1, spray: 5, resist: 1 } }),
+      gun(9, 8.2, 0.6, 5, 0, 420, 0.6667, { type: "swarm", calculator: "swarm", shoot: { reload: 34.5, recoil: 0.25, shudder: 0.05, size: 0.4, health: 0.4, damage: 0.525, pen: 1, speed: 4, maxSpeed: 1, range: 1, density: 1, spray: 5, resist: 1 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.15,
+    maxDrones: 6
+  });
+
+  def("conqueror", {
+    name: "Conqueror",
+    desc: "",
+    guns: [
+      gun(20.5, 14, 1, 0, 0, 180, 0, { shoot: { reload: 42, recoil: 4.032, shudder: 0.05, size: 1, health: 2, damage: 1.35, pen: 1.2, speed: 2.125, maxSpeed: 0.48, range: 1, density: 3, spray: 15, resist: 3.45 } }),
+      gun(18, 12, 1, 0, 0, 0, 0, { type: "deco" }),
+      gun(2, 12, 1.1, 18, 0, 0, 0, { type: "trap", calculator: "trap", shoot: { reload: 25.3, recoil: 2, shudder: 0.025, size: 1.05, health: 2, damage: 0.75, pen: 1.25, speed: 7.15, maxSpeed: 2.15, range: 1.25, density: 1, spray: 0, resist: 3.75 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    speed: 0.8
+  });
+
+  def("construct", {
+    name: "Constructor",
+    desc: "",
+    guns: [
+      gun(18, 18, 1, 0, 0, 0, 0, { type: "deco" }),
+      gun(2, 18, 1.2, 18, 0, 0, 0, { type: "trap", calculator: "trap", shoot: { reload: 32.89, recoil: 2, shudder: 0.025, size: 0.945, health: 2, damage: 0.75, pen: 1.25, speed: 7.15, maxSpeed: 2.365, range: 1.25, density: 1, spray: 0, resist: 3.75 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.15,
+    speed: 0.7
+  });
+
+  def("cropduster", {
+    name: "Crop Duster",
+    desc: "",
+    guns: [
+      gun(21, 8, 1, 0, 0, 0, 0, { shoot: { reload: 13.125, recoil: 0.84, shudder: 0.1, size: 0.8, health: 0.55, damage: 0.3375, pen: 1.25, speed: 6.65, maxSpeed: 1, range: 1, density: 1.25, spray: 7.5, resist: 1.1 } }),
+      gun(19, 8, 1, 0, 0, 0, 0.3333, { shoot: { reload: 13.125, recoil: 0.84, shudder: 0.1, size: 0.8, health: 0.55, damage: 0.3375, pen: 1.25, speed: 6.65, maxSpeed: 1, range: 1, density: 1.25, spray: 7.5, resist: 1.1 } }),
+      gun(17, 8, 1, 0, 0, 0, 0.6667, { shoot: { reload: 13.125, recoil: 0.84, shudder: 0.1, size: 0.8, health: 0.55, damage: 0.3375, pen: 1.25, speed: 6.65, maxSpeed: 1, range: 1, density: 1.25, spray: 7.5, resist: 1.1 } }),
+      gun(6, 11, 1.2, 8, 0, 180, 0, { type: "drone", calculator: "drone", shoot: { reload: 45, recoil: 0.25, shudder: 0.1, size: 0.51, health: 0.7, damage: 0.8, pen: 1, speed: 1.5, maxSpeed: 0.9, range: 1, density: 2, spray: 0.1, resist: 1 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.2,
+    maxDrones: 3
+  });
+
+  def("crossbow", {
+    name: "Crossbow",
+    desc: "",
+    guns: [
+      gun(13, 3, 1, 0, 2, 35, 1, { shoot: { reload: 22.68, recoil: 0.56, shudder: 0.0375, size: 1, health: 0.48, damage: 0.288, pen: 0.792, speed: 7.5, maxSpeed: 1.5, range: 1, density: 1.5, spray: 6, resist: 1.15 } }),
+      gun(13, 3, 1, 0, -2, -35, 1.5, { shoot: { reload: 22.68, recoil: 0.56, shudder: 0.0375, size: 1, health: 0.48, damage: 0.288, pen: 0.792, speed: 7.5, maxSpeed: 1.5, range: 1, density: 1.5, spray: 6, resist: 1.15 } }),
+      gun(15, 3, 1, 0, 3.5, 15, 0.6667, { shoot: { reload: 22.68, recoil: 0.56, shudder: 0.0375, size: 1, health: 0.48, damage: 0.288, pen: 0.792, speed: 7.5, maxSpeed: 1.5, range: 1, density: 1.5, spray: 6, resist: 1.15 } }),
+      gun(15, 3, 1, 0, -3.5, -15, 1.1667, { shoot: { reload: 22.68, recoil: 0.56, shudder: 0.0375, size: 1, health: 0.48, damage: 0.288, pen: 0.792, speed: 7.5, maxSpeed: 1.5, range: 1, density: 1.5, spray: 6, resist: 1.15 } }),
+      gun(20, 4, 1, 0, 4, 0, 0.3333, { shoot: { reload: 22.68, recoil: 0.56, shudder: 0.0375, size: 1, health: 0.48, damage: 0.288, pen: 0.792, speed: 5.25, maxSpeed: 1.05, range: 1, density: 1.5, spray: 6, resist: 1.15 } }),
+      gun(20, 4, 1, 0, -4, 0, 0.8333, { shoot: { reload: 22.68, recoil: 0.56, shudder: 0.0375, size: 1, health: 0.48, damage: 0.288, pen: 0.792, speed: 5.25, maxSpeed: 1.05, range: 1, density: 1.5, spray: 6, resist: 1.15 } }),
+      gun(24, 7, 1, 0, 0, 0, 0, { shoot: { reload: 22.68, recoil: 0.56, shudder: 0.0375, size: 1, health: 0.48, damage: 0.288, pen: 0.792, speed: 5.25, maxSpeed: 1.05, range: 1, density: 1.5, spray: 6, resist: 1.15 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.225
+  });
+
+  def("cyclone", {
+    name: "Cyclone",
+    desc: "",
+    guns: [
+      gun(15, 3.5, 1, 0, 0, 0, 0, { shoot: { reload: 10.5, recoil: 0.175, shudder: 0.135, size: 1.2, health: 1.5795, damage: 0.170625, pen: 1.375, speed: 6, maxSpeed: 0.7475, range: 1, density: 1.5, spray: 27, resist: 1.2 } }),
+      gun(15, 3.5, 1, 0, 0, 120, 0, { shoot: { reload: 10.5, recoil: 0.175, shudder: 0.135, size: 1.2, health: 1.5795, damage: 0.170625, pen: 1.375, speed: 6, maxSpeed: 0.7475, range: 1, density: 1.5, spray: 27, resist: 1.2 } }),
+      gun(15, 3.5, 1, 0, 0, 240, 0, { shoot: { reload: 10.5, recoil: 0.175, shudder: 0.135, size: 1.2, health: 1.5795, damage: 0.170625, pen: 1.375, speed: 6, maxSpeed: 0.7475, range: 1, density: 1.5, spray: 27, resist: 1.2 } }),
+      gun(15, 3.5, 1, 0, 0, 30, 0.25, { shoot: { reload: 10.5, recoil: 0.175, shudder: 0.135, size: 1.2, health: 1.5795, damage: 0.170625, pen: 1.375, speed: 6, maxSpeed: 0.7475, range: 1, density: 1.5, spray: 27, resist: 1.2 } }),
+      gun(15, 3.5, 1, 0, 0, 150, 0.25, { shoot: { reload: 10.5, recoil: 0.175, shudder: 0.135, size: 1.2, health: 1.5795, damage: 0.170625, pen: 1.375, speed: 6, maxSpeed: 0.7475, range: 1, density: 1.5, spray: 27, resist: 1.2 } }),
+      gun(15, 3.5, 1, 0, 0, 270, 0.25, { shoot: { reload: 10.5, recoil: 0.175, shudder: 0.135, size: 1.2, health: 1.5795, damage: 0.170625, pen: 1.375, speed: 6, maxSpeed: 0.7475, range: 1, density: 1.5, spray: 27, resist: 1.2 } }),
+      gun(15, 3.5, 1, 0, 0, 60, 0.5, { shoot: { reload: 10.5, recoil: 0.175, shudder: 0.135, size: 1.2, health: 1.5795, damage: 0.170625, pen: 1.375, speed: 6, maxSpeed: 0.7475, range: 1, density: 1.5, spray: 27, resist: 1.2 } }),
+      gun(15, 3.5, 1, 0, 0, 180, 0.5, { shoot: { reload: 10.5, recoil: 0.175, shudder: 0.135, size: 1.2, health: 1.5795, damage: 0.170625, pen: 1.375, speed: 6, maxSpeed: 0.7475, range: 1, density: 1.5, spray: 27, resist: 1.2 } }),
+      gun(15, 3.5, 1, 0, 0, 300, 0.5, { shoot: { reload: 10.5, recoil: 0.175, shudder: 0.135, size: 1.2, health: 1.5795, damage: 0.170625, pen: 1.375, speed: 6, maxSpeed: 0.7475, range: 1, density: 1.5, spray: 27, resist: 1.2 } }),
+      gun(15, 3.5, 1, 0, 0, 90, 0.75, { shoot: { reload: 10.5, recoil: 0.175, shudder: 0.135, size: 1.2, health: 1.5795, damage: 0.170625, pen: 1.375, speed: 6, maxSpeed: 0.7475, range: 1, density: 1.5, spray: 27, resist: 1.2 } }),
+      gun(15, 3.5, 1, 0, 0, 210, 0.75, { shoot: { reload: 10.5, recoil: 0.175, shudder: 0.135, size: 1.2, health: 1.5795, damage: 0.170625, pen: 1.375, speed: 6, maxSpeed: 0.7475, range: 1, density: 1.5, spray: 27, resist: 1.2 } }),
+      gun(15, 3.5, 1, 0, 0, 330, 0.75, { shoot: { reload: 10.5, recoil: 0.175, shudder: 0.135, size: 1.2, health: 1.5795, damage: 0.170625, pen: 1.375, speed: 6, maxSpeed: 0.7475, range: 1, density: 1.5, spray: 27, resist: 1.2 } })
+    ],
+    upgrades: [],
+    needLevel: 45
+  });
+
+  def("deadeye", {
+    name: "Deadeye",
+    desc: "",
+    guns: [
+      gun(13, 5, 2.2, 7, 0, 0, 0, { type: "deco" }),
+      gun(13, 5, 2.2, 2, 0, 0, 0, { type: "deco" }),
+      gun(24, 8, 1, 0, 0, 0, 0, { shoot: { reload: 40.930312, recoil: 1.4, shudder: 0.00625, size: 1, health: 9.583333, damage: 0.072, pen: 2.42, speed: 8.85, maxSpeed: 1.77, range: 1, density: 4.5, spray: 3, resist: 1.495 } }),
+      gun(13, 8, -2.2, 0, 0, 0, 0, { type: "deco" })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.4,
+    speed: 0.85
+  });
+
+  def("engineer", {
+    name: "Engineer",
+    desc: "",
+    guns: [
+      gun(5, 11, 1, 10.5, 0, 0, 0, { type: "deco" }),
+      gun(3, 14, 1, 15.5, 0, 0, 0, { type: "deco" }),
+      gun(2, 14, 1.3, 18, 0, 0, 0, { type: "pillbox", calculator: "trap", shoot: { reload: 25.3, recoil: 2, shudder: 0.025, size: 1.05, health: 2, damage: 0.75, pen: 1.25, speed: 7.15, maxSpeed: 2.15, range: 1.25, density: 1, spray: 0, resist: 3.75 } }),
+      gun(12, 14, 1, 0, 0, 0, 0, { type: "deco" })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.15,
+    speed: 0.75,
+    maxDrones: 6
+  });
+
+  def("factory", {
+    name: "Factory",
+    desc: "",
+    guns: [
+      gun(15.5, 11, 1, 0, 0, 0, 0, { type: "deco" }),
+      gun(2, 14, 1, 15.5, 0, 0, 0, { type: "minion", calculator: "drone", shoot: { reload: 48, recoil: 1, shudder: 0.1, size: 0.7, health: 1, damage: 0.75, pen: 1, speed: 3, maxSpeed: 1, range: 1, density: 1, spray: 0.1, resist: 1 } }),
+      gun(12, 14, 1, 0, 0, 0, 0, { type: "deco" })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.1,
+    speed: 0.8,
+    maxDrones: 6
+  });
+
+  def("falcon", {
+    name: "Falcon",
+    desc: "",
+    guns: [
+      gun(27, 8, 1, 0, 0, 0, 0, { shoot: { reload: 23.38875, recoil: 0.3024, shudder: 0.00625, size: 1, health: 1.0557, damage: 0.486, pen: 1.089, speed: 9.204, maxSpeed: 1.32396, range: 0.9, density: 5.4, spray: 3, resist: 1.495 } }),
+      gun(13, 8, -2.2, 0, 0, 0, 0, { type: "deco" }),
+      gun(16, 8, 1, 0, 0, 153, 0.1, { shoot: { reload: 10.5, recoil: 1.134, shudder: 0.2, size: 1, health: 0.459, damage: 0.30375, pen: 0.63, speed: 4, maxSpeed: 0.68, range: 0.6, density: 1.2, spray: 7.5, resist: 0.7 } }),
+      gun(16, 8, 1, 0, 0, -153, 0.1, { shoot: { reload: 10.5, recoil: 1.134, shudder: 0.2, size: 1, health: 0.459, damage: 0.30375, pen: 0.63, speed: 4, maxSpeed: 0.68, range: 0.6, density: 1.2, spray: 7.5, resist: 0.7 } }),
+      gun(18, 8, 1, 0, 0, 180, 0.6, { shoot: { reload: 10.5, recoil: 1.134, shudder: 0.2, size: 1, health: 0.459, damage: 0.30375, pen: 0.63, speed: 4, maxSpeed: 0.68, range: 0.6, density: 1.2, spray: 7.5, resist: 0.7 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.4,
+    speed: 0.85
+  });
+
+  def("fieldgun", {
+    name: "Field Gun",
+    desc: "",
+    guns: [
+      gun(14.5, 3, 1, 0, -6, -7, 0.25, { shoot: { reload: 15.75, recoil: 0.245, shudder: 0.15, size: 0.99, health: 1, damage: 0.2625, pen: 1.35, speed: 5.175, maxSpeed: 0.88, range: 1, density: 2.25, spray: 22.5, resist: 1.2 } }),
+      gun(14.5, 3, 1, 0, 6, 7, 0.75, { shoot: { reload: 15.75, recoil: 0.245, shudder: 0.15, size: 0.99, health: 1, damage: 0.2625, pen: 1.35, speed: 5.175, maxSpeed: 0.88, range: 1, density: 2.25, spray: 22.5, resist: 1.2 } }),
+      gun(19.2, 13, 0.7, 0, 0, 0, 0, { type: "deco" }),
+      gun(17, 13, 1, 0, 0, 0, 0, { type: "missile", shoot: { reload: 30.24, recoil: 1.0976, shudder: 0.1, size: 0.81, health: 1, damage: 1.5, pen: 1, speed: 5.620625, maxSpeed: 0.968, range: 1, density: 3.375, spray: 15, resist: 1.15 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.1
+  });
+
+  def("fighter", {
+    name: "Fighter",
+    desc: "",
+    guns: [
+      gun(18, 8, 1, 0, 0, 0, 0, { shoot: { reload: 10.5, recoil: 1.2096, shudder: 0.1, size: 1, health: 0.918, damage: 0.6075, pen: 0.9, speed: 5.2, maxSpeed: 0.748, range: 0.9, density: 1.2, spray: 15, resist: 1 } }),
+      gun(16, 8, 1, 0, -1, 90, 0, { shoot: { reload: 10.5, recoil: 0.3024, shudder: 0.1, size: 1, health: 0.918, damage: 0.6075, pen: 0.9, speed: 5.2, maxSpeed: 0.748, range: 0.9, density: 1.2, spray: 15, resist: 1 } }),
+      gun(16, 8, 1, 0, 1, -90, 0, { shoot: { reload: 10.5, recoil: 0.3024, shudder: 0.1, size: 1, health: 0.918, damage: 0.6075, pen: 0.9, speed: 5.2, maxSpeed: 0.748, range: 0.9, density: 1.2, spray: 15, resist: 1 } }),
+      gun(16, 8, 1, 0, 0, 150, 0.1, { shoot: { reload: 10.5, recoil: 2.268, shudder: 0.2, size: 1, health: 0.459, damage: 0.30375, pen: 0.63, speed: 4, maxSpeed: 0.68, range: 0.6, density: 1.2, spray: 7.5, resist: 0.7 } }),
+      gun(16, 8, 1, 0, 0, -150, 0.1, { shoot: { reload: 10.5, recoil: 2.268, shudder: 0.2, size: 1, health: 0.459, damage: 0.30375, pen: 0.63, speed: 4, maxSpeed: 0.68, range: 0.6, density: 1.2, spray: 7.5, resist: 0.7 } })
+    ],
+    upgrades: [],
+    needLevel: 45
+  });
+
+  def("focal", {
+    name: "Focal",
+    desc: "",
+    guns: [
+      gun(25, 7, 1, 0, 0, 0, 0, { shoot: { reload: 6.5625, recoil: 0.322, shudder: 0.51, size: 1.1, health: 0.35, damage: 0.091875, pen: 0.945, speed: 4.5, maxSpeed: 0.64, range: 1, density: 1.5, spray: 28.125, resist: 0.84 } }),
+      gun(14, 9.5, 1.25, 8, 0, 0, 0, { shoot: { reload: 6.5625, recoil: 1.493333, shudder: 0.136, size: 1, health: 0.56, damage: 0.525, pen: 1.1, speed: 6.25, maxSpeed: 1, range: 1.1, density: 1.25, spray: 18.75, resist: 1.1 } })
+    ],
+    upgrades: [],
+    needLevel: 45
+  });
+
+  def("fork", {
+    name: "Fork",
+    desc: "",
+    guns: [
+      gun(13, 5, 2.2, 15, 0, 0, 0, { type: "deco" }),
+      gun(13, 5, 2.2, 10, 0, 0, 0, { type: "deco" }),
+      gun(13, 5, 2.2, 5, 0, 0, 0, { type: "deco" }),
+      gun(13, 5, 2.2, 0, 0, 0, 0, { type: "deco" }),
+      gun(29, 8, 1, 0, 0, 0, 0, { shoot: { reload: 24.80625, recoil: 1.4, shudder: 0.025, size: 1, health: 8.333333, damage: 0.072, pen: 2.2, speed: 7.5, maxSpeed: 1.5, range: 1, density: 1.5, spray: 3, resist: 1.15 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.2
+  });
+
+  def("fortress", {
+    name: "Fortress",
+    desc: "",
+    guns: [
+      gun(9, 8.2, 0.6, 5, 0, 180, 0, { type: "swarm", calculator: "swarm", shoot: { reload: 23, recoil: 0.25, shudder: 0.05, size: 0.4, health: 1, damage: 0.75, pen: 1, speed: 4, maxSpeed: 1, range: 1, density: 1, spray: 5, resist: 1 } }),
+      gun(9, 8.2, 0.6, 5, 0, 300, 0.3333, { type: "swarm", calculator: "swarm", shoot: { reload: 23, recoil: 0.25, shudder: 0.05, size: 0.4, health: 1, damage: 0.75, pen: 1, speed: 4, maxSpeed: 1, range: 1, density: 1, spray: 5, resist: 1 } }),
+      gun(9, 8.2, 0.6, 5, 0, 420, 0.6667, { type: "swarm", calculator: "swarm", shoot: { reload: 23, recoil: 0.25, shudder: 0.05, size: 0.4, health: 1, damage: 0.75, pen: 1, speed: 4, maxSpeed: 1, range: 1, density: 1, spray: 5, resist: 1 } }),
+      gun(14, 9, 1, 0, 0, 0, 0, { type: "deco" }),
+      gun(14, 9, 1, 0, 0, 120, 0, { type: "deco" }),
+      gun(14, 9, 1, 0, 0, 240, 0, { type: "deco" }),
+      gun(4, 9, 1.5, 14, 0, 0, 0, { type: "trap", calculator: "trap", shoot: { reload: 23, recoil: 1, shudder: 0.25, size: 0.7, health: 1, damage: 0.75, pen: 1, speed: 2.275, maxSpeed: 0.7, range: 0.5, density: 1, spray: 0, resist: 3 } }),
+      gun(4, 9, 1.5, 14, 0, 120, 0, { type: "trap", calculator: "trap", shoot: { reload: 23, recoil: 1, shudder: 0.25, size: 0.7, health: 1, damage: 0.75, pen: 1, speed: 2.275, maxSpeed: 0.7, range: 0.5, density: 1, spray: 0, resist: 3 } }),
+      gun(4, 9, 1.5, 14, 0, 240, 0, { type: "trap", calculator: "trap", shoot: { reload: 23, recoil: 1, shudder: 0.25, size: 0.7, health: 1, damage: 0.75, pen: 1, speed: 2.275, maxSpeed: 0.7, range: 0.5, density: 1, spray: 0, resist: 3 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.2,
+    speed: 0.8
+  });
+
+  def("gunnertrapper", {
+    name: "Gunner Trapper",
+    desc: "",
+    guns: [
+      gun(13, 11, 1, 0, 0, 180, 0, { type: "deco" }),
+      gun(4, 11, 1.7, 13, 0, 180, 0, { type: "trap", calculator: "trap", shoot: { reload: 23, recoil: 0.5, shudder: 0.25, size: 0.7, health: 1, damage: 0.75, pen: 1, speed: 3.9, maxSpeed: 1, range: 1, density: 1, spray: 0, resist: 3 } }),
+      gun(19, 2, 1, 0, -2.5, 0, 0, { shoot: { reload: 13.125, recoil: 1.26, shudder: 0.081, size: 1.32, health: 0.9, damage: 0.18375, pen: 1.6875, speed: 9, maxSpeed: 1.36, range: 1, density: 3, spray: 13.5, resist: 1.8 } }),
+      gun(19, 2, 1, 0, 2.5, 0, 0.5, { shoot: { reload: 13.125, recoil: 1.26, shudder: 0.081, size: 1.32, health: 0.9, damage: 0.18375, pen: 1.6875, speed: 9, maxSpeed: 1.36, range: 1, density: 3, spray: 13.5, resist: 1.8 } }),
+      gun(12, 11, 1, 0, 0, 0, 0, { type: "deco" })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.25
+  });
+
+  def("hewn", {
+    name: "Hewn Double",
+    desc: "",
+    guns: [
+      gun(19, 8, 1, 0, -5.5, 155, 0, { shoot: { reload: 13.125, recoil: 0.60375, shudder: 0.081, size: 1, health: 0.729, damage: 0.343612, pen: 1, speed: 5, maxSpeed: 0.9, range: 1, density: 1, spray: 21.6, resist: 1 } }),
+      gun(19, 8, 1, 0, 5.5, -155, 0.5, { shoot: { reload: 13.125, recoil: 0.60375, shudder: 0.081, size: 1, health: 0.729, damage: 0.343612, pen: 1, speed: 5, maxSpeed: 0.9, range: 1, density: 1, spray: 21.6, resist: 1 } }),
+      gun(20, 8, 1, 0, 5.5, 0, 0, { shoot: { reload: 13.125, recoil: 1.05, shudder: 0.09, size: 1, health: 0.81, damage: 0.490875, pen: 1, speed: 5, maxSpeed: 0.9, range: 1, density: 1, spray: 18, resist: 1 } }),
+      gun(20, 8, 1, 0, 5.5, 180, 0, { shoot: { reload: 13.125, recoil: 1.05, shudder: 0.09, size: 1, health: 0.81, damage: 0.490875, pen: 1, speed: 5, maxSpeed: 0.9, range: 1, density: 1, spray: 18, resist: 1 } }),
+      gun(20, 8, 1, 0, -5.5, 0, 0.5, { shoot: { reload: 13.125, recoil: 1.05, shudder: 0.09, size: 1, health: 0.81, damage: 0.490875, pen: 1, speed: 5, maxSpeed: 0.9, range: 1, density: 1, spray: 18, resist: 1 } }),
+      gun(20, 8, 1, 0, -5.5, 180, 0.5, { shoot: { reload: 13.125, recoil: 1.05, shudder: 0.09, size: 1, health: 0.81, damage: 0.490875, pen: 1, speed: 5, maxSpeed: 0.9, range: 1, density: 1, spray: 18, resist: 1 } })
+    ],
+    upgrades: [],
+    needLevel: 45
+  });
+
+  def("hexatrap", {
+    name: "Hexa-Trapper",
+    desc: "",
+    guns: [
+      gun(15, 7, 1, 0, 0, 0, 0, { type: "deco" }),
+      gun(15, 7, 1, 0, 0, 60, 0.5, { type: "deco" }),
+      gun(15, 7, 1, 0, 0, 120, 0, { type: "deco" }),
+      gun(15, 7, 1, 0, 0, 180, 0.5, { type: "deco" }),
+      gun(15, 7, 1, 0, 0, 240, 0, { type: "deco" }),
+      gun(15, 7, 1, 0, 0, 300, 0.5, { type: "deco" }),
+      gun(3, 7, 1.7, 15, 0, 0, 0, { type: "trap", calculator: "trap", shoot: { reload: 29.9, recoil: 1, shudder: 0.3125, size: 0.7, health: 1, damage: 0.75, pen: 1, speed: 2.6, maxSpeed: 1, range: 0.5, density: 1, spray: 0, resist: 3 } }),
+      gun(3, 7, 1.7, 15, 0, 60, 0.5, { type: "trap", calculator: "trap", shoot: { reload: 29.9, recoil: 1, shudder: 0.3125, size: 0.7, health: 1, damage: 0.75, pen: 1, speed: 2.6, maxSpeed: 1, range: 0.5, density: 1, spray: 0, resist: 3 } }),
+      gun(3, 7, 1.7, 15, 0, 120, 0, { type: "trap", calculator: "trap", shoot: { reload: 29.9, recoil: 1, shudder: 0.3125, size: 0.7, health: 1, damage: 0.75, pen: 1, speed: 2.6, maxSpeed: 1, range: 0.5, density: 1, spray: 0, resist: 3 } }),
+      gun(3, 7, 1.7, 15, 0, 180, 0.5, { type: "trap", calculator: "trap", shoot: { reload: 29.9, recoil: 1, shudder: 0.3125, size: 0.7, health: 1, damage: 0.75, pen: 1, speed: 2.6, maxSpeed: 1, range: 0.5, density: 1, spray: 0, resist: 3 } }),
+      gun(3, 7, 1.7, 15, 0, 240, 0, { type: "trap", calculator: "trap", shoot: { reload: 29.9, recoil: 1, shudder: 0.3125, size: 0.7, health: 1, damage: 0.75, pen: 1, speed: 2.6, maxSpeed: 1, range: 0.5, density: 1, spray: 0, resist: 3 } }),
+      gun(3, 7, 1.7, 15, 0, 300, 0.5, { type: "trap", calculator: "trap", shoot: { reload: 29.9, recoil: 1, shudder: 0.3125, size: 0.7, health: 1, damage: 0.75, pen: 1, speed: 2.6, maxSpeed: 1, range: 0.5, density: 1, spray: 0, resist: 3 } }),
+      gun(22, 10, 1, 0, 0, 180, 0, { type: "auto", shoot: { reload: 26.25, recoil: 0.4025, shudder: 0.09, size: 1.32, health: 0.8, damage: 0.1575, pen: 1.18125, speed: 9, maxSpeed: 1.36, range: 1, density: 0.3, spray: 11.25, resist: 1.8 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    auto: true
+  });
+
+  def("hybrid", {
+    name: "Hybrid",
+    desc: "",
+    guns: [
+      gun(20.5, 14, 1, 0, 0, 0, 0, { shoot: { reload: 42, recoil: 4.032, shudder: 0.05, size: 1, health: 2, damage: 1.35, pen: 1.2, speed: 2.125, maxSpeed: 0.48, range: 1, density: 3, spray: 15, resist: 3.45 } }),
+      gun(6, 11, 1.2, 8, 0, 180, 0, { type: "drone", calculator: "drone", shoot: { reload: 45, recoil: 0.25, shudder: 0.1, size: 0.51, health: 0.7, damage: 0.8, pen: 1, speed: 1.5, maxSpeed: 0.9, range: 1, density: 2, spray: 0.1, resist: 1 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    maxDrones: 3
+  });
+
+  def("infestor", {
+    name: "Infestor",
+    desc: "",
+    guns: [
+      gun(10, 6, 1.2, 3, 5, 90, 0, { type: "drone", calculator: "drone", shoot: { reload: 72, recoil: 0.25, shudder: 0.1, size: 0.84, health: 0.5, damage: 0.4, pen: 0.6, speed: 1.5, maxSpeed: 1, range: 1, density: 0.8, spray: 0.1, resist: 1 } }),
+      gun(10, 6, 1.2, 3, 5, 270, 0, { type: "drone", calculator: "drone", shoot: { reload: 72, recoil: 0.25, shudder: 0.1, size: 0.84, health: 0.5, damage: 0.4, pen: 0.6, speed: 1.5, maxSpeed: 1, range: 1, density: 0.8, spray: 0.1, resist: 1 } }),
+      gun(10, 6, 1.2, 3, -5, -90, 0, { type: "drone", calculator: "drone", shoot: { reload: 72, recoil: 0.25, shudder: 0.1, size: 0.84, health: 0.5, damage: 0.4, pen: 0.6, speed: 1.5, maxSpeed: 1, range: 1, density: 0.8, spray: 0.1, resist: 1 } }),
+      gun(10, 6, 1.2, 3, -5, 90, 0, { type: "drone", calculator: "drone", shoot: { reload: 72, recoil: 0.25, shudder: 0.1, size: 0.84, health: 0.5, damage: 0.4, pen: 0.6, speed: 1.5, maxSpeed: 1, range: 1, density: 0.8, spray: 0.1, resist: 1 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.1,
+    speed: 0.9,
+    maxDrones: 40
+  });
+
+  def("landmine", {
+    name: "Landmine",
+    desc: "",
+    guns: [],
+    upgrades: [],
+    needLevel: 45,
+    speed: 1.2,
+    health: 1.4,
+    bodyDamage: 2.35,
+    smasher: true
+  });
+
+  def("machinegunner", {
+    name: "Machine Gunner",
+    desc: "",
+    guns: [
+      gun(14, 3, 4, -3, 5, 0, 0.6, { shoot: { reload: 7, recoil: 0.14, shudder: 0.27, size: 1.2, health: 1.215, damage: 0.098437, pen: 1.25, speed: 4.8, maxSpeed: 0.52, range: 1, density: 1.5, spray: 67.5, resist: 1.2 } }),
+      gun(14, 3, 4, -3, -5, 0, 0.8, { shoot: { reload: 7, recoil: 0.14, shudder: 0.27, size: 1.2, health: 1.215, damage: 0.098437, pen: 1.25, speed: 4.8, maxSpeed: 0.52, range: 1, density: 1.5, spray: 67.5, resist: 1.2 } }),
+      gun(14, 3, 4, 0, -2.5, 0, 0.2, { shoot: { reload: 7, recoil: 0.14, shudder: 0.27, size: 1.2, health: 1.215, damage: 0.098437, pen: 1.25, speed: 4.8, maxSpeed: 0.52, range: 1, density: 1.5, spray: 67.5, resist: 1.2 } }),
+      gun(14, 3, 4, 0, 2.5, 0, 0.4, { shoot: { reload: 7, recoil: 0.14, shudder: 0.27, size: 1.2, health: 1.215, damage: 0.098437, pen: 1.25, speed: 4.8, maxSpeed: 0.52, range: 1, density: 1.5, spray: 67.5, resist: 1.2 } }),
+      gun(14, 3, 4, 3, 0, 0, 0, { shoot: { reload: 7, recoil: 0.14, shudder: 0.27, size: 1.2, health: 1.215, damage: 0.098437, pen: 1.25, speed: 4.8, maxSpeed: 0.52, range: 1, density: 1.5, spray: 67.5, resist: 1.2 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    speed: 0.9
+  });
+
+  def("maleficitor", {
+    name: "Maleficitor",
+    desc: "",
+    body: 4,
+    guns: [
+      gun(6, 12, 1.2, 7.4, 0, 0, 0, { type: "drone", calculator: "drone", shoot: { reload: 36, recoil: 0.25, shudder: 0.1, size: 0.882, health: 0.575, damage: 0.46, pen: 0.69, speed: 1.2, maxSpeed: 0.8, range: 1, density: 0.92, spray: 0.1, resist: 1 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.1,
+    speed: 0.85,
+    maxDrones: 20
   });
 
   def("medic", {
     name: "Medic",
-    desc: "Longer-range healing shells",
-    healer: true,
+    desc: "",
     guns: [
       gun(11, 9, -0.4, 14, 0, 0, 0, { type: "deco" }),
-      gun(22, 10, 1, 0, 0, 0, 0, { type: "heal", layers: [g.basic, g.healer, g.sniper] }),
+      gun(22, 10, 1, 0, 0, 0, 0, { type: "heal", shoot: { reload: 14.175, recoil: 0.7, shudder: 0.025, size: 1, health: 1, damage: -0.6, pen: 1.1, speed: 3.75, maxSpeed: 0.75, range: 1, density: 1.5, spray: 3, resist: 1.15 } })
     ],
-    fov: 1.2,
     upgrades: [],
-    needLevel: 30,
+    needLevel: 45,
+    fov: 1.2,
+    healer: true
   });
+
+  def("mega3", {
+    name: "Mega-3",
+    desc: "",
+    guns: [
+      gun(22, 14, 1, 0, 0, 0, 0, { type: "auto", shoot: { reload: 18.9, recoil: 1.68, shudder: 0.05, size: 0.8, health: 0.9, damage: 0.9, pen: 1.2, speed: 4.675, maxSpeed: 0.8, range: 0.8, density: 1.95, spray: 15, resist: 1.4375 } }),
+      gun(22, 14, 1, 0, 0, 120, 0, { type: "auto", shoot: { reload: 18.9, recoil: 1.68, shudder: 0.05, size: 0.8, health: 0.9, damage: 0.9, pen: 1.2, speed: 4.675, maxSpeed: 0.8, range: 0.8, density: 1.95, spray: 15, resist: 1.4375 } }),
+      gun(22, 14, 1, 0, 0, 240, 0, { type: "auto", shoot: { reload: 18.9, recoil: 1.68, shudder: 0.05, size: 0.8, health: 0.9, damage: 0.9, pen: 1.2, speed: 4.675, maxSpeed: 0.8, range: 0.8, density: 1.95, spray: 15, resist: 1.4375 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    speed: 0.95,
+    auto: true
+  });
+
+  def("megasmash", {
+    name: "Mega-Smasher",
+    desc: "",
+    guns: [],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.1,
+    speed: 1.05,
+    health: 1.5,
+    bodyDamage: 2.6,
+    smasher: true
+  });
+
+  def("mortar", {
+    name: "Mortar",
+    desc: "",
+    guns: [
+      gun(13, 3, 1, 0, -8, -3.5, 0.6, { shoot: { reload: 15.75, recoil: 0.1225, shudder: 0.135, size: 0.99, health: 0.9, damage: 0.18375, pen: 1.35, speed: 5.175, maxSpeed: 0.88, range: 1, density: 2.25, spray: 27, resist: 1.2 } }),
+      gun(13, 3, 1, 0, 8, 3.5, 0.8, { shoot: { reload: 15.75, recoil: 0.1225, shudder: 0.135, size: 0.99, health: 0.9, damage: 0.18375, pen: 1.35, speed: 5.175, maxSpeed: 0.88, range: 1, density: 2.25, spray: 27, resist: 1.2 } }),
+      gun(17, 5, 1, 0, -5, -3.5, 0.2, { shoot: { reload: 15.75, recoil: 0.1225, shudder: 0.135, size: 0.99, health: 0.9, damage: 0.18375, pen: 1.35, speed: 5.175, maxSpeed: 0.88, range: 1, density: 2.25, spray: 27, resist: 1.2 } }),
+      gun(17, 5, 1, 0, 5, 3.5, 0.4, { shoot: { reload: 15.75, recoil: 0.1225, shudder: 0.135, size: 0.99, health: 0.9, damage: 0.18375, pen: 1.35, speed: 5.175, maxSpeed: 0.88, range: 1, density: 2.25, spray: 27, resist: 1.2 } }),
+      gun(19, 12, 1, 0, 0, 0, 0, { shoot: { reload: 25.2, recoil: 1.568, shudder: 0.1, size: 0.9, health: 1, damage: 1.5, pen: 1, speed: 4.8875, maxSpeed: 0.88, range: 1, density: 2.25, spray: 15, resist: 1.15 } })
+    ],
+    upgrades: [],
+    needLevel: 45
+  });
+
+  def("nailgun", {
+    name: "Nailgun",
+    desc: "",
+    guns: [
+      gun(19, 3, 1, 0, -2, 0, 0.25, { shoot: { reload: 11.15625, recoil: 0.4375, shudder: 0.081, size: 0.704, health: 0.9, damage: 0.128625, pen: 1.6875, speed: 9, maxSpeed: 1.36, range: 1, density: 6, spray: 13.5, resist: 1.8 } }),
+      gun(19, 3, 1, 0, 2, 0, 0.75, { shoot: { reload: 11.15625, recoil: 0.4375, shudder: 0.081, size: 0.704, health: 0.9, damage: 0.128625, pen: 1.6875, speed: 9, maxSpeed: 1.36, range: 1, density: 6, spray: 13.5, resist: 1.8 } }),
+      gun(20, 2, 1, 0, 0, 0, 0, { shoot: { reload: 11.15625, recoil: 0.4375, shudder: 0.081, size: 1.056, health: 0.9, damage: 0.128625, pen: 1.6875, speed: 9, maxSpeed: 1.36, range: 1, density: 6, spray: 13.5, resist: 1.8 } }),
+      gun(5.5, 7, -1.8, 6.5, 0, 0, 0, { type: "deco" })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.1,
+    speed: 0.9
+  });
+
+  def("necromancer", {
+    name: "Necromancer",
+    desc: "",
+    body: 4,
+    guns: [
+      gun(6, 12, 1.2, 7.4, 0, 0, 0.25, { type: "drone", calculator: "drone", shoot: { reload: 144, recoil: 0.25, shudder: 0.1, size: 0.84, health: 0.5, damage: 0.4, pen: 0.6, speed: 1.5, maxSpeed: 1, range: 1, density: 0.8, spray: 0.1, resist: 1 } }),
+      gun(6, 12, 1.2, 7.4, 0, 90, 0, { type: "drone", calculator: "drone", shoot: { reload: 144, recoil: 0.25, shudder: 0.1, size: 0.84, health: 0.5, damage: 0.4, pen: 0.6, speed: 1.5, maxSpeed: 1, range: 1, density: 0.8, spray: 0.1, resist: 1 } }),
+      gun(6, 12, 1.2, 7.4, 0, 180, 0.75, { type: "drone", calculator: "drone", shoot: { reload: 144, recoil: 0.25, shudder: 0.1, size: 0.84, health: 0.5, damage: 0.4, pen: 0.6, speed: 1.5, maxSpeed: 1, range: 1, density: 0.8, spray: 0.1, resist: 1 } }),
+      gun(6, 12, 1.2, 7.4, 0, 270, 0.5, { type: "drone", calculator: "drone", shoot: { reload: 144, recoil: 0.25, shudder: 0.1, size: 0.84, health: 0.5, damage: 0.4, pen: 0.6, speed: 1.5, maxSpeed: 1, range: 1, density: 0.8, spray: 0.1, resist: 1 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.1,
+    speed: 0.8,
+    maxDrones: 14
+  });
+
+  def("nimrod", {
+    name: "Nimrod",
+    desc: "",
+    guns: [
+      gun(13, 6.5, 2.2, 0, 0, 0, 0, { type: "deco" }),
+      gun(13, 6.4, 2.2, 5, 0, 0, 0, { type: "deco" }),
+      gun(24, 8, 1, 0, 0, 0, 0, { shoot: { reload: 37.209375, recoil: 0.98, shudder: 0.025, size: 0.855, health: 16.666667, damage: 0.0324, pen: 3.3, speed: 8.25, maxSpeed: 1.2, range: 1, density: 2.16, spray: 3, resist: 1.45475 } }),
+      gun(21, 11, 1, 0, 0, 0, 0.25, { shoot: { reload: 37.209375, recoil: 0.98, shudder: 0.025, size: 0.95, health: 8.333333, damage: 0.0648, pen: 2.2, speed: 8.25, maxSpeed: 1.2, range: 1, density: 1.8, spray: 3, resist: 1.3225 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.3,
+    speed: 0.9
+  });
+
+  def("octo", {
+    name: "Octo Tank",
+    desc: "",
+    guns: [
+      gun(18, 8, 1, 0, 0, 45, 0.5, { shoot: { reload: 11.55, recoil: 2.016, shudder: 0.1, size: 1.05, health: 1.0404, damage: 0.541283, pen: 0.81, speed: 4.5, maxSpeed: 0.50575, range: 1, density: 1.44, spray: 15, resist: 1.05 } }),
+      gun(18, 8, 1, 0, 0, 135, 0.5, { shoot: { reload: 11.55, recoil: 2.016, shudder: 0.1, size: 1.05, health: 1.0404, damage: 0.541283, pen: 0.81, speed: 4.5, maxSpeed: 0.50575, range: 1, density: 1.44, spray: 15, resist: 1.05 } }),
+      gun(18, 8, 1, 0, 0, 225, 0.5, { shoot: { reload: 11.55, recoil: 2.016, shudder: 0.1, size: 1.05, health: 1.0404, damage: 0.541283, pen: 0.81, speed: 4.5, maxSpeed: 0.50575, range: 1, density: 1.44, spray: 15, resist: 1.05 } }),
+      gun(18, 8, 1, 0, 0, 315, 0.5, { shoot: { reload: 11.55, recoil: 2.016, shudder: 0.1, size: 1.05, health: 1.0404, damage: 0.541283, pen: 0.81, speed: 4.5, maxSpeed: 0.50575, range: 1, density: 1.44, spray: 15, resist: 1.05 } }),
+      gun(18, 8, 1, 0, 0, 0, 0, { shoot: { reload: 11.55, recoil: 2.016, shudder: 0.1, size: 1.05, health: 1.0404, damage: 0.541283, pen: 0.81, speed: 4.5, maxSpeed: 0.50575, range: 1, density: 1.44, spray: 15, resist: 1.05 } }),
+      gun(18, 8, 1, 0, 0, 90, 0, { shoot: { reload: 11.55, recoil: 2.016, shudder: 0.1, size: 1.05, health: 1.0404, damage: 0.541283, pen: 0.81, speed: 4.5, maxSpeed: 0.50575, range: 1, density: 1.44, spray: 15, resist: 1.05 } }),
+      gun(18, 8, 1, 0, 0, 180, 0, { shoot: { reload: 11.55, recoil: 2.016, shudder: 0.1, size: 1.05, health: 1.0404, damage: 0.541283, pen: 0.81, speed: 4.5, maxSpeed: 0.50575, range: 1, density: 1.44, spray: 15, resist: 1.05 } }),
+      gun(18, 8, 1, 0, 0, 270, 0, { shoot: { reload: 11.55, recoil: 2.016, shudder: 0.1, size: 1.05, health: 1.0404, damage: 0.541283, pen: 0.81, speed: 4.5, maxSpeed: 0.50575, range: 1, density: 1.44, spray: 15, resist: 1.05 } })
+    ],
+    upgrades: [],
+    needLevel: 45
+  });
+
+  def("ordnance", {
+    name: "Ordnance",
+    desc: "",
+    guns: [
+      gun(17, 5, 1, 0, -4.45, -7, 0.25, { shoot: { reload: 15.75, recoil: 0.245, shudder: 0.15, size: 0.99, health: 1, damage: 0.2625, pen: 1.35, speed: 5.175, maxSpeed: 0.88, range: 1, density: 2.25, spray: 22.5, resist: 1.2 } }),
+      gun(17, 5, 1, 0, 4.45, 7, 0.75, { shoot: { reload: 15.75, recoil: 0.245, shudder: 0.15, size: 0.99, health: 1, damage: 0.2625, pen: 1.35, speed: 5.175, maxSpeed: 0.88, range: 1, density: 2.25, spray: 22.5, resist: 1.2 } }),
+      gun(24, 8, 1, 0, 0, 0, 0, { shoot: { reload: 21.2625, recoil: 0.98, shudder: 0.025, size: 0.855, health: 2, damage: 0.27, pen: 1.65, speed: 8.25, maxSpeed: 1.2, range: 1, density: 2.16, spray: 3, resist: 1.45475 } }),
+      gun(21, 11, 1, 0, 0, 0, 0.25, { shoot: { reload: 21.2625, recoil: 0.98, shudder: 0.025, size: 0.95, health: 1, damage: 0.54, pen: 1.1, speed: 8.25, maxSpeed: 1.2, range: 1, density: 1.8, spray: 3, resist: 1.3225 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.25,
+    speed: 0.9
+  });
+
+  def("overdrive", {
+    name: "Overdrive",
+    desc: "",
+    guns: [
+      gun(6, 12, 1.2, 8, 0, 90, 0, { type: "drone", calculator: "drone", shoot: { reload: 45, recoil: 0.25, shudder: 0.1, size: 0.51, health: 0.7, damage: 0.8, pen: 1, speed: 1.5, maxSpeed: 0.9, range: 1, density: 2, spray: 0.1, resist: 1 } }),
+      gun(6, 12, 1.2, 8, 0, -90, 0, { type: "drone", calculator: "drone", shoot: { reload: 45, recoil: 0.25, shudder: 0.1, size: 0.51, health: 0.7, damage: 0.8, pen: 1, speed: 1.5, maxSpeed: 0.9, range: 1, density: 2, spray: 0.1, resist: 1 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.1,
+    speed: 0.9,
+    maxDrones: 8,
+    auto: true
+  });
+
+  def("overgunner", {
+    name: "Overgunner",
+    desc: "",
+    guns: [
+      gun(19, 2, 1, 0, -2.5, 0, 0, { shoot: { reload: 13.125, recoil: 0.378, shudder: 0.081, size: 1.32, health: 0.918, damage: 0.148837, pen: 1.51875, speed: 6.3, maxSpeed: 0.8092, range: 1, density: 3.6, spray: 13.5, resist: 1.8 } }),
+      gun(19, 2, 1, 0, 2.5, 0, 0.5, { shoot: { reload: 13.125, recoil: 0.378, shudder: 0.081, size: 1.32, health: 0.918, damage: 0.148837, pen: 1.51875, speed: 6.3, maxSpeed: 0.8092, range: 1, density: 3.6, spray: 13.5, resist: 1.8 } }),
+      gun(12, 11, 1, 0, 0, 0, 0, { type: "deco" }),
+      gun(6, 11, 1.2, 8, 0, 125, 0, { type: "drone", calculator: "drone", shoot: { reload: 45, recoil: 0.25, shudder: 0.1, size: 0.51, health: 0.7, damage: 0.8, pen: 1, speed: 1.5, maxSpeed: 0.9, range: 1, density: 2, spray: 0.1, resist: 1 } }),
+      gun(6, 11, 1.2, 8, 0, -125, 0, { type: "drone", calculator: "drone", shoot: { reload: 45, recoil: 0.25, shudder: 0.1, size: 0.51, health: 0.7, damage: 0.8, pen: 1, speed: 1.5, maxSpeed: 0.9, range: 1, density: 2, spray: 0.1, resist: 1 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    maxDrones: 6
+  });
+
+  def("overlord", {
+    name: "Overlord",
+    desc: "",
+    guns: [
+      gun(6, 12, 1.2, 8, 0, 0, 0, { type: "drone", calculator: "drone", shoot: { reload: 45, recoil: 0.25, shudder: 0.1, size: 0.51, health: 0.7, damage: 0.8, pen: 1, speed: 1.5, maxSpeed: 0.9, range: 1, density: 2, spray: 0.1, resist: 1 } }),
+      gun(6, 12, 1.2, 8, 0, 90, 0, { type: "drone", calculator: "drone", shoot: { reload: 45, recoil: 0.25, shudder: 0.1, size: 0.51, health: 0.7, damage: 0.8, pen: 1, speed: 1.5, maxSpeed: 0.9, range: 1, density: 2, spray: 0.1, resist: 1 } }),
+      gun(6, 12, 1.2, 8, 0, 180, 0, { type: "drone", calculator: "drone", shoot: { reload: 45, recoil: 0.25, shudder: 0.1, size: 0.51, health: 0.7, damage: 0.8, pen: 1, speed: 1.5, maxSpeed: 0.9, range: 1, density: 2, spray: 0.1, resist: 1 } }),
+      gun(6, 12, 1.2, 8, 0, 270, 0, { type: "drone", calculator: "drone", shoot: { reload: 45, recoil: 0.25, shudder: 0.1, size: 0.51, health: 0.7, damage: 0.8, pen: 1, speed: 1.5, maxSpeed: 0.9, range: 1, density: 2, spray: 0.1, resist: 1 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.1,
+    speed: 0.8,
+    maxDrones: 8
+  });
+
+  def("paramedic", {
+    name: "Paramedic",
+    desc: "",
+    guns: [
+      gun(11, 6, -0.4, 8, 2, 18, 0, { type: "deco" }),
+      gun(11, 6, -0.4, 8, -2, -18, 0, { type: "deco" }),
+      gun(17, 8, 1, 0, 2, 18, 0.5, { type: "heal", shoot: { reload: 11.55, recoil: 0.35, shudder: 0.072, size: 1, health: 0.81, damage: -0.525, pen: 0.8, speed: 2.5, maxSpeed: 0.5, range: 1, density: 0.8, spray: 9, resist: 1 } }),
+      gun(17, 8, 1, 0, -2, -18, 0.5, { type: "heal", shoot: { reload: 11.55, recoil: 0.35, shudder: 0.072, size: 1, health: 0.81, damage: -0.525, pen: 0.8, speed: 2.5, maxSpeed: 0.5, range: 1, density: 0.8, spray: 9, resist: 1 } }),
+      gun(11, 9, -0.4, 11, 0, 0, 0, { type: "deco" }),
+      gun(20, 10, 1, 0, 0, 0, 0, { type: "heal", shoot: { reload: 11.55, recoil: 0.35, shudder: 0.072, size: 1, health: 0.81, damage: -0.525, pen: 0.8, speed: 2.5, maxSpeed: 0.5, range: 1, density: 0.8, spray: 9, resist: 1 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    speed: 0.9,
+    healer: true
+  });
+
+  def("penta", {
+    name: "Penta Shot",
+    desc: "",
+    guns: [
+      gun(16, 8, 1, 0, 3, 30, 0.6667, { shoot: { reload: 11.55, recoil: 0.7, shudder: 0.072, size: 1, health: 0.81, damage: 0.525, pen: 0.8, speed: 5, maxSpeed: 1, range: 1, density: 0.8, spray: 9, resist: 1 } }),
+      gun(16, 8, 1, 0, -3, -30, 0.6667, { shoot: { reload: 11.55, recoil: 0.7, shudder: 0.072, size: 1, health: 0.81, damage: 0.525, pen: 0.8, speed: 5, maxSpeed: 1, range: 1, density: 0.8, spray: 9, resist: 1 } }),
+      gun(19, 8, 1, 0, 2, 15, 0.3333, { shoot: { reload: 11.55, recoil: 0.7, shudder: 0.072, size: 1, health: 0.81, damage: 0.525, pen: 0.8, speed: 5, maxSpeed: 1, range: 1, density: 0.8, spray: 9, resist: 1 } }),
+      gun(19, 8, 1, 0, -2, -15, 0.3333, { shoot: { reload: 11.55, recoil: 0.7, shudder: 0.072, size: 1, health: 0.81, damage: 0.525, pen: 0.8, speed: 5, maxSpeed: 1, range: 1, density: 0.8, spray: 9, resist: 1 } }),
+      gun(22, 8, 1, 0, 0, 0, 0, { shoot: { reload: 11.55, recoil: 0.7, shudder: 0.072, size: 1, health: 0.81, damage: 0.525, pen: 0.8, speed: 5, maxSpeed: 1, range: 1, density: 0.8, spray: 9, resist: 1 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    speed: 0.85
+  });
+
+  def("phoenix", {
+    name: "Phoenix",
+    desc: "",
+    guns: [
+      gun(23, 7, 1, 0, 0, 0, 0, { shoot: { reload: 6.5625, recoil: 0.069552, shudder: 0.51, size: 1.1, health: 0.3213, damage: 0.074419, pen: 0.8505, speed: 4.68, maxSpeed: 0.47872, range: 0.9, density: 1.8, spray: 28.125, resist: 0.84 } }),
+      gun(12, 10, 1.4, 8, 0, 0, 0, { shoot: { reload: 5.25, recoil: 0.24192, shudder: 0.17, size: 1, health: 0.6426, damage: 0.42525, pen: 0.9, speed: 5.2, maxSpeed: 0.5984, range: 0.9, density: 1.2, spray: 37.5, resist: 1 } }),
+      gun(16, 8, 1, 0, 0, 153, 0.1, { shoot: { reload: 10.5, recoil: 1.134, shudder: 0.2, size: 1, health: 0.459, damage: 0.30375, pen: 0.63, speed: 4, maxSpeed: 0.68, range: 0.6, density: 1.2, spray: 7.5, resist: 0.7 } }),
+      gun(16, 8, 1, 0, 0, -153, 0.1, { shoot: { reload: 10.5, recoil: 1.134, shudder: 0.2, size: 1, health: 0.459, damage: 0.30375, pen: 0.63, speed: 4, maxSpeed: 0.68, range: 0.6, density: 1.2, spray: 7.5, resist: 0.7 } }),
+      gun(18, 8, 1, 0, 0, 180, 0.6, { shoot: { reload: 10.5, recoil: 1.134, shudder: 0.2, size: 1, health: 0.459, damage: 0.30375, pen: 0.63, speed: 4, maxSpeed: 0.68, range: 0.6, density: 1.2, spray: 7.5, resist: 0.7 } })
+    ],
+    upgrades: [],
+    needLevel: 45
+  });
+
+  def("poacher", {
+    name: "Poacher",
+    desc: "",
+    guns: [
+      gun(24, 8, 1, 0, 0, 0, 0, { shoot: { reload: 21.2625, recoil: 0.98, shudder: 0.025, size: 0.855, health: 2, damage: 0.27, pen: 1.65, speed: 8.25, maxSpeed: 1.2, range: 1, density: 2.16, spray: 3, resist: 1.45475 } }),
+      gun(21, 11, 1, 0, 0, 0, 0.25, { shoot: { reload: 21.2625, recoil: 0.98, shudder: 0.025, size: 0.95, health: 1, damage: 0.54, pen: 1.1, speed: 8.25, maxSpeed: 1.2, range: 1, density: 1.8, spray: 3, resist: 1.3225 } }),
+      gun(6, 11, 1.2, 8, 0, 180, 0, { type: "drone", calculator: "drone", shoot: { reload: 45, recoil: 0.25, shudder: 0.1, size: 0.51, health: 0.7, damage: 0.8, pen: 1, speed: 1.5, maxSpeed: 0.9, range: 1, density: 2, spray: 0.1, resist: 1 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.25,
+    speed: 0.9,
+    maxDrones: 3
+  });
+
+  def("predator", {
+    name: "Predator",
+    desc: "",
+    guns: [
+      gun(24, 8, 1, 0, 0, 0, 0, { shoot: { reload: 29.7675, recoil: 0.98, shudder: 0.025, size: 0.6156, health: 6, damage: 0.1215, pen: 2.97, speed: 7.425, maxSpeed: 1.08, range: 1, density: 2.592, spray: 3, resist: 1.600225 } }),
+      gun(21, 11, 1, 0, 0, 0, 0.15, { shoot: { reload: 29.7675, recoil: 0.98, shudder: 0.025, size: 0.684, health: 3, damage: 0.243, pen: 1.98, speed: 7.425, maxSpeed: 1.08, range: 1, density: 2.16, spray: 3, resist: 1.45475 } }),
+      gun(18, 14, 1, 0, 0, 0, 0.3, { shoot: { reload: 29.7675, recoil: 0.98, shudder: 0.025, size: 0.76, health: 1.5, damage: 0.486, pen: 1.32, speed: 7.425, maxSpeed: 1.08, range: 1, density: 1.8, spray: 3, resist: 1.3225 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.25,
+    speed: 0.9
+  });
+
+  def("ranger", {
+    name: "Ranger",
+    desc: "",
+    guns: [
+      gun(32, 8, 1, 0, 0, 0, 0, { shoot: { reload: 23.38875, recoil: 1.4, shudder: 0.00625, size: 1, health: 1.15, damage: 0.6, pen: 1.21, speed: 8.85, maxSpeed: 1.77, range: 1, density: 4.5, spray: 3, resist: 1.495 } }),
+      gun(13, 8, -2.2, 0, 0, 0, 0, { type: "deco" })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.5,
+    speed: 0.8
+  });
+
+  def("redistributor", {
+    name: "Redistributor",
+    desc: "",
+    guns: [
+      gun(26, 7, 1, 0, 0, 0, 0.6667, { shoot: { reload: 6.5625, recoil: 0.322, shudder: 0.51, size: 1.1, health: 0.35, damage: 0.091875, pen: 0.945, speed: 4.5, maxSpeed: 0.64, range: 1, density: 1.5, spray: 28.125, resist: 0.84 } }),
+      gun(23, 10, 1, 0, 0, 0, 0.3333, { shoot: { reload: 6.5625, recoil: 0.322, shudder: 0.51, size: 1.1, health: 0.35, damage: 0.091875, pen: 0.945, speed: 4.5, maxSpeed: 0.64, range: 1, density: 1.5, spray: 28.125, resist: 0.84 } }),
+      gun(12, 10, 1.4, 8, 0, 0, 0, { shoot: { reload: 5.25, recoil: 1.12, shudder: 0.17, size: 1, health: 0.7, damage: 0.525, pen: 1, speed: 5, maxSpeed: 0.8, range: 1, density: 1, spray: 37.5, resist: 1 } })
+    ],
+    upgrades: [],
+    needLevel: 45
+  });
+
+  def("revolver", {
+    name: "Revolver",
+    desc: "",
+    guns: [
+      gun(13, 7, 2.2, 5, 0, 0, 0, { type: "deco" }),
+      gun(13, 7, 2.2, 0, 0, 0, 0, { type: "deco" }),
+      gun(20, 12, 1, 0, 0, 0, 0, { type: "deco" }),
+      gun(24, 7, 1, 0, 0, 0, 0, { shoot: { reload: 19.845, recoil: 1.12, shudder: 0.0375, size: 1, health: 6.666667, damage: 0.0576, pen: 1.98, speed: 7.5, maxSpeed: 1.5, range: 1, density: 1.5, spray: 6, resist: 1.15 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.225
+  });
+
+  def("septatrapper", {
+    name: "Septa-Trapper",
+    desc: "",
+    guns: [
+      gun(15, 7, 1, 0, 0, 0, 0, { type: "deco" }),
+      gun(3, 7, 1.7, 15, 0, 0, 0, { type: "trap", calculator: "trap", shoot: { reload: 29.9, recoil: 1, shudder: 0.3125, size: 0.7, health: 1, damage: 0.75, pen: 1, speed: 2.6, maxSpeed: 1, range: 0.5, density: 1, spray: 0, resist: 3 } }),
+      gun(15, 7, 1, 0, 0, 51.4286, 0.3333, { type: "deco" }),
+      gun(15, 7, 1, 0, 0, -51.4286, 0.3333, { type: "deco" }),
+      gun(3, 7, 1.7, 15, 0, 51.4286, 0.3333, { type: "trap", calculator: "trap", shoot: { reload: 29.9, recoil: 1, shudder: 0.3125, size: 0.7, health: 1, damage: 0.75, pen: 1, speed: 2.6, maxSpeed: 1, range: 0.5, density: 1, spray: 0, resist: 3 } }),
+      gun(3, 7, 1.7, 15, 0, -51.4286, 0.3333, { type: "trap", calculator: "trap", shoot: { reload: 29.9, recoil: 1, shudder: 0.3125, size: 0.7, health: 1, damage: 0.75, pen: 1, speed: 2.6, maxSpeed: 1, range: 0.5, density: 1, spray: 0, resist: 3 } }),
+      gun(15, 7, 1, 0, 0, 102.8571, 0.6667, { type: "deco" }),
+      gun(15, 7, 1, 0, 0, -102.8571, 0.6667, { type: "deco" }),
+      gun(3, 7, 1.7, 15, 0, 102.8571, 0.6667, { type: "trap", calculator: "trap", shoot: { reload: 29.9, recoil: 1, shudder: 0.3125, size: 0.7, health: 1, damage: 0.75, pen: 1, speed: 2.6, maxSpeed: 1, range: 0.5, density: 1, spray: 0, resist: 3 } }),
+      gun(3, 7, 1.7, 15, 0, -102.8571, 0.6667, { type: "trap", calculator: "trap", shoot: { reload: 29.9, recoil: 1, shudder: 0.3125, size: 0.7, health: 1, damage: 0.75, pen: 1, speed: 2.6, maxSpeed: 1, range: 0.5, density: 1, spray: 0, resist: 3 } }),
+      gun(15, 7, 1, 0, 0, 154.2857, 1, { type: "deco" }),
+      gun(15, 7, 1, 0, 0, -154.2857, 1, { type: "deco" }),
+      gun(3, 7, 1.7, 15, 0, 154.2857, 1, { type: "trap", calculator: "trap", shoot: { reload: 29.9, recoil: 1, shudder: 0.3125, size: 0.7, health: 1, damage: 0.75, pen: 1, speed: 2.6, maxSpeed: 1, range: 0.5, density: 1, spray: 0, resist: 3 } }),
+      gun(3, 7, 1.7, 15, 0, -154.2857, 1, { type: "trap", calculator: "trap", shoot: { reload: 29.9, recoil: 1, shudder: 0.3125, size: 0.7, health: 1, damage: 0.75, pen: 1, speed: 2.6, maxSpeed: 1, range: 0.5, density: 1, spray: 0, resist: 3 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    speed: 0.8
+  });
+
+  def("sidewinder", {
+    name: "Sidewinder",
+    desc: "",
+    guns: [
+      gun(10, 11, -0.5, 14, 0, 0, 0, { type: "deco" }),
+      gun(21, 12, -1.1, 0, 0, 0, 0, { type: "missile", shoot: { reload: 31.89375, recoil: 1.96, shudder: 0.025, size: 0.95, health: 1.5, damage: 0.486, pen: 1.1, speed: 1.2375, maxSpeed: 0.6, range: 1, density: 1.8, spray: 3, resist: 1.3225 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.3,
+    speed: 0.8
+  });
+
+  def("single", {
+    name: "Single",
+    desc: "",
+    guns: [
+      gun(19, 8, 1, 0, 0, 0, 0, { shoot: { reload: 11.025, recoil: 1.4, shudder: 0.1, size: 1, health: 1, damage: 0.75, pen: 1, speed: 5.25, maxSpeed: 1, range: 1, density: 1, spray: 15, resist: 1 } }),
+      gun(5.5, 8, -1.8, 6.5, 0, 0, 0, { type: "deco" })
+    ],
+    upgrades: [],
+    needLevel: 45
+  });
+
+  def("skimmer", {
+    name: "Skimmer",
+    desc: "",
+    guns: [
+      gun(10, 14, -0.5, 9, 0, 0, 0, { type: "deco" }),
+      gun(17, 15, 1, 0, 0, 0, 0, { type: "missile", shoot: { reload: 30.24, recoil: 0.87808, shudder: 0.08, size: 0.729, health: 1.35, damage: 1.2, pen: 2, speed: 4.777531, maxSpeed: 0.8228, range: 1, density: 3.375, spray: 15, resist: 1.265 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.15
+  });
+
+  def("spike", {
+    name: "Spike",
+    desc: "",
+    body: 6,
+    guns: [],
+    upgrades: [],
+    needLevel: 45,
+    speed: 1.08,
+    health: 1.45,
+    bodyDamage: 2.8,
+    smasher: true
+  });
+
+  def("spread", {
+    name: "Spreadshot",
+    desc: "",
+    guns: [
+      gun(13, 4, 1, 0, 0.8, 71.5, 0.8333, { shoot: { reload: 23.625, recoil: 0.1225, shudder: 0.03375, size: 0.99, health: 0.9, damage: 0.18375, pen: 1.35, speed: 3.6225, maxSpeed: 0.616, range: 1, density: 2.25, spray: 6.75, resist: 1.2 } }),
+      gun(13, 4, 1, 0, -0.8, -71.5, 0.8333, { shoot: { reload: 23.625, recoil: 0.1225, shudder: 0.03375, size: 0.99, health: 0.9, damage: 0.18375, pen: 1.35, speed: 3.6225, maxSpeed: 0.616, range: 1, density: 2.25, spray: 6.75, resist: 1.2 } }),
+      gun(14.5, 4, 1, 0, 1, 56.5, 0.6667, { shoot: { reload: 23.625, recoil: 0.1225, shudder: 0.03375, size: 0.99, health: 0.9, damage: 0.18375, pen: 1.35, speed: 3.6225, maxSpeed: 0.616, range: 1, density: 2.25, spray: 6.75, resist: 1.2 } }),
+      gun(14.5, 4, 1, 0, -1, -56.5, 0.6667, { shoot: { reload: 23.625, recoil: 0.1225, shudder: 0.03375, size: 0.99, health: 0.9, damage: 0.18375, pen: 1.35, speed: 3.6225, maxSpeed: 0.616, range: 1, density: 2.25, spray: 6.75, resist: 1.2 } }),
+      gun(16, 4, 1, 0, 1.2, 41.5, 0.5, { shoot: { reload: 23.625, recoil: 0.1225, shudder: 0.03375, size: 0.99, health: 0.9, damage: 0.18375, pen: 1.35, speed: 3.6225, maxSpeed: 0.616, range: 1, density: 2.25, spray: 6.75, resist: 1.2 } }),
+      gun(16, 4, 1, 0, -1.2, -41.5, 0.5, { shoot: { reload: 23.625, recoil: 0.1225, shudder: 0.03375, size: 0.99, health: 0.9, damage: 0.18375, pen: 1.35, speed: 3.6225, maxSpeed: 0.616, range: 1, density: 2.25, spray: 6.75, resist: 1.2 } }),
+      gun(17.5, 4, 1, 0, 1.4, 26.5, 0.3333, { shoot: { reload: 23.625, recoil: 0.1225, shudder: 0.03375, size: 0.99, health: 0.9, damage: 0.18375, pen: 1.35, speed: 3.6225, maxSpeed: 0.616, range: 1, density: 2.25, spray: 6.75, resist: 1.2 } }),
+      gun(17.5, 4, 1, 0, -1.4, -26.5, 0.3333, { shoot: { reload: 23.625, recoil: 0.1225, shudder: 0.03375, size: 0.99, health: 0.9, damage: 0.18375, pen: 1.35, speed: 3.6225, maxSpeed: 0.616, range: 1, density: 2.25, spray: 6.75, resist: 1.2 } }),
+      gun(19, 4, 1, 0, 1, 15, 0.1667, { shoot: { reload: 23.625, recoil: 0.1225, shudder: 0.03375, size: 0.99, health: 0.9, damage: 0.18375, pen: 1.35, speed: 3.6225, maxSpeed: 0.616, range: 1, density: 2.25, spray: 6.75, resist: 1.2 } }),
+      gun(19, 4, 1, 0, -1, -15, 0.1667, { shoot: { reload: 23.625, recoil: 0.1225, shudder: 0.03375, size: 0.99, health: 0.9, damage: 0.18375, pen: 1.35, speed: 3.6225, maxSpeed: 0.616, range: 1, density: 2.25, spray: 6.75, resist: 1.2 } }),
+      gun(20, 8, 1, 0, 0, 0, 0, { shoot: { reload: 24.6015, recoil: 0.56, shudder: 0.0125, size: 1, health: 0.5, damage: 1.5, pen: 1, speed: 5.720925, maxSpeed: 1.36416, range: 1, density: 1.5, spray: 3.75, resist: 1.15 } })
+    ],
+    upgrades: [],
+    needLevel: 45
+  });
+
+  def("stalker", {
+    name: "Stalker",
+    desc: "",
+    guns: [
+      gun(27, 8, -1.77, 0, 0, 0, 0, { shoot: { reload: 23.38875, recoil: 1.4, shudder: 0.00625, size: 1, health: 1.15, damage: 0.6, pen: 1.21, speed: 8.85, maxSpeed: 1.77, range: 1, density: 4.5, spray: 3, resist: 1.495 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.35,
+    speed: 0.85
+  });
+
+  def("streamliner", {
+    name: "Streamliner",
+    desc: "",
+    guns: [
+      gun(25, 8, 1, 0, 0, 0, 0, { shoot: { reload: 14.4375, recoil: 0.504, shudder: 0.1, size: 0.8, health: 0.55, damage: 0.219375, pen: 1.25, speed: 8.246, maxSpeed: 1, range: 1, density: 1.25, spray: 7.5, resist: 1.1 } }),
+      gun(23, 8, 1, 0, 0, 0, 0.2, { shoot: { reload: 14.4375, recoil: 0.504, shudder: 0.1, size: 0.8, health: 0.55, damage: 0.219375, pen: 1.25, speed: 8.246, maxSpeed: 1, range: 1, density: 1.25, spray: 7.5, resist: 1.1 } }),
+      gun(21, 8, 1, 0, 0, 0, 0.4, { shoot: { reload: 14.4375, recoil: 0.504, shudder: 0.1, size: 0.8, health: 0.55, damage: 0.219375, pen: 1.25, speed: 8.246, maxSpeed: 1, range: 1, density: 1.25, spray: 7.5, resist: 1.1 } }),
+      gun(19, 8, 1, 0, 0, 0, 0.6, { shoot: { reload: 14.4375, recoil: 0.504, shudder: 0.1, size: 0.8, health: 0.55, damage: 0.219375, pen: 1.25, speed: 8.246, maxSpeed: 1, range: 1, density: 1.25, spray: 7.5, resist: 1.1 } }),
+      gun(17, 8, 1, 0, 0, 0, 0.8, { shoot: { reload: 14.4375, recoil: 0.504, shudder: 0.1, size: 0.8, health: 0.55, damage: 0.219375, pen: 1.25, speed: 8.246, maxSpeed: 1, range: 1, density: 1.25, spray: 7.5, resist: 1.1 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.3
+  });
+
+  def("surfer", {
+    name: "Surfer",
+    desc: "",
+    guns: [
+      gun(18, 8, 1, 0, 0, 0, 0, { shoot: { reload: 10.5, recoil: 0.3024, shudder: 0.1, size: 1, health: 0.918, damage: 0.6075, pen: 0.9, speed: 5.2, maxSpeed: 0.748, range: 0.9, density: 1.2, spray: 15, resist: 1 } }),
+      gun(7, 7.5, 0.6, 7, 1, -90, 0, { type: "swarm", calculator: "swarm", shoot: { reload: 23, recoil: 0.25, shudder: 0.05, size: 0.4, health: 1, damage: 0.75, pen: 1, speed: 4, maxSpeed: 1, range: 1, density: 1, spray: 5, resist: 1 } }),
+      gun(7, 7.5, 0.6, 7, -1, 90, 0, { type: "swarm", calculator: "swarm", shoot: { reload: 23, recoil: 0.25, shudder: 0.05, size: 0.4, health: 1, damage: 0.75, pen: 1, speed: 4, maxSpeed: 1, range: 1, density: 1, spray: 5, resist: 1 } }),
+      gun(16, 8, 1, 0, 0, 150, 0.1, { shoot: { reload: 10.5, recoil: 2.268, shudder: 0.2, size: 1, health: 0.459, damage: 0.30375, pen: 0.63, speed: 4, maxSpeed: 0.68, range: 0.6, density: 1.2, spray: 7.5, resist: 0.7 } }),
+      gun(16, 8, 1, 0, 0, -150, 0.1, { shoot: { reload: 10.5, recoil: 2.268, shudder: 0.2, size: 1, health: 0.459, damage: 0.30375, pen: 0.63, speed: 4, maxSpeed: 0.68, range: 0.6, density: 1.2, spray: 7.5, resist: 0.7 } })
+    ],
+    upgrades: [],
+    needLevel: 45
+  });
+
+  def("surgeon", {
+    name: "Surgeon",
+    desc: "",
+    guns: [
+      gun(5, 10, 1, 9.5, 0, 0, 0, { type: "deco" }),
+      gun(3, 13, 1, 14.5, 0, 0, 0, { type: "deco" }),
+      gun(1.5, 13, 1.3, 17, 0, 0, 0, { shoot: { reload: 25.3, recoil: 2, shudder: 0.025, size: 1.05, health: 2, damage: 0.75, pen: 1.25, speed: 6.435, maxSpeed: 1.935, range: 1.25, density: 1, spray: 0, resist: 3.75 } }),
+      gun(11, 13, 1, 0, 0, 0, 0, { type: "deco" })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.15,
+    speed: 0.75,
+    maxDrones: 2,
+    healer: true
+  });
+
+  def("swarmer", {
+    name: "Swarmer",
+    desc: "",
+    guns: [
+      gun(15, 13, -1.2, 5, 0, 0, 0, { shoot: { reload: 63, recoil: 3.2256, shudder: 0.05, size: 0.8, health: 1.4, damage: 0.405, pen: 1.2, speed: 2.125, maxSpeed: 0.288, range: 1, density: 3, spray: 15, resist: 3.45 } }),
+      gun(15, 12, 1, 5, 0, 0, 0, { type: "deco" })
+    ],
+    upgrades: [],
+    needLevel: 45
+  });
+
+  def("triplet", {
+    name: "Triplet",
+    desc: "",
+    guns: [
+      gun(17.5, 8, 1, 0, 5.5, 0, 0.5, { shoot: { reload: 12.6, recoil: 0.466667, shudder: 0.081, size: 1, health: 0.765, damage: 0.44625, pen: 0.9, speed: 5, maxSpeed: 1, range: 1, density: 1.1, spray: 16.2, resist: 0.95 } }),
+      gun(17.5, 8, 1, 0, -5.5, 0, 0.5, { shoot: { reload: 12.6, recoil: 0.466667, shudder: 0.081, size: 1, health: 0.765, damage: 0.44625, pen: 0.9, speed: 5, maxSpeed: 1, range: 1, density: 1.1, spray: 16.2, resist: 0.95 } }),
+      gun(21, 8, 1, 0, 0, 0, 0, { shoot: { reload: 12.6, recoil: 0.466667, shudder: 0.081, size: 1, health: 0.765, damage: 0.44625, pen: 0.9, speed: 5, maxSpeed: 1, range: 1, density: 1.1, spray: 16.2, resist: 0.95 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.05
+  });
+
+  def("triplex", {
+    name: "Triplex",
+    desc: "",
+    guns: [
+      gun(18, 7, -1.5, 0, 0, 0, 0, { shoot: { reload: 11.55, recoil: 0.7, shudder: 0.072, size: 1, health: 0.81, damage: 0.525, pen: 0.8, speed: 6.25, maxSpeed: 1.25, range: 1, density: 0.8, spray: 9, resist: 1 } }),
+      gun(18, 7, -1.5, 0, 0, 45, 0.5, { shoot: { reload: 12.705, recoil: 0.7, shudder: 0, size: 1, health: 0.81, damage: 0.39375, pen: 0.8, speed: 2.5, maxSpeed: 1, range: 1.2, density: 0.8, spray: 0, resist: 1 } }),
+      gun(18, 7, -1.5, 0, 0, -45, 0.5, { shoot: { reload: 12.705, recoil: 0.7, shudder: 0, size: 1, health: 0.81, damage: 0.39375, pen: 0.8, speed: 2.5, maxSpeed: 1, range: 1.2, density: 0.8, spray: 0, resist: 1 } }),
+      gun(5, 5, -4, -4.75, -5, 45, 0, { type: "deco" }),
+      gun(5, 5, -4, -4.75, 5, -45, 0.5, { type: "deco" }),
+      gun(15.5, 3, -4, 0, 0, 22.5, 0, { type: "deco" }),
+      gun(15.5, 3, -4, 0, 0, -22.5, 0.5, { type: "deco" })
+    ],
+    upgrades: [],
+    needLevel: 45
+  });
+
+  def("twister", {
+    name: "Twister",
+    desc: "",
+    guns: [
+      gun(10, 13, -0.5, 9, 0, 0, 0, { type: "deco" }),
+      gun(17, 14, -1.4, 0, 0, 0, 0, { type: "missile", shoot: { reload: 40.32, recoil: 0.87808, shudder: 0.008, size: 0.729, health: 1.35, damage: 1.2, pen: 2, speed: 2.866519, maxSpeed: 0.8228, range: 1, density: 3.375, spray: 15, resist: 1.265 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.1
+  });
+
+  def("vulture", {
+    name: "Vulture",
+    desc: "",
+    guns: [
+      gun(22, 7, -1.5, 0, 0, 0, 0, { shoot: { reload: 13.125, recoil: 0.18144, shudder: 0.1, size: 0.8, health: 0.5049, damage: 0.273375, pen: 1.125, speed: 6.916, maxSpeed: 0.748, range: 0.9, density: 1.5, spray: 7.5, resist: 1.1 } }),
+      gun(20, 7.5, -1.5, 0, 0, 0, 0.3333, { shoot: { reload: 13.125, recoil: 0.18144, shudder: 0.1, size: 0.746667, health: 0.5049, damage: 0.273375, pen: 1.125, speed: 6.916, maxSpeed: 0.748, range: 0.9, density: 1.5, spray: 7.5, resist: 1.1 } }),
+      gun(18, 8, -1.5, 0, 0, 0, 0.6667, { shoot: { reload: 13.125, recoil: 0.18144, shudder: 0.1, size: 0.7, health: 0.5049, damage: 0.273375, pen: 1.125, speed: 6.916, maxSpeed: 0.748, range: 0.9, density: 1.5, spray: 7.5, resist: 1.1 } }),
+      gun(16, 8, 1, 0, 0, 153, 0.1, { shoot: { reload: 10.5, recoil: 1.134, shudder: 0.2, size: 1, health: 0.459, damage: 0.30375, pen: 0.63, speed: 4, maxSpeed: 0.68, range: 0.6, density: 1.2, spray: 7.5, resist: 0.7 } }),
+      gun(16, 8, 1, 0, 0, -153, 0.1, { shoot: { reload: 10.5, recoil: 1.134, shudder: 0.2, size: 1, health: 0.459, damage: 0.30375, pen: 0.63, speed: 4, maxSpeed: 0.68, range: 0.6, density: 1.2, spray: 7.5, resist: 0.7 } }),
+      gun(18, 8, 1, 0, 0, 180, 0.6, { shoot: { reload: 10.5, recoil: 1.134, shudder: 0.2, size: 1, health: 0.459, damage: 0.30375, pen: 0.63, speed: 4, maxSpeed: 0.68, range: 0.6, density: 1.2, spray: 7.5, resist: 0.7 } })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.2
+  });
+
+  def("xhunter", {
+    name: "X-Hunter",
+    desc: "",
+    guns: [
+      gun(24, 8, 1, 0, 0, 0, 0, { shoot: { reload: 21.2625, recoil: 0.98, shudder: 0.025, size: 0.855, health: 2, damage: 0.27, pen: 1.65, speed: 8.25, maxSpeed: 1.2, range: 1, density: 2.16, spray: 3, resist: 1.45475 } }),
+      gun(21, 11, 1, 0, 0, 0, 0.25, { shoot: { reload: 21.2625, recoil: 0.98, shudder: 0.025, size: 0.95, health: 1, damage: 0.54, pen: 1.1, speed: 8.25, maxSpeed: 1.2, range: 1, density: 1.8, spray: 3, resist: 1.3225 } }),
+      gun(12.5, 11, -1.65, 0, 0, 0, 0, { type: "deco" })
+    ],
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.25,
+    speed: 0.9
+  });
+
+  // Compatibility aliases for older Tankfield IDs
+  if (tanks.doubletwin && !tanks.twinflank) {
+    def("twinflank", { ...cloneDef(tanks.doubletwin), id: "twinflank", name: "Twin Flank", upgrades: tanks.doubletwin.upgrades.slice() });
+  }
+  if (tanks.hexatank && !tanks.quad) {
+    // Keep classic Quad Tank (4-way) alongside Hexa Tank
+    def("quad", {
+      name: "Quad Tank",
+      desc: "Fire in four directions",
+      guns: [0, 90, 180, 270].map((a, i) => gun(18, 8, 1, 0, 0, a, i * 0.15, { layers: [g.basic, g.flankGuard] })),
+      upgrades: ["octo", "cyclone"],
+      needLevel: 30,
+    });
+  }
+  if (!tanks.pelleter) {
+    def("pelleter", {
+      name: "Pelleter",
+      desc: "Two small, fast barrels",
+      guns: [
+        gun(17, 6.5, 1, 0, 4.2, 0, 0, { layers: [g.basic, g.pelleter] }),
+        gun(17, 6.5, 1, 0, -4.2, 0, 0.5, { layers: [g.basic, g.pelleter] }),
+      ],
+      upgrades: ["gunner", "nailgun", "borer"],
+      needLevel: 15,
+    });
+  }
+
+  // --- Mode bosses / specials retained from Tankfield ---
 
   def("pelleter", {
     name: "Pelleter",
@@ -348,266 +2156,6 @@
     ],
     upgrades: ["gunner", "nailgun", "borer"],
     needLevel: 15,
-  });
-
-  def("triplet", {
-    name: "Triplet",
-    desc: "Three barrels of pressure",
-    guns: [
-      gun(16, 8, 1, 0, 5.5, 0, 0.5, B(g.twin, g.triplet)),
-      gun(20, 8, 1, 0, 0, 0, 0, B(g.twin, g.triplet)),
-      gun(16, 8, 1, 0, -5.5, 0, 0.5, B(g.twin, g.triplet)),
-    ],
-    upgrades: ["penta", "quintuplet"],
-    needLevel: 30,
-  });
-
-  def("twinflank", {
-    name: "Twin Flank",
-    desc: "Twins on both ends",
-    guns: [...G.twinAt(0, 5.2, [g.doubleTwin]), ...G.twinAt(180, 5.2, [g.doubleTwin])],
-    upgrades: ["tripletwin", "octo"],
-    needLevel: 30,
-  });
-
-  def("tripleshot", {
-    name: "Triple Shot",
-    desc: "A spreading fan of fire",
-    guns: [
-      gun(19, 8, 1, 0, 0, -27, 0, B(g.twin, g.tripleShot)),
-      gun(19, 8, 1, 0, 0, 0, 0, B(g.twin, g.tripleShot)),
-      gun(19, 8, 1, 0, 0, 27, 0, B(g.twin, g.tripleShot)),
-    ],
-    upgrades: ["penta", "spread", "triplet"],
-    needLevel: 30,
-  });
-
-  def("dual", {
-    name: "Dual",
-    desc: "Twin sniper barrels",
-    guns: [
-      gun(22, 7, 1, 0, 4.8, 0, 0, B(g.twin, g.dual)),
-      gun(22, 7, 1, 0, -4.8, 0, 0.5, B(g.twin, g.dual)),
-    ],
-    fov: 1.12,
-    upgrades: ["hewn", "assassin"],
-    needLevel: 30,
-  });
-
-  def("assassin", {
-    name: "Assassin",
-    desc: "See farther, hit harder",
-    guns: G.sniper(27, [g.assassin]),
-    fov: 1.42,
-    upgrades: ["ranger", "stalker"],
-    needLevel: 30,
-  });
-
-  def("rifle", {
-    name: "Rifle",
-    desc: "Fast sniper rounds with more spray",
-    guns: [
-      gun(20, 12, 1, 0, 0, 0, 0, { type: "deco" }),
-      gun(24, 7, 1, 0, 0, 0, 0, { layers: [g.basic, g.sniper, g.rifle] }),
-    ],
-    fov: 1.22,
-    upgrades: ["musket"],
-    needLevel: 30,
-  });
-
-  def("musket", {
-    name: "Musket",
-    desc: "Twin rifles",
-    guns: [
-      gun(15.5, 7, 1, 0, 6.15, 0, 0, { type: "deco" }),
-      gun(18, 7, 1, 0, 4.15, 0, 0, { layers: [g.basic, g.sniper, g.rifle, g.twin] }),
-      gun(15.5, 7, 1, 0, -6.15, 0, 0, { type: "deco" }),
-      gun(18, 7, 1, 0, -4.15, 0, 0.5, { layers: [g.basic, g.sniper, g.rifle, g.twin] }),
-    ],
-    fov: 1.22,
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("hunter", {
-    name: "Hunter",
-    desc: "Staggered sniper shots",
-    guns: [
-      gun(24, 8, 1, 0, 0, 0, 0, { layers: [g.basic, g.sniper, g.hunter] }),
-      gun(21, 12, 1, 0, 0, 0, 0.2, { layers: [g.basic, g.sniper, g.hunter, g.hunterSecondary] }),
-    ],
-    fov: 1.25,
-    upgrades: ["predator", "poacher"],
-    needLevel: 30,
-  });
-
-  def("minigun", {
-    name: "Minigun",
-    desc: "A stream of small shots",
-    guns: [
-      gun(23, 8, 1, 0, 0, 0, 0, B(g.minigun)),
-      gun(20, 8, 1, 0, 0, 0, 0.33, B(g.minigun)),
-      gun(17, 8, 1, 0, 0, 0, 0.66, B(g.minigun)),
-    ],
-    fov: 1.15,
-    upgrades: ["streamliner", "sprayer"],
-    needLevel: 30,
-  });
-
-  def("destroyer", {
-    name: "Destroyer",
-    desc: "Huge shells, huge recoil",
-    guns: [gun(21, 14, 1, 0, 0, 0, 0, { layers: [g.basic, g.pounder, g.destroyer] })],
-    upgrades: ["hybrid", "annihilator", "skimmer"],
-    needLevel: 30,
-  });
-
-  def("gunner", {
-    name: "Gunner",
-    desc: "Four small, fast guns",
-    guns: [
-      gun(12, 4.5, 1, 0, 7.2, 0, 0.5, { layers: [g.basic, g.twin, g.gunner] }),
-      gun(12, 4.5, 1, 0, -7.2, 0, 0.75, { layers: [g.basic, g.twin, g.gunner] }),
-      gun(16, 4.5, 1, 0, 3.6, 0, 0, { layers: [g.basic, g.twin, g.gunner] }),
-      gun(16, 4.5, 1, 0, -3.6, 0, 0.25, { layers: [g.basic, g.twin, g.gunner] }),
-    ],
-    upgrades: ["streamliner", "gunnertrapper"],
-    needLevel: 30,
-  });
-
-  def("sprayer", {
-    name: "Sprayer",
-    desc: "Machine gun with a secondary stream",
-    guns: [
-      gun(23, 8, 1, 0, 0, 0, 0, B(g.minigun)),
-      gun(12, 10, 1.4, 8, 0, 0, 0, { layers: [g.basic, g.machineGun], spread: 0.2 }),
-    ],
-    upgrades: ["atomizer", "focal"],
-    needLevel: 30,
-  });
-
-  def("quad", {
-    name: "Quad Tank",
-    desc: "Fire in four directions",
-    guns: [0, 90, 180, 270].map((a, i) => gun(18, 8, 1, 0, 0, a, i * 0.15, B(g.flankGuard))),
-    upgrades: ["octo", "cyclone"],
-    needLevel: 30,
-  });
-
-  def("booster", {
-    name: "Booster",
-    desc: "Rear thrusters for speed",
-    guns: [
-      gun(18, 8, 1, 0, 0, 0, 0, B(g.flankGuard, g.triAngle, g.triAngleFront)),
-      gun(14, 8, 1, 0, 0, 140, 0.33, B(g.flankGuard, g.triAngle, g.thruster)),
-      gun(14, 8, 1, 0, 0, 220, 0.66, B(g.flankGuard, g.triAngle, g.thruster)),
-      gun(16, 8, 1, 0, 0, 150, 0.15, B(g.flankGuard, g.triAngle, g.thruster)),
-      gun(16, 8, 1, 0, 0, 210, 0.5, B(g.flankGuard, g.triAngle, g.thruster)),
-    ],
-    speed: 1.18,
-    upgrades: ["fighter"],
-    needLevel: 45,
-  });
-
-  def("overseer", {
-    name: "Overseer",
-    desc: "Two drone spawners",
-    body: 4,
-    guns: [...G.director(90, [g.overseer]), ...G.director(270, [g.overseer])],
-    maxDrones: 8,
-    upgrades: ["overlord", "necromancer", "manager"],
-    needLevel: 30,
-  });
-
-  def("cruiser", {
-    name: "Cruiser",
-    desc: "Swarm swarms",
-    body: 4,
-    guns: [...G.swarm(0, 90, 0), ...G.swarm(0, 270, 0.5)],
-    maxDrones: 14,
-    upgrades: ["carrier", "battleship"],
-    needLevel: 30,
-  });
-
-  def("underseer", {
-    name: "Underseer",
-    desc: "Square drones that steal squares",
-    body: 4,
-    guns: [...G.director(90, [g.sunchip], { shape: 4, necro: true }), ...G.director(270, [g.sunchip], { shape: 4, necro: true })],
-    maxDrones: 15,
-    necro: 4,
-    upgrades: ["necromancer", "maleficitor"],
-    needLevel: 30,
-  });
-
-  def("spawner", {
-    name: "Spawner",
-    desc: "Builds mini tanks that shoot for you",
-    body: 4,
-    guns: [
-      gun(4.5, 10, 1, 10.5, 0, 0, 0, { type: "deco" }),
-      gun(1, 12, 1, 15, 0, 0, 0, { type: "minion", layers: [g.minion, g.spawner], calculator: "drone" }),
-      gun(11.5, 12, 1, 0, 0, 0, 0, { type: "deco" }),
-    ],
-    maxDrones: 4,
-    fov: 1.1,
-    upgrades: ["factory"],
-    needLevel: 30,
-  });
-
-  def("factory", {
-    name: "Factory",
-    desc: "A bigger spawner with more minions",
-    body: 4,
-    guns: [
-      gun(15.5, 11, 1, 0, 0, 0, 0, { type: "deco" }),
-      gun(2, 14, 1, 15.5, 0, 0, 0, { type: "minion", layers: [g.minion], calculator: "drone" }),
-      gun(12, 14, 1, 0, 0, 0, 0, { type: "deco" }),
-    ],
-    maxDrones: 6,
-    fov: 1.12,
-    speed: 14 / 15,
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("builder", {
-    name: "Builder",
-    desc: "Fires block traps",
-    guns: [
-      gun(18, 12, 1, 0, 0, 0, 0, { type: "deco" }),
-      gun(2, 12, 1.1, 18, 0, 0, 0, { type: "trap", layers: [g.trap, g.setTrap], calculator: "trap", size: 1.4 }),
-    ],
-    upgrades: ["construct", "engineer", "architect"],
-    needLevel: 30,
-  });
-
-  def("artillery", {
-    name: "Artillery",
-    desc: "Side guns plus a pounder",
-    guns: [
-      gun(17, 8, 1, 0, 0, -25, 0.5, B(g.pelleter, g.artillery)),
-      gun(17, 8, 1, 0, 0, 25, 0.5, B(g.pelleter, g.artillery)),
-      gun(19, 12, 1, 0, 0, 0, 0, B(g.pounder, g.artillery)),
-    ],
-    upgrades: ["mortar", "skimmer"],
-    needLevel: 30,
-  });
-
-  def("launcher", {
-    name: "Launcher",
-    desc: "Fires a slow, heavy missile",
-    guns: [gun(16, 13, 1.15, 0, 0, 0, 0, { type: "missile", layers: [g.basic, g.pounder, g.launcher] })],
-    upgrades: ["skimmer", "rocketeer"],
-    needLevel: 30,
-  });
-
-  def("tritrapper", {
-    name: "Tri-Trapper",
-    desc: "Traps in three directions",
-    guns: [0, 120, 240].flatMap((a) => G.trap(a, [g.flankGuard])),
-    upgrades: ["fortress", "hexatrap"],
-    needLevel: 30,
   });
 
   def("megatrapper", {
@@ -621,78 +2169,6 @@
     needLevel: 30,
   });
 
-  def("gunnertrapper", {
-    name: "Gunner Trapper",
-    desc: "Front gunners, rear traps",
-    guns: [
-      gun(19, 4.5, 1, 0, 3.2, 0, 0, B(g.twin, g.gunner)),
-      gun(19, 4.5, 1, 0, -3.2, 0, 0.5, B(g.twin, g.gunner)),
-      ...G.trap(180),
-    ],
-    upgrades: ["bushwhacker", "fortress"],
-    needLevel: 30,
-  });
-
-  def("overtrapper", {
-    name: "Overtrapper",
-    desc: "Traps up front, drones on the sides",
-    body: 4,
-    guns: [...G.trap(0), ...G.director(120, [g.overseer]), ...G.director(240, [g.overseer])],
-    maxDrones: 4,
-    upgrades: ["fortress"],
-    needLevel: 30,
-  });
-
-  def("landmine", {
-    name: "Landmine",
-    desc: "A smasher that fades while still",
-    guns: [],
-    smasher: true,
-    speed: 1.2,
-    health: 1.4,
-    bodyDamage: 2.35,
-    upgrades: ["megasmash"],
-    needLevel: 30,
-  });
-
-  def("spike", {
-    name: "Spike",
-    desc: "More body damage, sharper hull",
-    guns: [],
-    smasher: true,
-    body: 6,
-    speed: 1.08,
-    health: 1.45,
-    bodyDamage: 2.8,
-    upgrades: ["megasmash"],
-    needLevel: 30,
-  });
-
-  def("autosmasher", {
-    name: "Auto Smasher",
-    desc: "Smasher with a turret",
-    smasher: true,
-    auto: true,
-    guns: G.auto(),
-    speed: 1.12,
-    health: 1.3,
-    bodyDamage: 2.05,
-    upgrades: [],
-    needLevel: 30,
-  });
-
-  def("nailgun", {
-    name: "Nailgun",
-    desc: "Dense pelleter fire",
-    guns: [
-      gun(19, 5.5, 1, 0, 3.6, 0, 0, B(g.pelleter, g.nailgun)),
-      gun(19, 5.5, 1, 0, -3.6, 0, 0.5, B(g.pelleter, g.nailgun)),
-      gun(16, 5.5, 1, 0, 0, 0, 0.25, B(g.pelleter, g.nailgun)),
-    ],
-    upgrades: ["borer"],
-    needLevel: 30,
-  });
-
   def("borer", {
     name: "Borer",
     desc: "Armor-piercing pellets",
@@ -701,14 +2177,6 @@
       gun(20, 8, 1, 0, -4.4, 0, 0.5, B(g.twin, g.pelleter, { pen: 1.8, speed: 1.25 })),
     ],
     upgrades: [],
-    needLevel: 45,
-  });
-
-  def("penta", {
-    name: "Penta Shot",
-    desc: "Five-wide shotgun",
-    guns: [-40, -20, 0, 20, 40].map((a, i) => gun(16 + (i === 2 ? 4 : 0), 8, 1, 0, 0, a, i % 2 ? 0.5 : 0, B(g.twin, g.tripleShot))),
-    upgrades: ["spread"],
     needLevel: 45,
   });
 
@@ -726,313 +2194,10 @@
     needLevel: 45,
   });
 
-  def("tripletwin", {
-    name: "Triple Twin",
-    desc: "Twins at 0, 120, 240",
-    guns: [0, 120, 240].flatMap((a) => G.twinAt(a, 5.2, [g.spam, g.doubleTwin, g.tripleTwin])),
-    upgrades: ["hexadual"],
-    needLevel: 45,
-  });
-
-  def("octo", {
-    name: "Octo Tank",
-    desc: "Eight-way fire",
-    guns: [0, 45, 90, 135, 180, 225, 270, 315].map((a, i) => gun(18, 8, 1, 0, 0, a, (i % 2) * 0.5, B(g.flankGuard, g.spam))),
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("spread", {
-    name: "Spread Shot",
-    desc: "A huge fan of small guns",
-    guns: [-75, -60, -45, -30, -15, 0, 15, 30, 45, 60, 75].map((a, i) =>
-      gun(13 + (a === 0 ? 6 : 0), a === 0 ? 8 : 6, 1, 0, 0, a, Math.abs(i - 5) * 0.08, a === 0 ? B(g.pounder, g.spreadshotMain, g.spreadshot) : B(g.twin, g.spreadshot))
-    ),
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("ranger", {
-    name: "Ranger",
-    desc: "The longest sightline",
-    guns: [gun(30, 8, 1, 0, 0, 0, 0, B(g.sniper, g.assassin)), gun(6, 12, -1.2, 8, 0, 0, 0, { type: "deco" })],
-    fov: 1.65,
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("stalker", {
-    name: "Stalker",
-    desc: "Assassin that fades while still",
-    guns: [gun(27, 8.5, -1.1, 0, 0, 0, 0, B(g.sniper, g.assassin))],
-    fov: 1.45,
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("predator", {
-    name: "Predator",
-    desc: "Three stacked sniper barrels",
-    guns: [
-      gun(24, 8, 1, 0, 0, 0, 0, B(g.sniper, g.hunter, g.hunterSecondary, g.hunterSecondary, g.predator)),
-      gun(21, 11, 1, 0, 0, 0, 0.15, B(g.sniper, g.hunter, g.hunterSecondary, g.predator)),
-      gun(18, 14, 1, 0, 0, 0, 0.3, B(g.sniper, g.hunter, g.predator)),
-    ],
-    fov: 1.35,
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("poacher", {
-    name: "Poacher",
-    desc: "Hunter with a drone spawner",
-    body: 4,
-    guns: [
-      gun(24, 8, 1, 0, 0, 0, 0, { layers: [g.basic, g.sniper, g.hunter] }),
-      gun(21, 12, 1, 0, 0, 0, 0.2, { layers: [g.basic, g.sniper, g.hunter, g.hunterSecondary] }),
-      ...G.director(180, [g.overseer]),
-    ],
-    maxDrones: 3,
-    fov: 1.22,
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("streamliner", {
-    name: "Streamliner",
-    desc: "Five-barrel bullet stream",
-    guns: [24, 21, 18, 15, 12].map((l, i) => gun(l, 7, 1, 0, 0, 0, i * 0.2, B(g.minigun, g.streamliner))),
-    fov: 1.18,
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("annihilator", {
-    name: "Annihilator",
-    desc: "The biggest gun",
-    guns: [gun(21, 20, 1, 0, 0, 0, 0, { layers: [g.basic, g.pounder, g.destroyer, g.annihilator] })],
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("hybrid", {
-    name: "Hybrid",
-    desc: "Destroyer plus a drone spawner",
-    body: 4,
-    guns: [gun(21, 14, 1, 0, 0, 0, 0, { layers: [g.basic, g.pounder, g.destroyer] }), ...G.director(180, [g.overseer])],
-    maxDrones: 3,
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("skimmer", {
-    name: "Skimmer",
-    desc: "A spinning missile launcher",
-    guns: [
-      gun(10, 14, -0.5, 9, 0, 0, 0, { type: "deco" }),
-      gun(16, 13, 1, 0, 0, 0, 0, { type: "missile", layers: [g.basic, g.pounder, g.launcher] }),
-    ],
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("atomizer", {
-    name: "Atomizer",
-    desc: "Tiny, furious spray",
-    guns: [
-      gun(24, 7, 1, 0, 0, 0, 0, B(g.pelleter, g.lowPower, g.machineGun, g.atomizer)),
-      gun(12, 10, 1.4, 8, 0, 0, 0, { layers: [g.basic, g.machineGun], spread: 0.28 }),
-    ],
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("focal", {
-    name: "Focal",
-    desc: "Sprayer with tighter aim",
-    guns: [
-      gun(24, 8, 1, 0, 0, 0, 0, B(g.minigun, { spray: 0.4, speed: 1.2 })),
-      gun(16, 9, 1.1, 4, 0, 0, 0, { layers: [g.basic, g.machineGun, { spray: 0.45 }], spread: 0.08 }),
-    ],
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("cyclone", {
-    name: "Cyclone",
-    desc: "Twelve small guns in a ring",
-    guns: Array.from({ length: 12 }, (_, i) => gun(13, 4.5, 1, 0, 0, i * 30, (i % 3) * 0.2, B(g.flankGuard, g.cyclone))),
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("fighter", {
-    name: "Fighter",
-    desc: "Booster with side guns",
-    guns: [
-      gun(18, 8, 1, 0, 0, 0, 0, B(g.flankGuard, g.triAngle, g.triAngleFront)),
-      gun(16, 8, 1, 0, 0, 90, 0.2, B(g.flankGuard, g.triAngle)),
-      gun(16, 8, 1, 0, 0, 270, 0.2, B(g.flankGuard, g.triAngle)),
-      gun(14, 8, 1, 0, 0, 150, 0.5, B(g.flankGuard, g.triAngle, g.thruster)),
-      gun(14, 8, 1, 0, 0, 210, 0.5, B(g.flankGuard, g.triAngle, g.thruster)),
-    ],
-    speed: 1.12,
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("surfer", {
-    name: "Surfer",
-    desc: "Booster that also launches swarms",
-    guns: [
-      gun(18, 8, 1, 0, 0, 0, 0, B(g.flankGuard, g.triAngle, g.triAngleFront)),
-      ...G.swarm(0, 150, 0.3),
-      ...G.swarm(0, 210, 0.6),
-      gun(14, 8, 1, 0, 0, 140, 0.2, B(g.flankGuard, g.triAngle, g.thruster)),
-      gun(14, 8, 1, 0, 0, 220, 0.5, B(g.flankGuard, g.triAngle, g.thruster)),
-    ],
-    maxDrones: 8,
-    speed: 1.14,
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("overlord", {
-    name: "Overlord",
-    desc: "Four drone spawners",
-    body: 4,
-    guns: [0, 90, 180, 270].flatMap((a) => G.director(a, [g.overseer])),
-    maxDrones: 8,
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("manager", {
-    name: "Manager",
-    desc: "One strong spawner, fades while still",
-    body: 4,
-    guns: G.director(0, [g.overseer, { reload: 0.7, damage: 1.25 }]),
-    maxDrones: 8,
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("battleship", {
-    name: "Battleship",
-    desc: "Four swarm spawners",
-    body: 4,
-    guns: [90, 270].flatMap((a) => [
-      gun(7, 6.5, 0.6, 7, 4, a, 0, { type: "swarm", layers: [g.swarm, g.battleship], calculator: "swarm" }),
-      gun(7, 6.5, 0.6, 7, -4, a, 0.5, { type: "swarm", layers: [g.swarm], calculator: "swarm" }),
-    ]),
-    maxDrones: 20,
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("carrier", {
-    name: "Carrier",
-    desc: "Three swarm spawners in a fan",
-    body: 4,
-    guns: [-30, 0, 30].flatMap((a, i) => G.swarm(0, a, i * 0.2, [g.battleship])),
-    maxDrones: 16,
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("necromancer", {
-    name: "Necromancer",
-    desc: "Four spawners · drones convert squares",
-    body: 4,
-    guns: [0, 90, 180, 270].flatMap((a) => G.director(a, [g.sunchip], { shape: 4, necro: true })),
-    maxDrones: 14,
-    necro: 4,
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("maleficitor", {
-    name: "Maleficitor",
-    desc: "One underseer spawner, fades while still · converts squares",
-    body: 4,
-    guns: G.director(0, [g.sunchip, { reload: 0.7 }], { shape: 4, necro: true }),
-    maxDrones: 12,
-    necro: 4,
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("construct", {
-    name: "Construct",
-    desc: "Builder with a bigger block",
-    guns: [
-      gun(18, 16, 1, 0, 0, 0, 0, { type: "deco" }),
-      gun(2, 16, 1.1, 18, 0, 0, 0, { type: "trap", layers: [g.trap, g.setTrap, { size: 1.25, health: 1.2, damage: 1.15 }], calculator: "trap", size: 1.8 }),
-    ],
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("engineer", {
-    name: "Engineer",
-    desc: "Places pillboxes with auto guns",
-    guns: [
-      gun(18, 10, 1, 0, 0, 0, 0, { type: "deco" }),
-      gun(3, 14, 1.3, 15, 0, 0, 0, { type: "deco" }),
-      gun(2, 14, 1.3, 18, 0, 0, 0, { type: "pillbox", layers: [g.trap, g.setTrap], calculator: "trap", size: 1.2 }),
-    ],
-    maxDrones: 6,
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("architect", {
-    name: "Architect",
-    desc: "Blocks in three directions",
-    guns: [0, 120, 240].flatMap((a) => [
-      gun(18, 12, 1, 0, 0, a, 0, { type: "deco" }),
-      gun(2, 12, 1.1, 18, 0, a, 0, { type: "trap", layers: [g.trap, g.setTrap, g.flankGuard], calculator: "trap", size: 1.35 }),
-    ]),
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("mortar", {
-    name: "Mortar",
-    desc: "Artillery with gunner sides",
-    guns: [
-      gun(12, 4.5, 1, 0, 8, -25, 0.5, B(g.twin, g.gunner, g.artillery)),
-      gun(12, 4.5, 1, 0, -8, 25, 0.5, B(g.twin, g.gunner, g.artillery)),
-      gun(19, 12, 1, 0, 0, 0, 0, B(g.pounder, g.artillery)),
-    ],
-    upgrades: [],
-    needLevel: 45,
-  });
-
   def("rocketeer", {
     name: "Rocketeer",
     desc: "A faster missile with a tapered barrel",
     guns: [gun(16, 12, 0.7, 0, 0, 0, 0, { type: "missile", layers: [g.basic, g.pounder, g.launcher, { speed: 1.15, reload: 0.9 }] })],
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("fortress", {
-    name: "Fortress",
-    desc: "Traps all around, gunners in front",
-    guns: [
-      gun(18, 4.5, 1, 0, 3.2, 0, 0, B(g.twin, g.gunner)),
-      gun(18, 4.5, 1, 0, -3.2, 0, 0.5, B(g.twin, g.gunner)),
-      ...[0, 120, 240].flatMap((a) => G.trap(a, [g.flankGuard])),
-    ],
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("hexatrap", {
-    name: "Hexa-Trapper",
-    desc: "Six trap launchers",
-    guns: [0, 60, 120, 180, 240, 300].flatMap((a) => G.trap(a, [g.flankGuard])),
     upgrades: [],
     needLevel: 45,
   });
@@ -1048,57 +2213,12 @@
     needLevel: 45,
   });
 
-  def("bushwhacker", {
-    name: "Bushwhacker",
-    desc: "Sniper front, traps behind",
-    guns: [...G.sniper(24), ...G.trap(180)],
-    fov: 1.2,
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("megasmash", {
-    name: "Mega Smasher",
-    desc: "A thicker smashing ring",
-    guns: [],
-    smasher: true,
-    health: 1.7,
-    bodyDamage: 3,
-    speed: 1.05,
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("autogunner", {
-    name: "Auto Gunner",
-    desc: "Gunner with a turret",
-    auto: true,
-    guns: [
-      gun(12, 4.5, 1, 0, 7.2, 0, 0.5, B(g.twin, g.gunner)),
-      gun(12, 4.5, 1, 0, -7.2, 0, 0.75, B(g.twin, g.gunner)),
-      gun(16, 4.5, 1, 0, 3.6, 0, 0, B(g.twin, g.gunner)),
-      gun(16, 4.5, 1, 0, -3.6, 0, 0.25, B(g.twin, g.gunner)),
-      ...G.auto(),
-    ],
-    upgrades: [],
-    needLevel: 45,
-  });
-
   def("autosniper", {
     name: "Auto Assassin",
     desc: "Sniper turret on a spinning hull",
     auto: true,
     guns: [...G.sniper(24, [g.assassin]), ...G.auto()],
     fov: 1.3,
-    upgrades: [],
-    needLevel: 45,
-  });
-
-  def("auto5", {
-    name: "Auto-5",
-    desc: "Five auto guns",
-    auto: true,
-    guns: [0, 72, 144, 216, 288].map((a, i) => gun(16, 6, 1, 0, 0, a, i * 0.15, { type: "auto", layers: [g.basic, g.autoTurret] })),
     upgrades: [],
     needLevel: 45,
   });
@@ -1112,19 +2232,6 @@
     needLevel: 45,
   });
 
-  def("hewn", {
-    name: "Hewn Pelleter",
-    desc: "Gunner with side barrels",
-    guns: [
-      gun(17, 6.5, 1, 0, 4.2, 0, 0, B(g.pelleter)),
-      gun(17, 6.5, 1, 0, -4.2, 0, 0.5, B(g.pelleter)),
-      gun(15, 6.5, 1, 0, 0, 28, 0.25, B(g.twin, g.hewnDouble)),
-      gun(15, 6.5, 1, 0, 0, -28, 0.75, B(g.twin, g.hewnDouble)),
-    ],
-    upgrades: [],
-    needLevel: 45,
-  });
-
   def("hexadual", {
     name: "Hexa Dual",
     desc: "Duals in three directions",
@@ -1134,14 +2241,6 @@
     ]),
     upgrades: [],
     needLevel: 45,
-  });
-
-  def("single", {
-    name: "Single",
-    desc: "One oversized basic gun",
-    guns: [gun(20, 10, 1, 0, 0, 0, 0, B(g.single))],
-    upgrades: ["pounder", "sniper"],
-    needLevel: 15,
   });
 
   def("auto2", {
@@ -1730,20 +2829,12 @@
     needLevel: 45,
   });
 
-  const skipAuto = new Set([
-    "auto3", "auto5", "auto8", "auto2", "autosmasher", "autogunner", "autosniper", "engineer",
-    "healer", "medic", "spawner", "factory",
-    "mothership", "arena_closer", "dom_gun", "dom_idle", "dom_heal", "assault_guard",
-    "elite_destroyer", "elite_gunner", "elite_sprayer", "elite_battleship", "elite_spawner",
-    "elite_trapguard", "elite_spinner", "elite_skimmer",
-    "sorcerer", "summoner", "enchantress", "exorcistor", "shaman", "witch",
-    "nest_keeper", "nest_warden", "nest_guardian", "rogue_palisade", "rogue_armada",
-    "terrestrial", "celestial", "eternal", "sentry_gun", "sentry_swarm", "sentry_trap", "sanctuary",
-  ]);
+
+  const skipAuto = new Set(["ambulance", "architect", "arena_closer", "assault_guard", "auto2", "auto3", "auto4", "auto5", "auto8", "autoassassin", "autobuilder", "autocruiser", "autodouble", "autogunner", "autooverseer", "autosmasher", "autosniper", "autospawner", "autotriangle", "banshee", "celestial", "dom_gun", "dom_heal", "dom_idle", "elite_battleship", "elite_destroyer", "elite_gunner", "elite_skimmer", "elite_spawner", "elite_spinner", "elite_sprayer", "elite_trapguard", "enchantress", "engineer", "eternal", "exorcistor", "factory", "healer", "medic", "mega3", "mothership", "nest_guardian", "nest_keeper", "nest_warden", "paramedic", "rogue_armada", "rogue_palisade", "sanctuary", "sentry_gun", "sentry_swarm", "sentry_trap", "shaman", "sorcerer", "spawner", "summoner", "surgeon", "terrestrial", "witch"]);
   for (const id of Object.keys(tanks)) {
     const t = tanks[id];
     if (skipAuto.has(id) || t.auto || tanks["auto_" + id]) continue;
-    if (!t.guns.some((g) => g.type === "bullet" || g.type === "trap" || g.type === "drone" || g.type === "swarm" || g.type === "minion" || g.type === "pillbox" || g.type === "heal")) {
+    if (!t.guns.some((g) => g.type === "bullet" || g.type === "trap" || g.type === "drone" || g.type === "swarm" || g.type === "minion" || g.type === "pillbox" || g.type === "heal" || g.type === "missile" || g.type === "auto")) {
       if (!t.smasher) continue;
     }
     def("auto_" + id, {
