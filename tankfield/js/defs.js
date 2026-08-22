@@ -192,6 +192,7 @@
       ...def,
       guns: cloneGuns(def.guns),
       upgrades: (def.upgrades || []).slice(),
+      armsUpgrades: (def.armsUpgrades || []).slice(),
       mods: { ...(def.mods || {}) },
     };
   }
@@ -206,6 +207,8 @@
       body: spec.body || 0,
       guns: spec.guns || [],
       upgrades: spec.upgrades || [],
+      armsUpgrades: spec.armsUpgrades || [],
+      arms: !!spec.arms,
       needLevel: spec.needLevel == null ? 1 : spec.needLevel,
       fov: spec.fov || 1,
       speed: spec.speed || 1,
@@ -2859,6 +2862,413 @@
       upgrades: [],
       needLevel: Math.min(45, Math.max(15, t.needLevel)),
     });
+  }
+
+  function copyBody(t) {
+    return {
+      body: t.body,
+      fov: t.fov,
+      speed: t.speed,
+      health: t.health,
+      bodyDamage: t.bodyDamage,
+      reload: t.reload,
+      bulletSpeed: t.bulletSpeed,
+      bulletDamage: t.bulletDamage,
+      bulletPen: t.bulletPen,
+      bulletSize: t.bulletSize,
+      maxDrones: t.maxDrones,
+      smasher: t.smasher,
+      necro: t.necro,
+      healer: t.healer,
+      spin: t.spin,
+      mods: { ...(t.mods || {}) },
+    };
+  }
+
+  function addArms(id, extra) {
+    const t = tanks[id];
+    if (!t) return;
+    if (!t.armsUpgrades) t.armsUpgrades = [];
+    for (const u of extra) {
+      if (u && tanks[u] && u !== id && !t.upgrades.includes(u) && !t.armsUpgrades.includes(u)) t.armsUpgrades.push(u);
+    }
+  }
+
+  function inherit(baseId, spec) {
+    const t = tanks[baseId];
+    if (!t) return null;
+    const body = copyBody(t);
+    return def(spec.id, {
+      name: spec.name || t.name,
+      desc: spec.desc != null ? spec.desc : "",
+      body: spec.body != null ? spec.body : body.body,
+      guns: spec.guns || cloneGuns(t.guns),
+      upgrades: spec.upgrades || [],
+      armsUpgrades: spec.armsUpgrades || [],
+      needLevel: spec.needLevel != null ? spec.needLevel : Math.min(45, Math.max(30, t.needLevel || 15)),
+      fov: spec.fov != null ? spec.fov : body.fov,
+      speed: spec.speed != null ? spec.speed : body.speed,
+      health: spec.health != null ? spec.health : body.health,
+      bodyDamage: spec.bodyDamage != null ? spec.bodyDamage : body.bodyDamage,
+      reload: spec.reload != null ? spec.reload : body.reload,
+      bulletSpeed: spec.bulletSpeed != null ? spec.bulletSpeed : body.bulletSpeed,
+      bulletDamage: spec.bulletDamage != null ? spec.bulletDamage : body.bulletDamage,
+      bulletPen: spec.bulletPen != null ? spec.bulletPen : body.bulletPen,
+      bulletSize: spec.bulletSize != null ? spec.bulletSize : body.bulletSize,
+      maxDrones: spec.maxDrones != null ? spec.maxDrones : body.maxDrones,
+      smasher: spec.smasher != null ? spec.smasher : body.smasher,
+      auto: !!spec.auto,
+      necro: spec.necro != null ? spec.necro : body.necro,
+      healer: spec.healer != null ? spec.healer : body.healer,
+      spin: spec.spin != null ? spec.spin : body.spin,
+      mods: spec.mods || { ...body.mods },
+      arms: true,
+    });
+  }
+
+  function gunTypes(t) {
+    return new Set((t.guns || []).map((item) => item.type));
+  }
+
+  function gunAngle(item) {
+    return ((((item.pos && item.pos[5]) || 0) % 360) + 360) % 360;
+  }
+
+  function hasRear(t) {
+    return (t.guns || []).some((item) => {
+      if (item.type === "deco") return false;
+      const a = gunAngle(item);
+      return Math.min(Math.abs(a - 180), 360 - Math.abs(a - 180)) < 25;
+    });
+  }
+
+  function offsetGuns(guns, dAng) {
+    return cloneGuns(guns).map((item) => {
+      const p = item.pos.slice();
+      p[5] = (p[5] || 0) + dAng;
+      item.pos = p;
+      return item;
+    });
+  }
+
+  function frontGuns(t) {
+    return (t.guns || []).filter((item) => {
+      const a = gunAngle(item);
+      return Math.min(a, 360 - a) < 22;
+    });
+  }
+
+  function trapAt(ang, y, delay, more) {
+    return [
+      gun(15, 8, 1, 0, y, ang, delay, { type: "deco" }),
+      gun(3.25, 8, 1.7, 14, y, ang, delay, { type: "trap", layers: [g.trap, ...(more || [])], calculator: "trap" }),
+    ];
+  }
+
+  function rearPellets() {
+    return [
+      gun(19, 2, 1, 0, -2.5, 180, 0, { layers: [g.basic, g.pelleter, g.power, g.twin] }),
+      gun(19, 2, 1, 0, 2.5, 180, 0.5, { layers: [g.basic, g.pelleter, g.power, g.twin] }),
+      gun(12, 11, 1, 0, 0, 180, 0, { type: "deco" }),
+    ];
+  }
+
+  function gunnerAt(ang, extra) {
+    const more = extra || [];
+    return [
+      gun(12, 3.5, 1, 0, 7.25, ang, 0.5, { layers: [g.basic, g.twin, g.gunner, ...more] }),
+      gun(12, 3.5, 1, 0, -7.25, ang, 0.75, { layers: [g.basic, g.twin, g.gunner, ...more] }),
+      gun(16, 3.5, 1, 0, 3.75, ang, 0, { layers: [g.basic, g.twin, g.gunner, ...more] }),
+      gun(16, 3.5, 1, 0, -3.75, ang, 0.25, { layers: [g.basic, g.twin, g.gunner, ...more] }),
+    ];
+  }
+
+  function makeAutoOf(id) {
+    const t = tanks[id];
+    if (!t || t.auto || tanks["auto_" + id]) return null;
+    if (!(t.guns || []).some((item) => item.type !== "deco") && !t.smasher) return null;
+    def("auto_" + id, {
+      name: "Auto-" + t.name,
+      desc: t.name + " with an auto turret",
+      ...copyBody(t),
+      guns: [...cloneGuns(t.guns), ...G.auto()],
+      auto: true,
+      upgrades: [],
+      needLevel: Math.min(45, Math.max(15, t.needLevel)),
+      arms: true,
+    });
+    addArms(id, ["auto_" + id]);
+    return tanks["auto_" + id];
+  }
+
+  inherit("twin", {
+    id: "wark",
+    name: "Wark",
+    desc: "Twin trap launchers",
+    guns: [...trapAt(5, 5.5, 0), ...trapAt(-5, -5.5, 0.5)],
+    needLevel: 30,
+  });
+  inherit("machinegun", {
+    id: "diesel",
+    name: "Diesel",
+    desc: "Wider, heavier machine gun",
+    guns: [gun(14, 12, 1.6, 8, 0, 0, 0, { layers: [g.basic, g.machineGun], spread: 0.3 })],
+    reload: 0.85,
+    needLevel: 30,
+  });
+  inherit("trapper", {
+    id: "machinetrapper",
+    name: "Machine Trapper",
+    desc: "Fast, spread trap stream",
+    guns: [
+      gun(15, 9, 1.4, 0, 0, 0, 0, { type: "deco" }),
+      gun(3, 13, 1.3, 15, 0, 0, 0, { type: "trap", layers: [g.trap, g.machineGun], calculator: "trap", spread: 0.18 }),
+    ],
+    needLevel: 30,
+  });
+  inherit("gunner", {
+    id: "equalizer",
+    name: "Equalizer",
+    desc: "Gunner barrels that fire traps",
+    guns: [
+      gun(12, 3.5, 1, 0, 7.25, 0, 0.5, { type: "deco" }),
+      gun(2, 3.5, 1.77, 12, 7.25, 0, 0.5, { type: "trap", layers: [g.trap, g.gunner], calculator: "trap" }),
+      gun(12, 3.5, 1, 0, -7.25, 0, 0.75, { type: "deco" }),
+      gun(2, 3.5, 1.77, 12, -7.25, 0, 0.75, { type: "trap", layers: [g.trap, g.gunner], calculator: "trap" }),
+      gun(16, 3.5, 1, 0, 3.75, 0, 0, { type: "deco" }),
+      gun(2, 3.5, 1.77, 16, 3.75, 0, 0, { type: "trap", layers: [g.trap, g.gunner], calculator: "trap" }),
+      gun(16, 3.5, 1, 0, -3.75, 0, 0.25, { type: "deco" }),
+      gun(2, 3.5, 1.77, 16, -3.75, 0, 0.25, { type: "trap", layers: [g.trap, g.gunner], calculator: "trap" }),
+    ],
+    needLevel: 45,
+  });
+  inherit("gunner", {
+    id: "battery",
+    name: "Battery",
+    desc: "Five gunner barrels",
+    guns: [
+      ...gunnerAt(0),
+      gun(20, 3.5, 1, 0, 0, 0, 0.1, { layers: [g.basic, g.twin, g.gunner, g.fast] }),
+    ],
+    needLevel: 45,
+  });
+  inherit("gunner", {
+    id: "volley",
+    name: "Volley",
+    desc: "Fat gunner barrels",
+    guns: [
+      gun(12, 5, 1, 0, 7.25, 0, 0.5, { layers: [g.basic, g.twin, g.gunner] }),
+      gun(12, 5, 1, 0, -7.25, 0, 0.75, { layers: [g.basic, g.twin, g.gunner] }),
+      gun(16, 5, 1, 0, 3.75, 0, 0, { layers: [g.basic, g.twin, g.gunner] }),
+      gun(16, 5, 1, 0, -3.75, 0, 0.25, { layers: [g.basic, g.twin, g.gunner] }),
+    ],
+    needLevel: 45,
+  });
+  inherit("gunner", {
+    id: "rimfire",
+    name: "Rimfire",
+    desc: "Twin gunner with outer barrels",
+    guns: [
+      gun(18, 2, 1, 2, -2.5, 0, 0, { layers: [g.basic, g.twin, g.gunner] }),
+      gun(18, 2, 1, 2, 2.5, 0, 0.5, { layers: [g.basic, g.twin, g.gunner] }),
+      gun(12, 7, 1, 0, 5, 0, 0.25, { layers: [g.basic, g.twin] }),
+      gun(12, 7, 1, 0, -5, 0, 0.75, { layers: [g.basic, g.twin] }),
+      gun(12, 10, 1, 2, 0, 0, 0, { type: "deco" }),
+    ],
+    needLevel: 45,
+  });
+  inherit("assassin", {
+    id: "buttbuttin",
+    name: "Buttbuttin",
+    desc: "Assassin with rear gunners",
+    guns: [
+      ...cloneGuns(tanks.assassin.guns),
+      ...rearPellets(),
+    ],
+    needLevel: 45,
+  });
+  inherit("destroyer", {
+    id: "blower",
+    name: "Blower",
+    desc: "Destroyer with rear gunners",
+    guns: [
+      ...cloneGuns(tanks.destroyer.guns),
+      ...rearPellets(),
+    ],
+    needLevel: 45,
+  });
+  inherit("hexatank", {
+    id: "deathstar",
+    name: "Death Star",
+    desc: "Six pounder guns",
+    guns: [0, 60, 120, 180, 240, 300].map((a, i) => gun(20.5, 12, 1, 0, 0, a, i % 2 ? 0.5 : 0, { layers: [g.basic, g.pounder, g.flankGuard] })),
+    needLevel: 45,
+  });
+  inherit("minigun", {
+    id: "subverter",
+    name: "Subverter",
+    desc: "Pounder minigun stack",
+    guns: [21, 19, 17].map((len, i) => gun(len, 14, 1, 0, 0, 0, i / 3, { layers: [g.basic, g.pounder, g.minigun] })),
+    needLevel: 45,
+  });
+  inherit("smasher", {
+    id: "bonker",
+    name: "Bonker",
+    desc: "Small, fast smasher",
+    guns: [],
+    smasher: true,
+    speed: 1.32,
+    health: 1.15,
+    bodyDamage: 2,
+    fov: 1.15,
+    mods: { size: 0.72, speed: 1, health: 1, damage: 1, reload: 1, fov: 1 },
+    needLevel: 45,
+  });
+  inherit("assassin", {
+    id: "hitman",
+    name: "Hitman",
+    desc: "Assassin with a rear drone spawner",
+    guns: [...cloneGuns(tanks.assassin.guns), ...G.director(180, [g.overseer])],
+    maxDrones: Math.max(tanks.assassin.maxDrones || 0, 3),
+    needLevel: 45,
+  });
+  inherit("sniper", {
+    id: "sniper3",
+    name: "Sniper-3",
+    desc: "Three sniper barrels",
+    guns: [-16, 0, 16].map((a, i) => gun(24, 8, 1, 0, 0, a, i * 0.2, { layers: [g.basic, g.sniper] })),
+    needLevel: 30,
+    fov: 1.25,
+  });
+  inherit("assassin", {
+    id: "duo",
+    name: "Duo",
+    desc: "Twin assassin barrels",
+    guns: [
+      gun(27, 8, 1, 0, 4.4, 0, 0, { layers: [g.basic, g.sniper, g.assassin, g.twin] }),
+      gun(27, 8, 1, 0, -4.4, 0, 0.5, { layers: [g.basic, g.sniper, g.assassin, g.twin] }),
+      gun(13, 8, -2.2, 0, 0, 0, 0, { type: "deco" }),
+    ],
+    needLevel: 45,
+  });
+  inherit("wark", {
+    id: "warkwark",
+    name: "Warkwark",
+    desc: "Wark front and back",
+    guns: [...trapAt(5, 5.5, 0), ...trapAt(-5, -5.5, 0.5), ...trapAt(185, 5.5, 0), ...trapAt(-185, -5.5, 0.5)],
+    needLevel: 45,
+  });
+  inherit("wark", {
+    id: "megawark",
+    name: "Mega Wark",
+    desc: "Heavier twin traps",
+    guns: [
+      gun(16, 10, 1, 0, 5.8, 5, 0, { type: "deco" }),
+      gun(4, 10, 1.7, 15, 5.8, 5, 0, { type: "trap", layers: [g.trap, g.setTrap], calculator: "trap" }),
+      gun(16, 10, 1, 0, -5.8, -5, 0.5, { type: "deco" }),
+      gun(4, 10, 1.7, 15, -5.8, -5, 0.5, { type: "trap", layers: [g.trap, g.setTrap], calculator: "trap" }),
+    ],
+    needLevel: 45,
+  });
+  inherit("diesel", {
+    id: "dieseltrapper",
+    name: "Diesel Trapper",
+    desc: "Diesel gun with a trap launcher",
+    guns: [
+      gun(14, 12, 1.6, 8, 0, 0, 0, { layers: [g.basic, g.machineGun], spread: 0.28 }),
+      ...G.trap(180),
+    ],
+    needLevel: 45,
+  });
+  inherit("wark", {
+    id: "warklet",
+    name: "Warklet",
+    desc: "Triplet-style trap spread",
+    guns: [...trapAt(0, 0, 0), ...trapAt(18, 6.2, 0.33), ...trapAt(-18, -6.2, 0.66)],
+    needLevel: 45,
+  });
+
+  addArms("twin", ["wark"]);
+  addArms("trapper", ["wark", "machinetrapper"]);
+  addArms("machinegun", ["diesel", "machinetrapper"]);
+  addArms("gunner", ["battery", "buttbuttin", "blower", "equalizer", "volley", "rimfire"]);
+  addArms("assassin", ["buttbuttin", "hitman", "duo"]);
+  addArms("destroyer", ["blower"]);
+  addArms("hexatank", ["deathstar"]);
+  addArms("pounder", ["subverter", "deathstar"]);
+  addArms("minigun", ["subverter"]);
+  addArms("smasher", ["bonker"]);
+  addArms("sniper", ["sniper3"]);
+  addArms("wark", ["warkwark", "megawark", "warklet"]);
+  addArms("diesel", ["dieseltrapper"]);
+  addArms("machinetrapper", ["equalizer", "dieseltrapper"]);
+  addArms("battery", ["rimfire", "volley"]);
+
+  const arSkip = new Set(skipAuto);
+  ["mothership", "arena_closer", "sanctuary", "assault_guard", "basic"].forEach((id) => arSkip.add(id));
+  const arParents = Object.keys(tanks).filter((id) => {
+    const t = tanks[id];
+    if (!t || t.arms || t.healer || t.smasher || t.auto) return false;
+    if (arSkip.has(id) || id.startsWith("auto_") || id.startsWith("ar_")) return false;
+    if ((t.needLevel || 1) < 15 || (t.needLevel || 1) > 45) return false;
+    if (!(t.guns || []).some((item) => item.type !== "deco")) return false;
+    return true;
+  });
+
+  for (const id of arParents) {
+    const t = tanks[id];
+    const types = gunTypes(t);
+    const next = t.needLevel <= 15 ? 30 : 45;
+    if (!types.has("trap") && !hasRear(t)) {
+      const gid = "ar_guard_" + id;
+      inherit(id, {
+        id: gid,
+        name: t.name + " Guard",
+        desc: t.name + " with a rear trap launcher",
+        guns: [...cloneGuns(t.guns), ...G.trap(180)],
+        needLevel: next,
+      });
+      addArms(id, [gid]);
+    }
+    if (!types.has("drone") && !types.has("minion")) {
+      const oid = "ar_over_" + id;
+      inherit(id, {
+        id: oid,
+        name: "Over" + t.name.toLowerCase(),
+        desc: t.name + " with side drone spawners",
+        guns: [...cloneGuns(t.guns), ...G.director(125, [g.overseer]), ...G.director(-125, [g.overseer])],
+        maxDrones: Math.max(t.maxDrones || 0, 6),
+        needLevel: next,
+      });
+      addArms(id, [oid]);
+    }
+    if (!hasRear(t) && (t.guns || []).length <= 10) {
+      const front = frontGuns(t);
+      if (front.length) {
+        const fid = "ar_flank_" + id;
+        inherit(id, {
+          id: fid,
+          name: "Flank " + t.name,
+          desc: t.name + " with a rear copy of its front guns",
+          guns: [...cloneGuns(t.guns), ...offsetGuns(front, 180)],
+          needLevel: next,
+        });
+        addArms(id, [fid]);
+      }
+    }
+  }
+
+  for (const id of Object.keys(tanks)) {
+    const t = tanks[id];
+    if (!t || arSkip.has(id)) continue;
+    if (id.startsWith("auto_")) continue;
+    const autoId = "auto_" + id;
+    if (tanks[autoId]) {
+      if (t.arms) tanks[autoId].arms = true;
+      addArms(id, [autoId]);
+    } else if (t.arms) {
+      makeAutoOf(id);
+    }
   }
 
   function get(id) {

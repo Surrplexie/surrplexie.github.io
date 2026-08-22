@@ -739,6 +739,9 @@ kbd {
   display: grid;
   grid-template-columns: repeat(3, 92px);
   gap: 6px;
+  max-height: min(78vh, 640px);
+  overflow-y: auto;
+  padding-right: 2px;
 }
 
 .class-btn {

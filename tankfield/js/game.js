@@ -1835,7 +1835,18 @@
       royale: "Battle Royale",
       royalemaze: "Royale Maze",
       sandbox: "Sandbox",
+      armsrace: "Arms Race",
     })[mode] || "FFA";
+  }
+
+  function isArmsMode(mode) {
+    const m = mode == null ? state.mode : mode;
+    return m === "armsrace" || m === "sandbox";
+  }
+
+  function usesFfaCloser(mode) {
+    const m = mode == null ? state.mode : mode;
+    return m === "ffa" || m === "onehp" || m === "growth" || m === "armsrace";
   }
 
   function teamMode(mode) {
@@ -1854,10 +1865,16 @@
   }
 
   function classUpgrades(def, tank) {
-    return (def.upgrades || []).filter((id) => {
+    const extra = isArmsMode() && def.armsUpgrades ? def.armsUpgrades : [];
+    const ids = [...(def.upgrades || []), ...extra];
+    const seen = new Set();
+    return ids.filter((id) => {
+      if (seen.has(id)) return false;
+      seen.add(id);
       const child = TankCatalog.tanks[id];
       if (!child || (tank && tank.level < (child.needLevel || 15))) return false;
       if (isHealerId(id) && !healerAllowed(tank)) return false;
+      if (child.arms && !isArmsMode()) return false;
       return true;
     });
   }
@@ -2145,7 +2162,7 @@
 
   function autoUpgradeBot(bot) {
     applyLevel(bot);
-    const rammerIds = new Set(["smasher", "landmine", "spike", "autosmasher"]);
+    const rammerIds = new Set(["smasher", "landmine", "spike", "autosmasher", "bonker", "auto_bonker", "auto_smasher"]);
     const dead = state.mode === "onehp" ? ["maxHealth", "regen", "shieldCap", "shieldRegen"] : [];
     const focus = state.mode === "onehp"
       ? ["reload", "bulletDamage", "bulletSpeed", "bulletPen", "moveSpeed", "bodyDamage"]
@@ -2412,6 +2429,10 @@
     if (state.mode === "onehp") {
       welcomeSpawnNotes();
       note("Everyone has 1 HP. Health and shield stats do nothing.");
+    }
+    if (state.mode === "armsrace") {
+      welcomeSpawnNotes();
+      note("Arms Race: extra class tree, hybrids, and T4–T5 tanks at 45.");
     }
     if (isRoyale()) {
       welcomeSpawnNotes();
@@ -2876,6 +2897,10 @@
     if (state.mode === "onehp") {
       welcomeSpawnNotes();
       note("Everyone has 1 HP. Health and shield stats do nothing.");
+    }
+    if (state.mode === "armsrace") {
+      welcomeSpawnNotes();
+      note("Arms Race: extra class tree, hybrids, and T4–T5 tanks at 45.");
     }
     if (isRoyale() && !force) {
       welcomeSpawnNotes();
@@ -4516,7 +4541,7 @@
       beginRoyaleStorm();
     }
     if (isRoyale()) checkRoyale();
-    if ((state.mode === "ffa" || state.mode === "onehp" || state.mode === "growth") && !state.closing && state.time >= FFA_CLOSE_AT) beginArenaClose();
+    if (usesFfaCloser() && !state.closing && state.time >= FFA_CLOSE_AT) beginArenaClose();
     updateDoms(dt);
     updateAssault(dt);
     updateSiege(dt);
@@ -4877,7 +4902,7 @@
     if (els.killsFill) els.killsFill.style.width = `${clamp((p.kills || 0) * 10, 8, 100)}%`;
     if (els.closeTimer) {
       if (state.closing) els.closeTimer.textContent = "Arena closing";
-      else if (state.mode === "ffa" || state.mode === "onehp" || state.mode === "growth") {
+      else if (usesFfaCloser()) {
         const left = Math.max(0, Math.floor(FFA_CLOSE_AT - state.time));
         const h = Math.floor(left / 3600);
         const m = Math.floor((left % 3600) / 60);
@@ -5065,7 +5090,7 @@
     });
   }
 
-  const CLASS_KEYS = ["y", "u", "i", "h", "j", "k", "n"];
+  const CLASS_KEYS = ["y", "u", "i", "h", "j", "k", "n", "b", "v", "g", "f", "x", "z", "q", "l", "p", "o"];
   const CLASS_TILES = ["#a8d8ea", "#c5e1a5", "#f8bbd0", "#ffe082", "#d1c4e9", "#ffccbc", "#b2dfdb", "#f0f4c3"];
 
   function renderClassPanel() {
@@ -5895,6 +5920,7 @@
     royale: "1 min prep · shrinking storm to a random point · closes fully · damage ramps · last tank wins",
     royalemaze: "Same as Battle Royale · L / Y / zig clusters · open map · storm closes fully",
     sandbox: "Level 45 · pick any tank · bots included · [T] swaps tanks without resetting",
+    armsrace: "FFA rules · expanded Arras class tree · hybrids, extra T4–T5 tanks at 45 · arena closers after 4 hours",
   };
 
   function saveName(name) {
@@ -5919,6 +5945,7 @@
     else if (menuMode === "onehp") startGame(name, { mode: "onehp", botCount: bots });
     else if (menuMode === "royale") startGame(name, { mode: "royale", botCount: bots });
     else if (menuMode === "royalemaze") startGame(name, { mode: "royalemaze", botCount: bots });
+    else if (menuMode === "armsrace") startGame(name, { mode: "armsrace", botCount: bots });
     else startGame(name, { mode: "ffa", botCount: bots });
   }
 
