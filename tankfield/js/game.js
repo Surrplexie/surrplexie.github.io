@@ -1867,16 +1867,13 @@
     let left = skillPointsFor(bot.level) - spentPoints(bot);
     const cap = statCap();
     while (left > 0) {
-      const key = focus[irand(0, focus.length - 1)];
-      if (bot.stats[key] < cap) {
-        bot.stats[key]++;
-        left--;
-      } else if (!focus.some((k) => bot.stats[k] < cap)) {
-        const any = STATS.find((s) => bot.stats[s.key] < cap && !dead.includes(s.key));
-        if (!any) break;
-        bot.stats[any.key]++;
-        left--;
-      }
+      const open = focus.filter((k) => bot.stats[k] < cap);
+      const pool = open.length
+        ? open
+        : STATS.filter((s) => bot.stats[s.key] < cap && !dead.includes(s.key)).map((s) => s.key);
+      if (!pool.length) break;
+      bot.stats[pool[irand(0, pool.length - 1)]]++;
+      left--;
     }
     const seen = new Set();
     while (!seen.has(bot.classId)) {
