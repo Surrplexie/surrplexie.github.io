@@ -187,6 +187,7 @@
     time: 0,
     spawnName: "Unnamed Tank",
     mode: "ffa",
+    armsRace: false,
     botCount: 20,
     paused: false,
     playOpts: null,
@@ -1818,8 +1819,18 @@
     return [];
   }
 
-  function modeLabel(mode) {
-    return ({
+  function parseArmsKey(key, armsFlag) {
+    let mode = key || "ffa";
+    let arms = !!armsFlag;
+    if (mode === "armsrace") return { mode: "ffa", arms: true };
+    if (mode.endsWith("-ar")) return { mode: mode.slice(0, -3), arms: true };
+    return { mode, arms };
+  }
+
+  function modeLabel(mode, arms) {
+    const m = mode == null ? state.mode : mode;
+    const ar = arms == null ? !!state.armsRace : !!arms;
+    const names = {
       ffa: "FFA",
       tdm: "2 Teams",
       "4tdm": "4 Teams",
@@ -1836,17 +1847,26 @@
       royalemaze: "Royale Maze",
       sandbox: "Sandbox",
       armsrace: "Arms Race",
-    })[mode] || "FFA";
+    };
+    const base = names[m] || "FFA";
+    if (!ar || m === "sandbox") return base;
+    if (m === "ffa") return "Arms Race";
+    if (m === "protect") return "Mothership AR";
+    return base + " AR";
   }
 
-  function isArmsMode(mode) {
-    const m = mode == null ? state.mode : mode;
-    return m === "armsrace" || m === "sandbox";
+  function isArmsMode() {
+    return !!(state.armsRace || state.mode === "sandbox" || state.mode === "armsrace");
   }
 
   function usesFfaCloser(mode) {
     const m = mode == null ? state.mode : mode;
     return m === "ffa" || m === "onehp" || m === "growth" || m === "armsrace";
+  }
+
+  function armsWelcome() {
+    if (!state.armsRace || state.mode === "sandbox") return;
+    note("Arms Race: extra class tree, hybrids, and T4–T5 tanks at 45.");
   }
 
   function teamMode(mode) {
@@ -2325,7 +2345,9 @@
     try {
     state.spawnName = name || "Unnamed Tank";
     state.playOpts = opts;
-    state.mode = opts.sandbox ? "sandbox" : (opts.mode || "ffa");
+    const parsed = parseArmsKey(opts.sandbox ? "sandbox" : (opts.mode || "ffa"), opts.armsRace);
+    state.mode = opts.sandbox ? "sandbox" : parsed.mode;
+    state.armsRace = opts.sandbox ? true : parsed.arms;
     state.botCount = clampBotCount(opts.botCount != null ? opts.botCount : menuBotCount);
     applyWorldSize(state.mode);
     state.tanks = [];
@@ -2430,21 +2452,21 @@
       welcomeSpawnNotes();
       note("Everyone has 1 HP. Health and shield stats do nothing.");
     }
-    if (state.mode === "armsrace") {
-      welcomeSpawnNotes();
-      note("Arms Race: extra class tree, hybrids, and T4–T5 tanks at 45.");
-    }
     if (isRoyale()) {
       welcomeSpawnNotes();
       note("You have 1 minute to farm and upgrade before the storm closes in.");
       note("After that, there are no respawns. Last tank standing wins.");
     }
+    if (state.armsRace && state.mode !== "sandbox" && state.mode !== "growth" && state.mode !== "onehp" && !isRoyale() && state.mode !== "assault" && state.mode !== "siege") {
+      welcomeSpawnNotes();
+    }
+    armsWelcome();
     els.hud.classList.remove("hidden");
     const ws = document.getElementById("workshop");
     if (ws) ws.classList.add("hidden");
     const colorBox = document.getElementById("sandbox-colors");
     if (colorBox) colorBox.classList.toggle("hidden", state.mode !== "sandbox");
-    if (els.arenaMode) els.arenaMode.textContent = modeLabel(state.mode);
+    if (els.arenaMode) els.arenaMode.textContent = modeLabel();
       try { renderStats(); } catch (err) { console.error(err); }
       try { renderClassPanel(); } catch (err) { console.error(err); }
       render();
@@ -2898,14 +2920,14 @@
       welcomeSpawnNotes();
       note("Everyone has 1 HP. Health and shield stats do nothing.");
     }
-    if (state.mode === "armsrace") {
-      welcomeSpawnNotes();
-      note("Arms Race: extra class tree, hybrids, and T4–T5 tanks at 45.");
-    }
     if (isRoyale() && !force) {
       welcomeSpawnNotes();
       note("Prep is still going. The storm has not started yet.");
     }
+    if (state.armsRace && state.mode !== "sandbox" && state.mode !== "onehp" && state.mode !== "assault" && state.mode !== "siege" && state.mode !== "growth" && !(isRoyale() && !force)) {
+      welcomeSpawnNotes();
+    }
+    armsWelcome();
     try { renderStats(); } catch (err) {}
     try { renderClassPanel(); } catch (err) {}
     return true;
@@ -4529,7 +4551,7 @@
 
   function update(dt) {
     if (isRoyale() && state.royaleRestartAt && state.time >= state.royaleRestartAt) {
-      startGame(state.spawnName, state.playOpts || { mode: state.mode });
+      startGame(state.spawnName, state.playOpts || { mode: state.mode, armsRace: state.armsRace });
       return;
     }
     state.time += dt;
@@ -4945,11 +4967,12 @@
     }
     if (els.arenaMode && state.mode === "manhunt") {
       const mark = state.hunted;
+      const title = modeLabel();
       els.arenaMode.textContent = !mark
-        ? "Manhunt"
+        ? title
         : mark === state.player
-          ? "Manhunt · you are hunted"
-          : `Manhunt · hunt ${mark.name}`;
+          ? `${title} · you are hunted`
+          : `${title} · hunt ${mark.name}`;
     }
     if (els.arenaMode && state.mode === "tag") {
       if (state.closing) els.arenaMode.textContent = "Arena closing";
@@ -4967,7 +4990,7 @@
         const gp = g ? Math.round((g.health / Math.max(1, g.maxHealth)) * 100) : 0;
         const rp = r ? Math.round((r.health / Math.max(1, r.maxHealth)) * 100) : 0;
         const piloting = state.player && state.player.mothership;
-        els.arenaMode.textContent = `Protect · G ${gp}%  R ${rp}%${piloting ? " · [H] leave" : " · [H] control"} · [N] lv45`;
+        els.arenaMode.textContent = `${modeLabel()} · G ${gp}%  R ${rp}%${piloting ? " · [H] leave" : " · [H] control"} · [N] lv45`;
       }
     }
     if (els.arenaMode && state.mode === "domination") {
@@ -4981,7 +5004,7 @@
       const side = state.player && state.player.team ? TEAMS[state.player.team].name : "Assault";
       els.arenaMode.textContent = state.closing
         ? "Arena closing"
-        : `Assault · ${side} · Green ${live}/${total}`;
+        : `${modeLabel()} · ${side} · Green ${live}/${total}`;
     }
     if (els.arenaMode && state.mode === "siege") {
       const wave = Math.max(1, (state.siegeWave || 0) + 1);
@@ -4993,7 +5016,9 @@
         : `Siege · Wave ${Math.min(wave, total)}/${total} · ${live}/${all} sancs`;
     }
     if (els.arenaMode && state.mode === "growth") {
-      els.arenaMode.textContent = state.closing ? "Arena closing" : "Growth · cap 1000 · [N] lv45";
+      els.arenaMode.textContent = state.closing
+        ? "Arena closing"
+        : (state.armsRace ? "Growth AR · cap 1000 · [N] lv45" : "Growth · cap 1000 · [N] lv45");
     }
     if (els.arenaMode && isRoyale()) {
       const alive = royaleContestants().length;
@@ -5921,6 +5946,12 @@
     royalemaze: "Same as Battle Royale · L / Y / zig clusters · open map · storm closes fully",
     sandbox: "Level 45 · pick any tank · bots included · [T] swaps tanks without resetting",
     armsrace: "FFA rules · expanded Arras class tree · hybrids, extra T4–T5 tanks at 45 · arena closers after 4 hours",
+    "growth-ar": "Growth · Arms Race class tree · start at 1 · bots at 45 · [N] skip to 45 · closers after 4 hours",
+    "protect-ar": "Mothership Protect · Arms Race class tree · random team · start at 45 · [N] skip · [H] to take control",
+    "assault-ar": "Assault · Arms Race class tree · Blue attacks Green · capture zones · Green wins in 10:00 if they hold 3/4",
+    "tdm-ar": "Red vs blue · Arms Race class tree · random team · start at 45",
+    "royalemaze-ar": "Royale Maze · Arms Race class tree · L / Y / zig clusters · storm closes fully · last tank wins",
+    "manhunt-ar": "Manhunt · Arms Race class tree · killing the hunted pays +50% their score · they respawn with 25%",
   };
 
   function saveName(name) {
@@ -5931,22 +5962,12 @@
     const name = (els.name && els.name.value.trim()) || "Unnamed Tank";
     saveName(name);
     const bots = menuBotCount;
-    if (menuMode === "sandbox") startGame(name, { sandbox: true, classId: "basic", botCount: bots });
-    else if (menuMode === "tdm") startGame(name, { mode: "tdm", botCount: bots });
-    else if (menuMode === "4tdm") startGame(name, { mode: "4tdm", botCount: bots });
-    else if (menuMode === "manhunt") startGame(name, { mode: "manhunt", botCount: bots });
-    else if (menuMode === "tag") startGame(name, { mode: "tag", botCount: bots });
-    else if (menuMode === "protect") startGame(name, { mode: "protect", botCount: bots });
-    else if (menuMode === "maze") startGame(name, { mode: "maze", botCount: bots });
-    else if (menuMode === "domination") startGame(name, { mode: "domination", botCount: bots });
-    else if (menuMode === "assault") startGame(name, { mode: "assault", botCount: bots });
-    else if (menuMode === "siege") startGame(name, { mode: "siege", botCount: bots });
-    else if (menuMode === "growth") startGame(name, { mode: "growth", botCount: bots });
-    else if (menuMode === "onehp") startGame(name, { mode: "onehp", botCount: bots });
-    else if (menuMode === "royale") startGame(name, { mode: "royale", botCount: bots });
-    else if (menuMode === "royalemaze") startGame(name, { mode: "royalemaze", botCount: bots });
-    else if (menuMode === "armsrace") startGame(name, { mode: "armsrace", botCount: bots });
-    else startGame(name, { mode: "ffa", botCount: bots });
+    if (menuMode === "sandbox") {
+      startGame(name, { sandbox: true, classId: "basic", botCount: bots });
+      return;
+    }
+    const parsed = parseArmsKey(menuMode);
+    startGame(name, { mode: parsed.mode, armsRace: parsed.arms, botCount: bots });
   }
 
   function openWorkshop() {
