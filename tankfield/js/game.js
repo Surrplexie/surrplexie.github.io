@@ -740,6 +740,85 @@
     return { x: tank.x + Math.cos(base + dir * 1.4) * 140, y: tank.y + Math.sin(base + dir * 1.4) * 140 };
   }
 
+  function edgePush(ent, margin) {
+    const m = margin == null ? 240 : margin;
+    let x = 0;
+    let y = 0;
+    if (ent.x < m) x += m - ent.x;
+    if (ent.y < m) y += m - ent.y;
+    if (ent.x > WORLD.w - m) x -= ent.x - (WORLD.w - m);
+    if (ent.y > WORLD.h - m) y -= ent.y - (WORLD.h - m);
+    return { x, y };
+  }
+
+  function clampArena(x, y, pad) {
+    const p = pad == null ? 180 : pad;
+    return { x: clamp(x, p, WORLD.w - p), y: clamp(y, p, WORLD.h - p) };
+  }
+
+  function nearMapEdge(ent, pad) {
+    const p = pad == null ? 150 : pad;
+    return ent.x < p || ent.y < p || ent.x > WORLD.w - p || ent.y > WORLD.h - p;
+  }
+
+  function aggroOn(target) {
+    if (!target) return 0;
+    return target.aggroN || 0;
+  }
+
+  function rollBotBrain(bot) {
+    if (!bot || !bot.ai) return bot;
+    bot.orbitR = 190 + Math.random() * 280;
+    bot.aiLock = null;
+    bot.aiLockUntil = 0;
+    if (bot.aiFocus === "farm") bot.aiHuntPlayer = Math.random() < 0.08;
+    else if (bot.aiFocus === "ram") bot.aiHuntPlayer = Math.random() < 0.36;
+    else bot.aiHuntPlayer = Math.random() < 0.18;
+    return bot;
+  }
+
+  const PLAYER_AGGRO_CAP = 4;
+
+  function pickAiEnemy(tank, seeRange) {
+    const now = state.time;
+    const player = state.player;
+    const hurt = tank.aiHurtBy;
+    if (hurt && hurt.alive && now - (tank.aiHurtT || 0) < 9 && isEnemyTank(tank, hurt)) {
+      if (dist2(tank, hurt) < (seeRange * 1.35) * (seeRange * 1.35)) return hurt;
+    }
+    if (tank.aiLock && tank.aiLock.alive && now < (tank.aiLockUntil || 0) && isEnemyTank(tank, tank.aiLock)) {
+      if (dist2(tank, tank.aiLock) < (seeRange * 1.25) * (seeRange * 1.25)) return tank.aiLock;
+    }
+    let best = null;
+    let bestS = -Infinity;
+    const see2 = seeRange * seeRange;
+    const onPlayer = player && player.alive ? aggroOn(player) : 99;
+    for (const t of state.tanks) {
+      if (!isEnemyTank(tank, t)) continue;
+      const d2 = dist2(tank, t);
+      if (d2 > see2) continue;
+      const seen = canSee(tank, t);
+      if (!seen && d2 > 480 * 480) continue;
+      const d = Math.sqrt(d2) || 1;
+      let s = 1200 / d;
+      if (!seen) s *= 0.42;
+      s /= 1 + aggroOn(t) * 0.6;
+      if (t === player) {
+        if (tank.aiFocus === "farm" && d > 340) s *= 0.07;
+        else if (!tank.aiHuntPlayer && d > 300) s *= 0.16;
+        else if (onPlayer >= PLAYER_AGGRO_CAP && hurt !== player) s *= 0.05;
+        else s *= tank.aiHuntPlayer ? 1.04 : 0.62;
+      } else {
+        s *= 1.18;
+      }
+      if (s > bestS) {
+        bestS = s;
+        best = t;
+      }
+    }
+    return best;
+  }
+
   function bestFarm(from, maxDist) {
     let best = null;
     let bestV = -1;
@@ -1674,6 +1753,13 @@
       aiTarget: null,
       aiJob: null,
       aiHunt: Math.random() < 0.58 ? "mid" : "roam",
+      orbitR: 190 + Math.random() * 280,
+      aiHuntPlayer: false,
+      aiLock: null,
+      aiLockUntil: 0,
+      aiHurtBy: null,
+      aiHurtT: 0,
+      aggroN: 0,
     };
     applyLevel(tank);
     tank.health = tank.maxHealth;
@@ -1859,6 +1945,7 @@
       });
       bot.aiFocus = ["gun", "gun", "farm", "ram"][irand(0, 3)];
       bot.aiJob = aiJob;
+      rollBotBrain(bot);
       autoUpgradeBot(bot);
       bot.health = bot.maxHealth;
       bot.shield = bot.maxShield || 0;
@@ -2242,6 +2329,7 @@
         });
         bot.aiFocus = focus || ["gun", "gun", "farm", "ram"][irand(0, 3)];
         bot.aiHunt = Math.random() < 0.58 ? "mid" : "roam";
+        rollBotBrain(bot);
         if (state.mode === "protect") {
           bot.aiJob = Math.random() < 0.48 ? "hunt" : Math.random() < 0.28 ? "defend" : "roam";
         } else if (state.mode === "assault") {
@@ -2298,6 +2386,10 @@
     let log = target.dmgLog;
     if (!log) log = target.dmgLog = [];
     log.push({ tank: dealer, amount, t: state.time });
+    if (target.ai && dealer.type === "tank") {
+      target.aiHurtBy = dealer;
+      target.aiHurtT = state.time;
+    }
     const cut = state.time - ASSIST_WINDOW;
     if (log.length > 48 && log[0].t < cut) {
       let i = 0;
@@ -2435,6 +2527,7 @@
     });
     bot.aiFocus = old.aiFocus || ["gun", "gun", "farm", "ram"][irand(0, 3)];
     bot.aiHunt = Math.random() < 0.58 ? "mid" : "roam";
+    rollBotBrain(bot);
     autoUpgradeBot(bot);
     bot.health = bot.maxHealth;
     bot.shield = bot.maxShield || 0;
@@ -3611,15 +3704,23 @@
     const huntingMoth = state.mode === "protect" && foeMoth && tank.aiJob === "hunt";
     const ram = isRammer(tank);
     const maze = state.mode === "maze" || state.mode === "assault" || state.mode === "royalemaze";
-    const fightRange = maze ? (ram ? 520 : 640) : (ram ? 820 : 980);
-    const seeRange = maze ? 1100 : (state.mode === "tag" || state.mode === "protect" ? 2200 : 1800);
+    const fightRange = maze
+      ? (ram ? 520 : 640)
+      : tank.aiFocus === "farm"
+        ? 360
+        : ram
+          ? 820
+          : tank.aiHuntPlayer
+            ? 880
+            : 640;
+    const seeRange = maze ? 1100 : (state.mode === "tag" || state.mode === "protect" ? 2200 : 1400);
     let enemy = hunting
-      ? nearestSeen(tank, state.tanks, maze ? 900 : 1600, (t) => isEnemyTank(tank, t))
+      ? pickAiEnemy(tank, maze ? 900 : 1600)
       : huntingMoth
-        ? (nearestSeen(tank, state.tanks, 520, (t) => isEnemyTank(tank, t) && !t.mothership) || foeMoth)
-        : nearestSeen(tank, state.tanks, seeRange, (t) => isEnemyTank(tank, t));
+        ? (pickAiEnemy(tank, 520) || foeMoth)
+        : pickAiEnemy(tank, seeRange);
     const heard = maze || enemy ? null : nearest(tank, state.tanks, 3200, (t) => isEnemyTank(tank, t));
-    if (hunting && mark && !spawnProtected(mark) && canSee(tank, mark)) {
+    if (hunting && mark && !spawnProtected(mark) && canSee(tank, mark) && (aggroOn(mark) < 5 || tank.aiHurtBy === mark)) {
       const melee = nearestSeen(tank, state.tanks, 420, (t) => isEnemyTank(tank, t) && t !== mark);
       if (!melee) enemy = mark;
     }
@@ -3645,20 +3746,12 @@
     else if (defending && enemy && dist2(tank, enemy) < 720 * 720) tank.aiState = "attack";
     else if (defending) tank.aiState = "defend";
     else if (healAlly && (!enemy || dist2(tank, healAlly) < dist2(tank, enemy) || healAlly.health < healAlly.maxHealth * 0.55)) tank.aiState = "heal";
+    else if (tank.aiFocus === "farm" && shape && (!enemy || dist2(tank, enemy) > 300 * 300) && dist2(tank, shape) < 560 * 560 && (!maze || canSee(tank, shape))) tank.aiState = "farm";
     else if (maze && enemy) tank.aiState = "attack";
     else if (enemy && dist2(tank, enemy) < fightRange * fightRange) tank.aiState = "attack";
     else if (heard && dist2(tank, heard) < 2600 * 2600) tank.aiState = "seek";
     else if (shape && dist2(tank, shape) < (maze ? 280 : 420) * (maze ? 280 : 420) && (!maze || canSee(tank, shape))) tank.aiState = "farm";
     else tank.aiState = "wander";
-
-    if (player && player.alive && isEnemyTank(tank, player) && tank.aiState !== "flee" && tank.aiState !== "storm" && tank.aiState !== "home" && tank.aiState !== "heal" && !(huntingMoth && dist2(tank, player) > 520 * 520)) {
-      const pd = dist2(tank, player);
-      const seen = canSee(tank, player);
-      if (pd < (ram ? 900 : 760) * (ram ? 900 : 760) && (hpPct > 0.28 || pd < 260 * 260) && (seen || (!maze && pd < 500 * 500))) {
-        tank.aiState = "attack";
-        enemy = player;
-      }
-    }
 
     if (state.mode === "domination" && tank.team && tank.aiState !== "flee" && tank.aiState !== "attack" && tank.aiState !== "home" && tank.aiState !== "heal") {
       let claim = null;
@@ -3724,6 +3817,13 @@
 
     const st = tankStats(tank);
     tank.aiTarget = tank.aiState === "heal" ? healAlly : tank.aiState === "attack" ? enemy : tank.aiState === "farm" ? shape : tank.aiState === "defend" ? (enemy || ownMoth) : tank.aiState === "seek" ? heard : null;
+    if (tank.aiState === "attack" && enemy) {
+      enemy.aggroN = (enemy.aggroN || 0) + 1;
+      if (tank.aiLock !== enemy) {
+        tank.aiLock = enemy;
+        tank.aiLockUntil = state.time + rand(2.2, 5.8);
+      }
+    }
 
     let tx = tank.x;
     let ty = tank.y;
@@ -3751,7 +3851,7 @@
         const ny = (enemy.y - tank.y) / dist;
         const sx = -ny * (tank.strafeDir || 1);
         const sy = nx * (tank.strafeDir || 1);
-        const prefer = ram ? 42 : (enemy.mothership || enemy.dominator ? 150 : 310);
+        const prefer = ram ? 42 : (enemy.mothership || enemy.dominator ? 150 : (tank.orbitR || 310));
         if (enemy.dominator) {
           const hold = holdPoint(tank, enemy, enemy.r + 78);
           tx = hold.x;
@@ -3759,18 +3859,25 @@
         } else if (ram) {
           tx = enemy.x;
           ty = enemy.y;
-        } else if (dist > prefer + 50) {
-          tx = enemy.x - nx * (prefer * 0.35) + sx * 70;
-          ty = enemy.y - ny * (prefer * 0.35) + sy * 70;
-        } else if (dist < prefer - 60 || hpPct < 0.5) {
-          tx = tank.x - nx * 150 + sx * 130;
-          ty = tank.y - ny * 150 + sy * 130;
         } else {
-          tx = tank.x + sx * 190;
-          ty = tank.y + sy * 190;
+          const hold = holdPoint(tank, enemy, prefer);
+          if (dist > prefer + 70) {
+            tx = hold.x;
+            ty = hold.y;
+          } else if (dist < prefer - 70 || hpPct < 0.5) {
+            tx = tank.x - nx * 160 + sx * 150;
+            ty = tank.y - ny * 160 + sy * 150;
+          } else {
+            tx = hold.x + sx * 40;
+            ty = hold.y + sy * 40;
+          }
         }
       }
-      const steered = steerAround(tank, tx, ty);
+      const push = edgePush(tank, 230);
+      tx += push.x * 2.4;
+      ty += push.y * 2.4;
+      const parked = clampArena(tx, ty, 160);
+      const steered = steerAround(tank, parked.x, parked.y);
       tx = steered.x;
       ty = steered.y;
       tank.angle = aimAt(tank, enemy, st);
@@ -3783,8 +3890,10 @@
     } else if (tank.aiState === "flee" && (closerNear || hunterNear || enemy)) {
       const from = closerNear || hunterNear || enemy;
       const steered = steerAround(tank, tank.x * 2 - from.x, tank.y * 2 - from.y);
-      tx = steered.x;
-      ty = steered.y;
+      const push = edgePush(tank, 260);
+      const parked = clampArena(steered.x + push.x * 2.2, steered.y + push.y * 2.2, 160);
+      tx = parked.x;
+      ty = parked.y;
       if (enemy && canSee(tank, enemy)) tank.angle = aimAt(tank, enemy, st);
       else tank.angle = Math.atan2(from.y - tank.y, from.x - tank.x);
     } else if (tank.aiState === "heal" && healAlly) {
@@ -3846,15 +3955,30 @@
     const ang = Math.atan2(ty - tank.y, tx - tank.x);
     tank.vx += Math.cos(ang) * pace * 62 * dt;
     tank.vy += Math.sin(ang) * pace * 62 * dt;
-    if (maze && Math.hypot(tank.vx, tank.vy) < 18) {
+    const slow = Math.hypot(tank.vx, tank.vy) < 20;
+    if ((maze && slow) || (nearMapEdge(tank, 150) && slow && tank.aiState === "attack")) {
       tank.stuckT = (tank.stuckT || 0) + dt;
-      if (tank.stuckT > 0.28) {
+      if (tank.stuckT > 0.3) {
         tank.stuckT = 0;
-        tank.aiT = 0;
+        tank.aiT = rand(1.1, 2.2);
         tank.strafeDir = -(tank.strafeDir || 1);
-        const p = randomOpenNear(tank, 120, 420);
-        tank.roamX = p.x;
-        tank.roamY = p.y;
+        tank.aiLock = null;
+        tank.aiLockUntil = 0;
+        const inward = clampArena(
+          tank.x + (WORLD.w * 0.5 - tank.x) * 0.48 + rand(-340, 340),
+          tank.y + (WORLD.h * 0.5 - tank.y) * 0.48 + rand(-340, 340),
+          280
+        );
+        if (maze) {
+          const p = randomOpenNear(tank, 120, 420);
+          tank.roamX = p.x;
+          tank.roamY = p.y;
+        } else {
+          tank.roamX = inward.x;
+          tank.roamY = inward.y;
+        }
+        tank.aiState = "wander";
+        tank.aiTarget = null;
       }
     } else tank.stuckT = 0;
     updateTurrets(tank, dt);
@@ -4113,6 +4237,7 @@
     if (!state.spectating) updatePlayer(dt);
     else updateGhost(dt);
 
+    for (const t of state.tanks) t.aggroN = 0;
     for (const tank of state.tanks) {
       if (!tank.alive) continue;
       if (tank.ai) updateAI(tank, dt);
