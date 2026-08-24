@@ -495,7 +495,7 @@ h2 {
 }
 
 .cert-image.cert-photo img {
-    max-width: min(100%, 720px);
+    max-width: 280px;
     display: block;
 }
 
