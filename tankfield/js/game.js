@@ -268,22 +268,62 @@
     return darken(hex);
   }
 
-  function siegeNestSize() {
-    return state.siegeNest || Math.round(WORLD.w * 0.16);
+  function siegeLayout() {
+    return state.siegeLayout || null;
   }
 
-  function inSiegeNest(x, y, pad = 0) {
+  function inSiegeInner(x, y, pad = 0) {
+    const L = siegeLayout();
+    if (!L) return true;
+    const i = L.inner;
+    return x >= i.x0 + pad && x <= i.x1 - pad && y >= i.y0 + pad && y <= i.y1 - pad;
+  }
+
+  function inSiegeSafe(x, y, pad = 0) {
+    const L = siegeLayout();
+    if (!L) return true;
+    const b = L.wall;
+    return x >= b.x0 + pad && x <= b.x1 - pad && y >= b.y0 + pad && y <= b.y1 - pad;
+  }
+
+  function inSiegeRed(x, y) {
     if (state.mode !== "siege") return false;
-    const n = siegeNestSize() + pad;
-    const left = x <= n;
-    const right = x >= WORLD.w - n;
-    const top = y <= n;
-    const bot = y >= WORLD.h - n;
-    return (left && top) || (left && bot) || (right && top) || (right && bot);
+    return !inSiegeSafe(x, y);
+  }
+
+  function siegeGatePoints() {
+    const L = siegeLayout();
+    if (!L) return [];
+    const w = L.wall;
+    const t = w.t;
+    const mx = (w.x0 + w.x1) * 0.5;
+    const my = (w.y0 + w.y1) * 0.5;
+    return [
+      { x: mx, y: w.y0 + t * 0.5 },
+      { x: mx, y: w.y1 - t * 0.5 },
+      { x: w.x0 + t * 0.5, y: my },
+      { x: w.x1 - t * 0.5, y: my },
+    ];
+  }
+
+  function siegeApproach(x, y, goalX, goalY) {
+    if (inSiegeSafe(x, y, -30)) return { x: goalX, y: goalY };
+    const gates = siegeGatePoints();
+    if (!gates.length) return { x: goalX, y: goalY };
+    let best = gates[0];
+    let bestD = Infinity;
+    for (const g of gates) {
+      const d = (g.x - x) * (g.x - x) + (g.y - y) * (g.y - y);
+      if (d < bestD) {
+        bestD = d;
+        best = g;
+      }
+    }
+    return best;
   }
 
   function zoneAt(x, y) {
-    if (state.mode === "siege") return inSiegeNest(x, y) ? "boss" : null;
+    if (state.mode === "siege") return inSiegeRed(x, y) ? "boss" : null;
     if (state.mode === "tdm") {
       if (x <= BASE_W) return "blue";
       if (x >= WORLD.w - BASE_W) return "red";
@@ -1526,23 +1566,34 @@
     const live = liveSanctuaries();
     if (live.length) {
       const s = live[irand(0, live.length - 1)];
-      return openAround(s.x, s.y, 90, 260, 36);
+      const p = openAround(s.x, s.y, 90, 240, 36);
+      if (inSiegeInner(p.x, p.y, 40)) return p;
+      return { x: s.x + rand(-80, 80), y: s.y + rand(-80, 80) };
     }
-    return randomInWorld(200);
+    const L = siegeLayout();
+    if (L) {
+      return {
+        x: rand(L.inner.x0 + 120, L.inner.x1 - 120),
+        y: rand(L.inner.y0 + 120, L.inner.y1 - 120),
+      };
+    }
+    return { x: WORLD.w * 0.5, y: WORLD.h * 0.5 };
   }
 
   function siegeBossSpawn() {
-    const n = siegeNestSize();
-    const pad = 90;
-    const loX = n + 160;
-    const hiX = WORLD.w - n - 160;
-    const loY = n + 160;
-    const hiY = WORLD.h - n - 160;
-    const side = irand(0, 3);
-    if (side === 0) return { x: pad, y: rand(loY, hiY) };
-    if (side === 1) return { x: WORLD.w - pad, y: rand(loY, hiY) };
-    if (side === 2) return { x: rand(loX, hiX), y: pad };
-    return { x: rand(loX, hiX), y: WORLD.h - pad };
+    const L = siegeLayout();
+    const pad = 140;
+    const r = L ? L.red : { x0: WORLD.w * 0.3, y0: WORLD.h * 0.3, x1: WORLD.w * 0.7, y1: WORLD.h * 0.7 };
+    for (let i = 0; i < 28; i++) {
+      const side = irand(0, 3);
+      let p;
+      if (side === 0) p = { x: rand(pad, Math.max(pad + 8, r.x0 - 40)), y: rand(pad, WORLD.h - pad) };
+      else if (side === 1) p = { x: rand(Math.min(WORLD.w - pad - 8, r.x1 + 40), WORLD.w - pad), y: rand(pad, WORLD.h - pad) };
+      else if (side === 2) p = { x: rand(pad, WORLD.w - pad), y: rand(pad, Math.max(pad + 8, r.y0 - 40)) };
+      else p = { x: rand(pad, WORLD.w - pad), y: rand(Math.min(WORLD.h - pad - 8, r.y1 + 40), WORLD.h - pad) };
+      if (!inSiegeSafe(p.x, p.y, 0) && !hitsWall(p.x, p.y, 48)) return p;
+    }
+    return { x: pad + 40, y: pad + 40 };
   }
 
   function resetSiege() {
@@ -1553,69 +1604,76 @@
     state.siegeTier = 1;
     state.siegeLoseAt = 0;
     state.siegeWon = false;
-    state.siegeNest = 0;
+    state.siegeLayout = null;
   }
 
-  function buildSiegeOpenMap() {
-    const { cube, cols, rows, x0, y0 } = mazeGrid();
-    const filled = Array.from({ length: rows }, () => Array(cols).fill(false));
-    const inside = (r, c) => r > 1 && r < rows - 2 && c > 1 && c < cols - 2;
-    const cr = (rows - 1) / 2;
-    const cc = (cols - 1) / 2;
-    const style = irand(0, 3);
-    const hole = Math.max(5, Math.floor(Math.min(rows, cols) * (style === 0 ? 0.34 : style === 1 ? 0.26 : 0.3)));
-    const tooClose = (r, c) => (r - cr) * (r - cr) + (c - cc) * (c - cc) <= hole * hole;
-    const shapes = [
-      [[0, 0]],
-      [[0, 0], [1, 0]],
-      [[0, 0], [0, 1]],
-      [[0, 0], [1, 1]],
-      [[0, 0], [1, 0], [2, 0]],
-      [[0, 0], [0, 1], [0, 2]],
-      [[0, 0], [1, 0], [1, 1]],
-      [[0, 0], [1, 0], [0, 1]],
-      [[0, 0], [1, 0], [2, 1]],
-      [[0, 0], [1, 0], [2, 0], [1, 1]],
-    ];
-    const n = style === 0 ? irand(8, 16) : style === 1 ? irand(20, 34) : style === 2 ? irand(14, 24) : irand(12, 22);
-    for (let i = 0; i < n; i++) {
-      const raw = shapes[irand(0, shapes.length - 1)];
-      const flip = Math.random() < 0.5;
-      const rot = irand(0, 3);
-      const cells = raw.map(([x, y]) => {
-        let a = flip ? -x : x;
-        let b = y;
-        for (let k = 0; k < rot; k++) {
-          const t = a;
-          a = -b;
-          b = t;
-        }
-        return [a, b];
-      });
-      const sr = irand(2, rows - 3);
-      const sc = irand(2, cols - 3);
-      if (cells.some(([dc, dr]) => tooClose(sr + dr, sc + dc) || !inside(sr + dr, sc + dc))) continue;
-      for (const [dc, dr] of cells) {
-        const r = sr + dr;
-        const c = sc + dc;
-        if (inside(r, c)) filled[r][c] = true;
-      }
-    }
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        if (tooClose(r, c)) filled[r][c] = false;
-      }
-    }
-    clearMazeBorder(filled, rows, cols);
-    state.maze = { cube, x0, y0, cols, rows, filled };
-    rebuildMazeWalls();
+  function addSiegeWall(x, y, w, h) {
+    if (w < 8 || h < 8) return;
+    state.walls.push({ x, y, w, h });
+  }
+
+  function addSiegeHWall(x0, x1, y, thick, gateX, gateW) {
+    const gap0 = gateX - gateW * 0.5;
+    const gap1 = gateX + gateW * 0.5;
+    addSiegeWall(x0, y, gap0 - x0, thick);
+    addSiegeWall(gap1, y, x1 - gap1, thick);
+  }
+
+  function addSiegeVWall(y0, y1, x, thick, gateY, gateW) {
+    const gap0 = gateY - gateW * 0.5;
+    const gap1 = gateY + gateW * 0.5;
+    addSiegeWall(x, y0, thick, gap0 - y0);
+    addSiegeWall(x, gap1, thick, y1 - gap1);
+  }
+
+  function makeSiegeLayout() {
+    const W = WORLD.w;
+    const H = WORLD.h;
+    const innerFrac = rand(0.58, 0.64);
+    const innerW = W * innerFrac;
+    const innerH = H * innerFrac;
+    const x0 = (W - innerW) * 0.5;
+    const y0 = (H - innerH) * 0.5;
+    const x1 = x0 + innerW;
+    const y1 = y0 + innerH;
+    const wallT = rand(160, 210);
+    const redT = Math.round(W * rand(0.055, 0.075));
+    const gateW = Math.round(W * rand(0.07, 0.09));
+    const wx0 = x0 - wallT;
+    const wy0 = y0 - wallT;
+    const wx1 = x1 + wallT;
+    const wy1 = y1 + wallT;
+    state.siegeLayout = {
+      inner: { x0, y0, x1, y1 },
+      wall: { x0: wx0, y0: wy0, x1: wx1, y1: wy1, t: wallT },
+      red: { x0: wx0 - redT, y0: wy0 - redT, x1: wx1 + redT, y1: wy1 + redT },
+      gate: gateW,
+    };
+    return state.siegeLayout;
+  }
+
+  function buildSiegeEnclosure() {
+    const L = makeSiegeLayout();
+    const w = L.wall;
+    const g = L.gate;
+    const t = w.t;
+    state.maze = null;
+    state.walls = [];
+    const mx = (w.x0 + w.x1) * 0.5;
+    const my = (w.y0 + w.y1) * 0.5;
+    addSiegeHWall(w.x0, w.x1, w.y0, t, mx, g);
+    addSiegeHWall(w.x0, w.x1, w.y1 - t, t, mx, g);
+    addSiegeVWall(w.y0, w.y1, w.x0, t, my, g);
+    addSiegeVWall(w.y0, w.y1, w.x1 - t, t, my, g);
   }
 
   function siegeSancSpots() {
+    const L = siegeLayout();
     const cx = WORLD.w * 0.5;
     const cy = WORLD.h * 0.5;
-    const spread = WORLD.w * rand(0.18, 0.23);
-    const jitter = () => rand(-70, 70);
+    const innerW = L ? (L.inner.x1 - L.inner.x0) : WORLD.w * 0.48;
+    const spread = innerW * rand(0.22, 0.28);
+    const jitter = () => rand(-40, 40);
     return [
       { x: cx + jitter(), y: cy - spread + jitter() },
       { x: cx + jitter(), y: cy + spread + jitter() },
@@ -1659,21 +1717,8 @@
   }
 
   function buildSiegeArena() {
-    state.siegeNest = Math.round(WORLD.w * rand(0.145, 0.185));
-    buildSiegeOpenMap();
+    buildSiegeEnclosure();
     const spots = siegeSancSpots();
-    const n = siegeNestSize();
-    for (const p of spots) punchMazeAt(p.x, p.y, 480);
-    punchMazeAt(WORLD.w * 0.5, WORLD.h * 0.5, 780);
-    punchMazeAt(WORLD.w * 0.5, 0, 640);
-    punchMazeAt(WORLD.w * 0.5, WORLD.h, 640);
-    punchMazeAt(0, WORLD.h * 0.5, 640);
-    punchMazeAt(WORLD.w, WORLD.h * 0.5, 640);
-    punchMazeAt(n * 0.5, n * 0.5, n);
-    punchMazeAt(WORLD.w - n * 0.5, n * 0.5, n);
-    punchMazeAt(n * 0.5, WORLD.h - n * 0.5, n);
-    punchMazeAt(WORLD.w - n * 0.5, WORLD.h - n * 0.5, n);
-    rebuildMazeWalls();
     for (const p of spots) spawnSanctuary(p, "blue");
     state.siegeWaves = siegeWaveList();
     state.siegeWave = -1;
@@ -1686,15 +1731,16 @@
 
   function spawnSiegeBoss(classId, fodder) {
     const def = TankCatalog.get(classId);
-    let pos = openAround(siegeBossSpawn().x, siegeBossSpawn().y, 0, 80, 48);
-    if (inSiegeNest(pos.x, pos.y, 24)) {
-      const cx = WORLD.w * 0.5;
-      const cy = WORLD.h * 0.5;
-      const dx = cx - pos.x;
-      const dy = cy - pos.y;
-      const d = Math.hypot(dx, dy) || 1;
-      pos = { x: pos.x + (dx / d) * (siegeNestSize() + 80), y: pos.y + (dy / d) * (siegeNestSize() + 80) };
+    let pos = siegeBossSpawn();
+    if (inSiegeSafe(pos.x, pos.y, 0)) {
+      const L = siegeLayout();
+      const r = L ? L.red : null;
+      pos = r
+        ? { x: r.x0 - 80, y: rand(r.y0, r.y1) }
+        : { x: 140, y: WORLD.h * 0.5 };
     }
+    pos = openAround(pos.x, pos.y, 0, 60, 48);
+    if (inSiegeSafe(pos.x, pos.y, 0)) pos = siegeBossSpawn();
     const tank = createTank({
       name: def && def.name ? def.name : "Boss",
       ai: true,
@@ -2567,7 +2613,7 @@
     if (state.mode === "assault") welcomeSpawnNotes();
     if (state.mode === "siege") {
       welcomeSpawnNotes();
-      note("Defend the blue sanctuaries. Corner red zones kill you. Bosses spawn outside them and push inward.");
+      note("Defend the blue sanctuaries. The red ring instakills you. Bosses spawn in the outer ring and push inward.");
       note("If every sanctuary falls, you cannot respawn. Destroy the yellow wrecks to restore them.");
     }
     if (isZeroFfa()) {
@@ -4133,8 +4179,9 @@
           target = melee ? prey : sanc;
         } else {
           tank.aiState = "push";
-          tx = sanc.x;
-          ty = sanc.y;
+          const aim = siegeApproach(tank.x, tank.y, sanc.x, sanc.y);
+          tx = aim.x;
+          ty = aim.y;
           target = prey || sanc;
         }
       } else if (prey) {
@@ -4810,6 +4857,14 @@
       tank.x = clamp(tank.x, tank.r, WORLD.w - tank.r);
       tank.y = clamp(tank.y, tank.r, WORLD.h - tank.r);
       pushOutWalls(tank);
+      if (state.mode === "siege" && tank.ai && tank.team === "blue" && !tank.sanctuary && !tank.dominator) {
+        const L = siegeLayout();
+        if (L && !inSiegeInner(tank.x, tank.y, 8)) {
+          tank.x = clamp(tank.x, L.inner.x0 + 28, L.inner.x1 - 28);
+          tank.y = clamp(tank.y, L.inner.y0 + 28, L.inner.y1 - 28);
+          pushOutWalls(tank);
+        }
+      }
       tank.bodyHitT = Math.max(0, tank.bodyHitT - dt);
       if (tank.spawnProtect > 0) tank.spawnProtect = Math.max(0, tank.spawnProtect - dt);
       const invading = tank.team && zoneAt(tank.x, tank.y) && zoneAt(tank.x, tank.y) !== tank.team;
@@ -4817,17 +4872,26 @@
       if (tank.dominator && tank.destroyed) {
         tank.health = 0;
       } else if (invading || inStorm) {
-        let burn = (tank.maxHealth + (tank.maxShield || 0)) * (inStorm ? royaleBurnRate() : 0.32) * dt;
-        if ((tank.shield || 0) > 0) {
-          const soak = Math.min(tank.shield, burn);
-          tank.shield -= soak;
-          burn -= soak;
-          tank.shieldDelay = 1.2;
+        const siegeKill = state.mode === "siege" && invading && tank.team !== "boss" && !tank.fodder && !tank.sanctuary && !tank.dominator && !tank.closer;
+        if (siegeKill) {
+          tank.health = 0;
+          tank.shield = 0;
+          tank.bodyHitT = 0.08;
+          if (tank === state.player) shake = Math.max(shake, 6);
+          killTank(tank, null, "the red zone");
+        } else {
+          let burn = (tank.maxHealth + (tank.maxShield || 0)) * (inStorm ? royaleBurnRate() : 0.32) * dt;
+          if ((tank.shield || 0) > 0) {
+            const soak = Math.min(tank.shield, burn);
+            tank.shield -= soak;
+            burn -= soak;
+            tank.shieldDelay = 1.2;
+          }
+          if (burn > 0) tank.health -= burn;
+          tank.bodyHitT = 0.08;
+          if (tank === state.player) shake = Math.max(shake, inStorm ? 3 : 4);
+          if (tank.health <= 0) killTank(tank, null, inStorm ? "the storm" : (state.mode === "siege" ? "the red zone" : `the ${zoneAt(tank.x, tank.y)} base`));
         }
-        if (burn > 0) tank.health -= burn;
-        tank.bodyHitT = 0.08;
-        if (tank === state.player) shake = Math.max(shake, inStorm ? 3 : 4);
-        if (tank.health <= 0) killTank(tank, null, inStorm ? "the storm" : (state.mode === "siege" ? "the red zone" : `the ${zoneAt(tank.x, tank.y)} base`));
       } else {
         tank.health = Math.min(tank.maxHealth, tank.health + st.regen * dt);
         tank.shieldDelay = Math.max(0, (tank.shieldDelay || 0) - dt);
@@ -5742,22 +5806,16 @@
       }
     }
     if (state.mode === "siege") {
-      const n = siegeNestSize();
-      const paintNest = (x, y) => {
+      const L = siegeLayout();
+      if (L) {
         ctx.fillStyle = TEAMS.boss.color;
-        ctx.globalAlpha = 0.18;
-        ctx.fillRect(x, y, n, n);
+        ctx.globalAlpha = 0.28;
+        ctx.fillRect(L.red.x0, L.red.y0, L.red.x1 - L.red.x0, L.wall.y0 - L.red.y0);
+        ctx.fillRect(L.red.x0, L.wall.y1, L.red.x1 - L.red.x0, L.red.y1 - L.wall.y1);
+        ctx.fillRect(L.red.x0, L.wall.y0, L.wall.x0 - L.red.x0, L.wall.y1 - L.wall.y0);
+        ctx.fillRect(L.wall.x1, L.wall.y0, L.red.x1 - L.wall.x1, L.wall.y1 - L.wall.y0);
         ctx.globalAlpha = 1;
-        ctx.strokeStyle = TEAMS.boss.color;
-        ctx.globalAlpha = 0.55;
-        ctx.lineWidth = 8;
-        ctx.strokeRect(x + 4, y + 4, n - 8, n - 8);
-        ctx.globalAlpha = 1;
-      };
-      paintNest(0, 0);
-      paintNest(WORLD.w - n, 0);
-      paintNest(0, WORLD.h - n);
-      paintNest(WORLD.w - n, WORLD.h - n);
+      }
     }
     if (state.mode === "assault") {
       for (const d of assaultDoms()) {
@@ -5959,11 +6017,13 @@
       paintZone("blue", 0, 0, BASE_W, WORLD.h);
       paintZone("red", WORLD.w - BASE_W, 0, BASE_W, WORLD.h);
     } else if (state.mode === "siege") {
-      const n = siegeNestSize();
-      paintZone("boss", 0, 0, n, n);
-      paintZone("boss", WORLD.w - n, 0, n, n);
-      paintZone("boss", 0, WORLD.h - n, n, n);
-      paintZone("boss", WORLD.w - n, WORLD.h - n, n, n);
+      const L = siegeLayout();
+      if (L) {
+        paintZone("boss", L.red.x0, L.red.y0, L.red.x1 - L.red.x0, L.wall.y0 - L.red.y0);
+        paintZone("boss", L.red.x0, L.wall.y1, L.red.x1 - L.red.x0, L.red.y1 - L.wall.y1);
+        paintZone("boss", L.red.x0, L.wall.y0, L.wall.x0 - L.red.x0, L.wall.y1 - L.wall.y0);
+        paintZone("boss", L.wall.x1, L.wall.y0, L.red.x1 - L.wall.x1, L.wall.y1 - L.wall.y0);
+      }
     }
     for (const d of state.doms) {
       mctx.beginPath();
