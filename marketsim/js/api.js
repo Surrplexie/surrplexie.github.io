@@ -90,8 +90,8 @@
       return this.getState();
     },
 
-    chart(ticker, bucket, maxBars) {
-      return chartSeries(getGame(), ticker, bucket, maxBars);
+    chart(ticker, opts, maxBars) {
+      return chartSeries(getGame(), ticker, opts, maxBars ?? 400);
     },
   };
 

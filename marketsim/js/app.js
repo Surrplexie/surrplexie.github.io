@@ -1,7 +1,7 @@
 (function () {
   const API = globalThis.MarketSimAPI;
   const { Result, resultMsg } = globalThis.MarketSimExecution;
-  const { fmtMoney, fmtQty } = globalThis.MarketSimState;
+  const { fmtMoney, fmtQty, CHART_EPOCH } = globalThis.MarketSimState;
   const { STARTING_CASH_MIN_USD, STARTING_CASH_MAX_USD } = globalThis.MarketSimConfig;
 
   let selectedTicker = null;
@@ -111,10 +111,21 @@
     renderState();
   }
 
+  function chartIntervalSpec() {
+    return $("chart-interval").value || "day:1";
+  }
+
   function refreshChart() {
     if (!selectedTicker || !candleSeries) return;
-    const { bars } = API.chart(selectedTicker, 1, 500);
+    const spec = chartIntervalSpec();
+    const st = API.getState();
+    const { bars, bucket_label } = API.chart(selectedTicker, spec, 400);
     $("chart-title").textContent = selectedTicker;
+    $("chart-interval-hint").textContent = bucket_label || "";
+    if (!bars.length) {
+      candleSeries.setData([]);
+      return;
+    }
     candleSeries.setData(
       bars.map((b) => ({
         time: b.time,
@@ -127,15 +138,43 @@
     chart.timeScale().fitContent();
   }
 
+  function simTickFromChartTime(time, mpt) {
+    return Math.round((time - CHART_EPOCH) / (mpt * 60));
+  }
+
   function initChart() {
     const el = $("chart");
     if (!globalThis.LightweightCharts) return;
+    const mpt = () => API.getState().sim_minutes_per_tick || 15;
     chart = globalThis.LightweightCharts.createChart(el, {
       width: el.clientWidth,
       height: 280,
       layout: { background: { color: "#0d1117" }, textColor: "#9db0c4" },
       grid: { vertLines: { color: "#1c2430" }, horzLines: { color: "#1c2430" } },
-      timeScale: { borderColor: "#2a3544" },
+      timeScale: {
+        borderColor: "#2a3544",
+        timeVisible: true,
+        secondsVisible: false,
+        tickMarkFormatter: (time) => {
+          const tick = simTickFromChartTime(time, mpt());
+          const tpd = Math.round((24 * 60) / mpt());
+          if (tpd > 0 && tick >= tpd) {
+            const day = Math.floor(tick / tpd);
+            const rem = tick % tpd;
+            return rem === 0 ? `D${day}` : `D${day}+${rem}`;
+          }
+          return `T${tick}`;
+        },
+      },
+      localization: {
+        timeFormatter: (time) => {
+          const tick = simTickFromChartTime(time, mpt());
+          const tpd = Math.round((24 * 60) / mpt());
+          const day = tpd > 0 ? Math.floor(tick / tpd) : 0;
+          const rem = tpd > 0 ? tick % tpd : tick;
+          return tpd > 0 ? `sim D${day} tick ${rem} (#${tick})` : `sim tick ${tick}`;
+        },
+      },
       rightPriceScale: { borderColor: "#2a3544" },
     });
     candleSeries = chart.addCandlestickSeries({
@@ -319,6 +358,10 @@
 
     $("start-cash").min = STARTING_CASH_MIN_USD;
     $("start-cash").max = STARTING_CASH_MAX_USD;
+
+    $("chart-interval").addEventListener("change", () => {
+      if (selectedTicker) refreshChart();
+    });
   }
 
   document.addEventListener("DOMContentLoaded", () => {

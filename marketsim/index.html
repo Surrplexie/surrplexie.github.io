@@ -190,7 +190,23 @@
 
       <section class="center">
         <div class="watch-wrap">
-          <div class="chart-head">Chart: <span id="chart-title">—</span></div>
+          <div class="chart-head">
+            <div class="chart-head-row">
+              <span>Chart: <strong id="chart-title">—</strong></span>
+              <label class="chart-interval-label" for="chart-interval">Candle</label>
+              <select id="chart-interval" class="chart-interval" title="Sim-time OHLC bucket">
+                <option value="tick:1">1 tick</option>
+                <option value="tick:2">2 ticks</option>
+                <option value="tick:5">5 ticks</option>
+                <option value="tick:15">15 ticks</option>
+                <option value="hour:1">1 sim hour</option>
+                <option value="hour:4">4 sim hours</option>
+                <option value="day:1" selected>1 sim day</option>
+                <option value="week:1">1 sim week</option>
+              </select>
+            </div>
+            <div id="chart-interval-hint" class="chart-hint"></div>
+          </div>
           <div id="chart"></div>
           <div class="watch-scroll">
             <table>
@@ -248,8 +264,8 @@
   <script src="js/player.js?v=2"></script>
   <script src="js/execution.js?v=2"></script>
   <script src="js/engine.js?v=2"></script>
-  <script src="js/state.js?v=2"></script>
-  <script src="js/api.js?v=2"></script>
-  <script src="js/app.js?v=2"></script>
+  <script src="js/state.js?v=3"></script>
+  <script src="js/api.js?v=3"></script>
+  <script src="js/app.js?v=3"></script>
 </body>
 </html>
