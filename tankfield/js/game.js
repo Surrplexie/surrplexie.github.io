@@ -82,6 +82,8 @@
   const DOM_HOLD = 8;
   const ASSAULT_WIN = 10 * 60;
   const TEAM4 = ["blue", "red", "green", "purple"];
+  const HUNTED_TEAM = "red";
+  const HUNTER_TEAM = "blue";
 
   const STATS = [
     { key: "regen", name: "Health Regen", color: "#e85d9c" },
@@ -472,7 +474,7 @@
       out.fov = Math.max(out.fov, 1.45);
       out.maxDrones = Math.max(out.maxDrones, 28);
     }
-    if (state.mode === "manhunt" && tank && tank === state.hunted) {
+    if (isHuntMode() && tank && tank === state.hunted) {
       out.maxHealth *= 1.16;
       out.regen *= 1.12;
       out.bodyDamage *= 1.1;
@@ -1823,6 +1825,7 @@
       return splitTwoTeams(count, own, own === "red" ? "green" : "red");
     }
     if (mode === "siege") return Array(count).fill("blue");
+    if (mode === "teamhunt") return Array(count).fill(HUNTER_TEAM);
     return [];
   }
 
@@ -1842,6 +1845,7 @@
       tdm: "2 Teams",
       "4tdm": "4 Teams",
       manhunt: "Manhunt",
+      teamhunt: "Team Manhunt",
       tag: "Tag",
       protect: "Protect",
       maze: "Maze",
@@ -1871,9 +1875,19 @@
     note("Arms Race: extra class tree, hybrids, and T4–T5 tanks at 45.");
   }
 
+  function isHuntMode(mode) {
+    const m = mode == null ? state.mode : mode;
+    return m === "manhunt" || m === "teamhunt";
+  }
+
+  function isTeamHunt(mode) {
+    const m = mode == null ? state.mode : mode;
+    return m === "teamhunt";
+  }
+
   function teamMode(mode) {
     const m = mode == null ? state.mode : mode;
-    return m === "tdm" || m === "4tdm" || m === "tag" || m === "protect" || m === "domination" || m === "assault" || m === "siege";
+    return m === "tdm" || m === "4tdm" || m === "tag" || m === "protect" || m === "domination" || m === "assault" || m === "siege" || m === "teamhunt";
   }
 
   function healerAllowed(tank) {
@@ -1903,6 +1917,7 @@
 
   function pickStartTeam(mode) {
     if (mode === "siege") return "blue";
+    if (mode === "teamhunt") return HUNTER_TEAM;
     if (mode === "tdm" || mode === "domination") return Math.random() < 0.5 ? "red" : "blue";
     if (mode === "assault") return Math.random() < 0.5 ? "blue" : "green";
     if (mode === "4tdm") return TEAM4[irand(0, TEAM4.length - 1)];
@@ -2093,8 +2108,8 @@
     const killer = payout.killer;
     const me = state.player;
     if (!killer || !me) return;
-    if (killer === me) note(`You killed ${victimLabel(victim)}${state.mode === "manhunt" && victim === state.hunted ? " · hunted 95%" : ""}.`);
-    else note(`You assisted ${killer.name} in killing ${victimLabel(victim)}${state.mode === "manhunt" && victim === state.hunted ? " · hunted 95%" : ""}.`);
+    if (killer === me) note(`You killed ${victimLabel(victim)}${isHuntMode() && victim === state.hunted ? " · hunted 95%" : ""}.`);
+    else note(`You assisted ${killer.name} in killing ${victimLabel(victim)}${isHuntMode() && victim === state.hunted ? " · hunted 95%" : ""}.`);
   }
 
   function populateWorld() {
@@ -2430,6 +2445,7 @@
     state.pilotTank = player;
     state.tanks.push(player);
     spawnBots();
+    refreshHunted();
     state.camera.x = player.x;
     state.camera.y = player.y;
     running = true;
@@ -2455,12 +2471,18 @@
       welcomeSpawnNotes();
       note("Everyone has 1 HP. Health and shield stats do nothing.");
     }
+    if (isTeamHunt()) {
+      welcomeSpawnNotes();
+      note("One tank is hunted (red). Every other tank is on the hunter team (blue).");
+      note("When the hunted dies, the new #1 joins the hunted team.");
+      if (state.hunted === state.player) note("You are the hunted.", 5000);
+    }
     if (isRoyale()) {
       welcomeSpawnNotes();
       note("You have 1 minute to farm and upgrade before the storm closes in.");
       note("After that, there are no respawns. Last tank standing wins.");
     }
-    if (state.armsRace && state.mode !== "sandbox" && state.mode !== "growth" && state.mode !== "onehp" && !isRoyale() && state.mode !== "assault" && state.mode !== "siege") {
+    if (state.armsRace && state.mode !== "sandbox" && state.mode !== "growth" && state.mode !== "onehp" && !isRoyale() && state.mode !== "assault" && state.mode !== "siege" && !isTeamHunt()) {
       welcomeSpawnNotes();
     }
     armsWelcome();
@@ -2499,7 +2521,7 @@
     clearOwnedShots(tank);
     burst(tank.x, tank.y, tank.color, 18, 220);
     const deathScore = Math.max(0, Math.floor(tank.score || 0));
-    const huntedKill = state.mode === "manhunt" && tank === state.hunted;
+    const huntedKill = isHuntMode() && tank === state.hunted;
     const pool = tank.killScore
       ? tank.killScore
       : killPoolFromScore(deathScore, huntedKill);
@@ -2512,6 +2534,7 @@
       if (huntedKill) floater(tank.x, tank.y - 24, "Hunted down · 95%");
     }
     notePlayerKill(tank, payout);
+    if (isHuntMode()) refreshHunted();
     if (tank.boss || tank.fodder) onSiegeEnemyKilled();
     if (tank === state.player) {
       if (tank.mothership) {
@@ -2539,7 +2562,7 @@
       floater(tank.x, tank.y - tank.r - 8, `${TEAMS[tank.team] ? TEAMS[tank.team].name : ""} mothership down`);
       checkProtectClose();
     } else if (!tank.closer && !tank.boss && !tank.fodder && !state.closing && !royaleLocked()) {
-      const team = tank.team;
+      const team = isTeamHunt() ? HUNTER_TEAM : tank.team;
       const kept = carryScore(deathScore);
       const focus = tank.aiFocus;
       setTimeout(() => {
@@ -2587,6 +2610,7 @@
         bot.shield = bot.maxShield || 0;
         bot.spawnProtect = 8;
         state.tanks.push(bot);
+        refreshHunted();
       }, 1800);
     }
   }
@@ -2874,7 +2898,7 @@
     if (state.player && state.player.alive) return false;
     const opts = state.playOpts || {};
     const prev = state.player;
-    const team = prev && prev.team ? prev.team : pickStartTeam(state.mode);
+    const team = isTeamHunt() ? HUNTER_TEAM : (prev && prev.team ? prev.team : pickStartTeam(state.mode));
     const home = team ? mothershipOf(team) : null;
     const pos = (state.mode === "tdm" || state.mode === "4tdm") && team
       ? spawnInBase(team)
@@ -2929,6 +2953,7 @@
     armsWelcome();
     try { renderStats(); } catch (err) {}
     try { renderClassPanel(); } catch (err) {}
+    refreshHunted();
     return true;
   }
 
@@ -3823,16 +3848,31 @@
     return true;
   }
 
+  function applyTeamHuntRoles() {
+    if (!isTeamHunt()) return;
+    for (const t of state.tanks) {
+      if (!t.alive || t.closer || t.boss || t.fodder || t.mothership || t.dominator) continue;
+      const team = t === state.hunted ? HUNTED_TEAM : HUNTER_TEAM;
+      t.team = team;
+      t.color = colorFor({ team, player: t === state.player });
+    }
+  }
+
   function refreshHunted() {
-    if (state.mode !== "manhunt") {
+    if (!isHuntMode()) {
       state.hunted = null;
       return;
     }
-    const alive = state.tanks.filter((t) => t.alive);
+    const alive = state.tanks.filter((t) => t.alive && !t.closer && !t.boss && !t.fodder && !t.mothership && !t.dominator);
+    if (isTeamHunt() && state.hunted && state.hunted.alive && alive.includes(state.hunted)) {
+      applyTeamHuntRoles();
+      return;
+    }
     if (!alive.length) {
       const prev = state.hunted;
       state.hunted = null;
       if (prev && prev.alive) applyLevel(prev);
+      applyTeamHuntRoles();
       return;
     }
     alive.sort((a, b) => b.score - a.score);
@@ -3841,6 +3881,7 @@
       const prev = state.hunted;
       state.hunted = null;
       if (prev && prev.alive) applyLevel(prev);
+      applyTeamHuntRoles();
       return;
     }
     const tied = alive.filter((t) => t.score === lead.score);
@@ -3852,9 +3893,13 @@
       if (next) {
         applyLevel(next);
         floater(next.x, next.y - 18, "HUNTED");
-        if (next === state.player) note("You are now the hunted.", 5000);
+        if (isTeamHunt()) {
+          if (next === state.player) note("You are now the hunted. Hunters are all on the other team.", 5000);
+          else if (prev === state.player) note("You joined the hunt.", 4000);
+        } else if (next === state.player) note("You are now the hunted.", 5000);
       }
     }
+    applyTeamHuntRoles();
   }
 
   function updateAI(tank, dt) {
@@ -4018,8 +4063,8 @@
       return;
     }
     const mark = state.hunted;
-    const hunting = state.mode === "manhunt" && mark && mark.alive && mark !== tank;
-    const huntedSelf = state.mode === "manhunt" && mark === tank;
+    const hunting = isHuntMode() && mark && mark.alive && mark !== tank;
+    const huntedSelf = isHuntMode() && mark === tank;
     const ownMoth = mothershipOf(tank.team);
     const foeMoth = state.tanks.find((t) => t.mothership && t.alive && t.team && t.team !== tank.team) || null;
     if (state.mode === "protect" && !tank.aiJob) {
@@ -4040,12 +4085,14 @@
             : 640;
     const seeRange = maze ? 1100 : (state.mode === "tag" || state.mode === "protect" ? 2200 : 1400);
     let enemy = hunting
-      ? pickAiEnemy(tank, maze ? 900 : 1600)
+      ? pickAiEnemy(tank, maze ? 900 : (isTeamHunt() ? 3200 : 1600))
       : huntingMoth
         ? (pickAiEnemy(tank, 520) || foeMoth)
         : pickAiEnemy(tank, seeRange);
     const heard = maze || enemy ? null : nearest(tank, state.tanks, 3200, (t) => isEnemyTank(tank, t));
-    if (hunting && mark && !spawnProtected(mark) && canSee(tank, mark) && (aggroOn(mark) < 5 || tank.aiHurtBy === mark)) {
+    if (isTeamHunt() && hunting && mark && mark.alive && !spawnProtected(mark)) {
+      enemy = mark;
+    } else if (hunting && mark && !spawnProtected(mark) && canSee(tank, mark) && (aggroOn(mark) < 5 || tank.aiHurtBy === mark)) {
       const melee = nearestSeen(tank, state.tanks, 420, (t) => isEnemyTank(tank, t) && t !== mark);
       if (!melee) enemy = mark;
     }
@@ -4061,7 +4108,7 @@
     const low = hpPct < (ram ? 0.16 : 0.22);
     const zone = zoneAt(tank.x, tank.y);
     const invading = !!(tank.team && zone && zone !== tank.team);
-    const hunterNear = huntedSelf ? nearestSeen(tank, state.tanks, 640, (t) => t !== tank && !spawnProtected(t)) : null;
+    const hunterNear = huntedSelf ? nearestSeen(tank, state.tanks, 640, (t) => isEnemyTank(tank, t)) : null;
     if (closerNear) tank.aiState = "flee";
     else if (stormOut) tank.aiState = "storm";
     else if (invading || ((state.mode === "tdm" || state.mode === "4tdm") && tank.team && low)) tank.aiState = "home";
@@ -4301,7 +4348,7 @@
     const peeled = peelOffShapes(tank, tx, ty);
     tx = peeled.x;
     ty = peeled.y;
-    const huntedBot = state.mode === "manhunt" && tank === state.hunted;
+    const huntedBot = isHuntMode() && tank === state.hunted;
     const pace = huntedBot
       ? st.moveSpeed
       : (state.player && state.player.alive ? tankStats(state.player).moveSpeed : st.moveSpeed);
@@ -4603,7 +4650,7 @@
       const st = tankStats(tank);
       let cap = st.moveSpeed * SPEED_CAP;
       if (tank.ai && !tank.closer && !tank.mothership && !tank.boss && !tank.fodder && !tank.dominator && state.player && state.player.alive && !state.player.mothership) {
-        if (!(state.mode === "manhunt" && tank === state.hunted)) {
+        if (!(isHuntMode() && tank === state.hunted)) {
           cap = tankStats(state.player).moveSpeed * SPEED_CAP * 0.95;
         }
       }
@@ -4987,7 +5034,7 @@
         els.closeTimer.textContent = resetText;
       }
     }
-    if (els.arenaMode && state.mode === "manhunt") {
+    if (els.arenaMode && isHuntMode()) {
       const mark = state.hunted;
       const title = modeLabel();
       els.arenaMode.textContent = !mark
@@ -5069,6 +5116,15 @@
         const sum = state.tanks.filter((t) => t.alive && t.team === id && !t.closer).reduce((n, t) => n + t.score, 0);
         rows.push({ color: TEAMS[id].color, label: `${TEAMS[id].name} — ${formatScore(sum)}`, sort: sum });
       }
+    } else if (isTeamHunt()) {
+      const hunted = state.hunted && state.hunted.alive ? state.hunted : null;
+      const hunters = state.tanks.filter((t) => t.alive && !t.closer && t.team === HUNTER_TEAM).length;
+      rows.push({ color: TEAMS[HUNTER_TEAM].color, label: `Hunters — ${hunters}`, sort: hunters });
+      rows.push({
+        color: TEAMS[HUNTED_TEAM].color,
+        label: hunted ? `Hunted — ${hunted.name}` : "Hunted — —",
+        sort: hunted ? hunted.score : -1,
+      });
     } else if (state.mode === "tag") {
       for (const id of ["green", "red"]) {
         const n = state.tanks.filter((t) => t.alive && !t.closer && t.team === id).length;
@@ -5956,6 +6012,7 @@
     tdm: "Red vs blue · random team · start at 45 · kills pay 80–90% · respawn 15–20% · fresh server after 4 hours",
     "4tdm": "Four bases · random team · start at 45 · fresh server after 4 hours",
     manhunt: "Everyone hunts #1 · hunted kill pays 95% · other kills 80–90% · respawn 15–20% · hunted gets a small boost · fresh server after 4 hours",
+    teamhunt: "Hunted (red) vs every hunter (blue) · new #1 joins the hunted team · hunted kill pays 95% · other kills 80–90% · respawn 15–20% · fresh server after 4 hours",
     tag: "Shoot to convert · random team · start at 45 · win or 4 hours starts a fresh server",
     protect: "Two motherships roam · random team · start at 45 · [N] skip to 45 · [H] to take control · win or 4 hours starts a fresh server",
     maze: "FFA inside generated walls · start at 45 · fresh server after 4 hours",
@@ -5974,6 +6031,7 @@
     "tdm-ar": "Red vs blue · Arms Race class tree · random team · start at 45 · kills pay 80–90% · respawn 15–20% · fresh server after 4 hours",
     "royalemaze-ar": "Royale Maze · Arms Race class tree · L / Y / zig clusters · storm closes fully · last tank wins · then a fresh server",
     "manhunt-ar": "Manhunt · Arms Race class tree · hunted kill pays 95% · other kills 80–90% · respawn 15–20% · fresh server after 4 hours",
+    "teamhunt-ar": "Team Manhunt · Arms Race class tree · hunted vs hunter team · new #1 joins the hunted team · hunted kill pays 95% · other kills 80–90% · respawn 15–20% · fresh server after 4 hours",
   };
 
   function saveName(name) {
