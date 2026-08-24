@@ -361,7 +361,6 @@
   }
 
   function startScore() {
-    if (state.mode === "growth") return 0;
     return xpForLevel(LEVEL_CAP);
   }
 
@@ -1987,6 +1986,9 @@
   }
 
   function applyLevel(tank) {
+    if ((state.mode === "growth" || state.armsRace) && tank && !tank.closer && !tank.mothership && !tank.dominator && !tank.boss && !tank.fodder) {
+      tank.score = Math.max(Number(tank.score) || 0, xpForLevel(LEVEL_CAP));
+    }
     const next = levelFromScore(tank.score);
     const gained = next > tank.level;
     tank.level = next;
@@ -2465,7 +2467,7 @@
     }
     if (state.mode === "growth") {
       welcomeSpawnNotes();
-      note("Grow past 45. Level cap is 1000. [N] skips to 45.");
+      note("Everyone starts at 45. Grow past 45. Level cap is 1000. [N] skips to 45.");
     }
     if (state.mode === "onehp") {
       welcomeSpawnNotes();
@@ -5973,7 +5975,7 @@
       state.autoSpin = !state.autoSpin;
       note(state.autoSpin ? "Autospin enabled." : "Autospin disabled.");
     }
-    const skippedLevel = k === "n" && running && !state.paused && (state.mode === "protect" || state.mode === "growth") && skipToLevelCap(menuTank());
+    const skippedLevel = k === "n" && running && !state.paused && (state.mode === "protect" || state.mode === "growth" || state.armsRace) && skipToLevelCap(menuTank());
     if (k === "h" && running && !state.paused && state.mode === "protect") {
       toggleMothershipControl();
     } else if (!skippedLevel) {
@@ -6019,13 +6021,13 @@
     domination: "Capture 4 points · random team · start at 45 · win or 4 hours starts a fresh server",
     assault: "Blue attacks Green · smaller maze · capture zones · start at 45 · Green wins in 10:00 if they hold 3/4 · win or 4 hours starts a fresh server",
     siege: "Blue defends sanctuaries · waves of bosses · start at 45 · restore fallen sanctuaries by destroying them · win or 4 hours starts a fresh server",
-    growth: "FFA · grow past 45 to 1000 · start at 1 · bots start at 45 · [N] skip to 45 · fresh server after 4 hours",
+    growth: "FFA · grow past 45 to 1000 · everyone starts at 45 · never below 45 · [N] skip to 45 · fresh server after 4 hours",
     onehp: "Everyone for themselves · 1 HP · no shields · health stats do nothing · medium map · start at 45 · fresh server after 4 hours",
     royale: "1 min prep · shrinking storm to a random point · closes fully · damage ramps · last tank wins · then a fresh server",
     royalemaze: "Same as Battle Royale · L / Y / zig clusters · open map · storm closes fully · then a fresh server",
     sandbox: "Level 45 · pick any tank · bots included · [T] swaps tanks without resetting · fresh server after 4 hours",
-    armsrace: "FFA rules · expanded Arras class tree · hybrids, extra T4–T5 tanks at 45 · fresh server after 4 hours",
-    "growth-ar": "Growth · Arms Race class tree · start at 1 · bots at 45 · [N] skip to 45 · fresh server after 4 hours",
+    armsrace: "FFA rules · expanded Arras class tree · hybrids, extra T4–T5 tanks at 45 · start at 45 · never below 45 · [N] skip to 45 · fresh server after 4 hours",
+    "growth-ar": "Growth · Arms Race class tree · everyone starts at 45 · never below 45 · [N] skip to 45 · fresh server after 4 hours",
     "protect-ar": "Mothership Protect · Arms Race class tree · random team · start at 45 · [N] skip · [H] to take control · win or 4 hours starts a fresh server",
     "assault-ar": "Assault · Arms Race class tree · Blue attacks Green · capture zones · Green wins in 10:00 if they hold 3/4 · win or 4 hours starts a fresh server",
     "tdm-ar": "Red vs blue · Arms Race class tree · random team · start at 45 · kills pay 80–90% · respawn 15–20% · fresh server after 4 hours",
