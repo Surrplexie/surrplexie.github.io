@@ -360,7 +360,13 @@
     return XP_AT[lv];
   }
 
+  function isZeroFfa(mode) {
+    const m = mode == null ? state.mode : mode;
+    return m === "ffazero";
+  }
+
   function startScore() {
+    if (isZeroFfa()) return 0;
     return xpForLevel(LEVEL_CAP);
   }
 
@@ -1841,6 +1847,7 @@
     const ar = arms == null ? !!state.armsRace : !!arms;
     const names = {
       ffa: "FFA",
+      ffazero: "FFA Zero",
       tdm: "2 Teams",
       "4tdm": "4 Teams",
       manhunt: "Manhunt",
@@ -2158,7 +2165,7 @@
     const nBots = clampBotCount(state.botCount);
     for (let i = 0; i < nBots; i++) {
       const team = teams[i] || null;
-      const score = xpForLevel(LEVEL_CAP);
+      const score = startScore();
       const aiJob = state.mode === "protect"
         ? (Math.random() < 0.48 ? "hunt" : Math.random() < 0.28 ? "defend" : "roam")
         : state.mode === "assault"
@@ -2273,6 +2280,7 @@
   }
 
   function skipToLevelCap(tank) {
+    if (isZeroFfa()) return false;
     if (!tank || !tank.alive || tank.mothership || tank.closer || tank.dominator) return false;
     if (tank.level >= LEVEL_CAP) return false;
     tank.score = Math.max(tank.score, xpForLevel(LEVEL_CAP));
@@ -2464,6 +2472,10 @@
       welcomeSpawnNotes();
       note("Defend the blue sanctuaries. Boss waves spawn from the edges.");
       note("If every sanctuary falls, you cannot respawn. Destroy the yellow wrecks to restore them.");
+    }
+    if (isZeroFfa()) {
+      welcomeSpawnNotes();
+      note("Everyone starts at 0. Score can drop below 45.");
     }
     if (state.mode === "growth") {
       welcomeSpawnNotes();
@@ -6011,6 +6023,7 @@
   let menuTeam = "blue";
   const MODE_HINT = {
     ffa: "Everyone for themselves · start at 45 · kills pay 80–90% · respawn 15–20% · fresh server after 4 hours",
+    ffazero: "Everyone for themselves · start at 0 · score can drop below 45 · kills pay 80–90% · respawn 15–20% · fresh server after 4 hours",
     tdm: "Red vs blue · random team · start at 45 · kills pay 80–90% · respawn 15–20% · fresh server after 4 hours",
     "4tdm": "Four bases · random team · start at 45 · fresh server after 4 hours",
     manhunt: "Everyone hunts #1 · hunted kill pays 95% · other kills 80–90% · respawn 15–20% · hunted gets a small boost · fresh server after 4 hours",
