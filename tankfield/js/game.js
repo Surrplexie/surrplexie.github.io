@@ -268,7 +268,22 @@
     return darken(hex);
   }
 
+  function siegeNestSize() {
+    return state.siegeNest || Math.round(WORLD.w * 0.16);
+  }
+
+  function inSiegeNest(x, y, pad = 0) {
+    if (state.mode !== "siege") return false;
+    const n = siegeNestSize() + pad;
+    const left = x <= n;
+    const right = x >= WORLD.w - n;
+    const top = y <= n;
+    const bot = y >= WORLD.h - n;
+    return (left && top) || (left && bot) || (right && top) || (right && bot);
+  }
+
   function zoneAt(x, y) {
+    if (state.mode === "siege") return inSiegeNest(x, y) ? "boss" : null;
     if (state.mode === "tdm") {
       if (x <= BASE_W) return "blue";
       if (x >= WORLD.w - BASE_W) return "red";
@@ -1516,13 +1531,18 @@
     return randomInWorld(200);
   }
 
-  function bossEdgePos() {
-    const pad = 220;
+  function siegeBossSpawn() {
+    const n = siegeNestSize();
+    const pad = 90;
+    const loX = n + 160;
+    const hiX = WORLD.w - n - 160;
+    const loY = n + 160;
+    const hiY = WORLD.h - n - 160;
     const side = irand(0, 3);
-    if (side === 0) return { x: pad, y: rand(pad, WORLD.h - pad) };
-    if (side === 1) return { x: WORLD.w - pad, y: rand(pad, WORLD.h - pad) };
-    if (side === 2) return { x: rand(pad, WORLD.w - pad), y: pad };
-    return { x: rand(pad, WORLD.w - pad), y: WORLD.h - pad };
+    if (side === 0) return { x: pad, y: rand(loY, hiY) };
+    if (side === 1) return { x: WORLD.w - pad, y: rand(loY, hiY) };
+    if (side === 2) return { x: rand(loX, hiX), y: pad };
+    return { x: rand(loX, hiX), y: WORLD.h - pad };
   }
 
   function resetSiege() {
@@ -1533,6 +1553,75 @@
     state.siegeTier = 1;
     state.siegeLoseAt = 0;
     state.siegeWon = false;
+    state.siegeNest = 0;
+  }
+
+  function buildSiegeOpenMap() {
+    const { cube, cols, rows, x0, y0 } = mazeGrid();
+    const filled = Array.from({ length: rows }, () => Array(cols).fill(false));
+    const inside = (r, c) => r > 1 && r < rows - 2 && c > 1 && c < cols - 2;
+    const cr = (rows - 1) / 2;
+    const cc = (cols - 1) / 2;
+    const style = irand(0, 3);
+    const hole = Math.max(5, Math.floor(Math.min(rows, cols) * (style === 0 ? 0.34 : style === 1 ? 0.26 : 0.3)));
+    const tooClose = (r, c) => (r - cr) * (r - cr) + (c - cc) * (c - cc) <= hole * hole;
+    const shapes = [
+      [[0, 0]],
+      [[0, 0], [1, 0]],
+      [[0, 0], [0, 1]],
+      [[0, 0], [1, 1]],
+      [[0, 0], [1, 0], [2, 0]],
+      [[0, 0], [0, 1], [0, 2]],
+      [[0, 0], [1, 0], [1, 1]],
+      [[0, 0], [1, 0], [0, 1]],
+      [[0, 0], [1, 0], [2, 1]],
+      [[0, 0], [1, 0], [2, 0], [1, 1]],
+    ];
+    const n = style === 0 ? irand(8, 16) : style === 1 ? irand(20, 34) : style === 2 ? irand(14, 24) : irand(12, 22);
+    for (let i = 0; i < n; i++) {
+      const raw = shapes[irand(0, shapes.length - 1)];
+      const flip = Math.random() < 0.5;
+      const rot = irand(0, 3);
+      const cells = raw.map(([x, y]) => {
+        let a = flip ? -x : x;
+        let b = y;
+        for (let k = 0; k < rot; k++) {
+          const t = a;
+          a = -b;
+          b = t;
+        }
+        return [a, b];
+      });
+      const sr = irand(2, rows - 3);
+      const sc = irand(2, cols - 3);
+      if (cells.some(([dc, dr]) => tooClose(sr + dr, sc + dc) || !inside(sr + dr, sc + dc))) continue;
+      for (const [dc, dr] of cells) {
+        const r = sr + dr;
+        const c = sc + dc;
+        if (inside(r, c)) filled[r][c] = true;
+      }
+    }
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (tooClose(r, c)) filled[r][c] = false;
+      }
+    }
+    clearMazeBorder(filled, rows, cols);
+    state.maze = { cube, x0, y0, cols, rows, filled };
+    rebuildMazeWalls();
+  }
+
+  function siegeSancSpots() {
+    const cx = WORLD.w * 0.5;
+    const cy = WORLD.h * 0.5;
+    const spread = WORLD.w * rand(0.18, 0.23);
+    const jitter = () => rand(-70, 70);
+    return [
+      { x: cx + jitter(), y: cy - spread + jitter() },
+      { x: cx + jitter(), y: cy + spread + jitter() },
+      { x: cx - spread + jitter(), y: cy + jitter() },
+      { x: cx + spread + jitter(), y: cy + jitter() },
+    ];
   }
 
   function applySanctuaryTier(sanc, tier) {
@@ -1570,20 +1659,20 @@
   }
 
   function buildSiegeArena() {
-    const inset = Math.round(WORLD.w * 0.18);
-    buildMaze();
-    const spots = [
-      { x: inset, y: inset },
-      { x: WORLD.w - inset, y: inset },
-      { x: inset, y: WORLD.h - inset },
-      { x: WORLD.w - inset, y: WORLD.h - inset },
-      { x: WORLD.w * 0.5, y: WORLD.h * 0.5 },
-    ];
-    for (const p of spots) punchMazeAt(p.x, p.y, 420);
-    punchMazeAt(WORLD.w * 0.5, 0, 520);
-    punchMazeAt(WORLD.w * 0.5, WORLD.h, 520);
-    punchMazeAt(0, WORLD.h * 0.5, 520);
-    punchMazeAt(WORLD.w, WORLD.h * 0.5, 520);
+    state.siegeNest = Math.round(WORLD.w * rand(0.145, 0.185));
+    buildSiegeOpenMap();
+    const spots = siegeSancSpots();
+    const n = siegeNestSize();
+    for (const p of spots) punchMazeAt(p.x, p.y, 480);
+    punchMazeAt(WORLD.w * 0.5, WORLD.h * 0.5, 780);
+    punchMazeAt(WORLD.w * 0.5, 0, 640);
+    punchMazeAt(WORLD.w * 0.5, WORLD.h, 640);
+    punchMazeAt(0, WORLD.h * 0.5, 640);
+    punchMazeAt(WORLD.w, WORLD.h * 0.5, 640);
+    punchMazeAt(n * 0.5, n * 0.5, n);
+    punchMazeAt(WORLD.w - n * 0.5, n * 0.5, n);
+    punchMazeAt(n * 0.5, WORLD.h - n * 0.5, n);
+    punchMazeAt(WORLD.w - n * 0.5, WORLD.h - n * 0.5, n);
     rebuildMazeWalls();
     for (const p of spots) spawnSanctuary(p, "blue");
     state.siegeWaves = siegeWaveList();
@@ -1597,7 +1686,15 @@
 
   function spawnSiegeBoss(classId, fodder) {
     const def = TankCatalog.get(classId);
-    const pos = openAround(bossEdgePos().x, bossEdgePos().y, 0, 80, 48);
+    let pos = openAround(siegeBossSpawn().x, siegeBossSpawn().y, 0, 80, 48);
+    if (inSiegeNest(pos.x, pos.y, 24)) {
+      const cx = WORLD.w * 0.5;
+      const cy = WORLD.h * 0.5;
+      const dx = cx - pos.x;
+      const dy = cy - pos.y;
+      const d = Math.hypot(dx, dy) || 1;
+      pos = { x: pos.x + (dx / d) * (siegeNestSize() + 80), y: pos.y + (dy / d) * (siegeNestSize() + 80) };
+    }
     const tank = createTank({
       name: def && def.name ? def.name : "Boss",
       ai: true,
@@ -1699,8 +1796,8 @@
   function updateSiege(dt) {
     if (state.mode !== "siege") return;
     for (const d of siegeSanctuaries()) {
-      d.x = d.homeX;
-      d.y = d.homeY;
+      d.x = d.homeX != null ? d.homeX : d.homeX;
+      d.y = d.homeY != null ? d.homeY : d.homeY;
       d.vx = 0;
       d.vy = 0;
     }
@@ -2470,7 +2567,7 @@
     if (state.mode === "assault") welcomeSpawnNotes();
     if (state.mode === "siege") {
       welcomeSpawnNotes();
-      note("Defend the blue sanctuaries. Boss waves spawn from the edges.");
+      note("Defend the blue sanctuaries. Corner red zones kill you. Bosses spawn outside them and push inward.");
       note("If every sanctuary falls, you cannot respawn. Destroy the yellow wrecks to restore them.");
     }
     if (isZeroFfa()) {
@@ -4013,18 +4110,44 @@
       return;
     }
     if (tank.boss || tank.fodder) {
-      const prey = nearest(tank, state.tanks, 99999, (t) => isEnemyTank(tank, t) && !t.boss && !t.fodder);
-      tank.aiState = prey ? "attack" : "wander";
-      let tx = WORLD.w / 2;
-      let ty = WORLD.h / 2;
-      if (prey) {
+      const live = liveSanctuaries();
+      if (tank.aiSanc && (!tank.aiSanc.alive || tank.aiSanc.sancFallen || tank.aiSanc.team !== "blue")) tank.aiSanc = null;
+      if (!tank.aiSanc) {
+        tank.aiSanc = nearest(tank, live, 99999) || live[0] || null;
+      }
+      const sanc = tank.aiSanc;
+      const prey = nearest(tank, state.tanks, 99999, (t) => isEnemyTank(tank, t) && !t.boss && !t.fodder && !t.sanctuary && !t.dominator);
+      const st = tankStats(tank);
+      let tx = WORLD.w * 0.5;
+      let ty = WORLD.h * 0.5;
+      let target = prey || sanc;
+      if (sanc) {
+        const orbitR = (sanc.r || 70) + (tank.r || 40) + (tank.fodder ? 130 : 170);
+        const dSanc = Math.hypot(sanc.x - tank.x, sanc.y - tank.y);
+        if (dSanc < orbitR + 70) {
+          tank.aiState = "orbit";
+          const hold = holdPoint(tank, sanc, orbitR);
+          tx = hold.x;
+          ty = hold.y;
+          const melee = prey && dist2(tank, prey) < 220 * 220;
+          target = melee ? prey : sanc;
+        } else {
+          tank.aiState = "push";
+          tx = sanc.x;
+          ty = sanc.y;
+          target = prey || sanc;
+        }
+      } else if (prey) {
+        tank.aiState = "attack";
         tx = prey.x;
         ty = prey.y;
-        tank.aiTarget = prey;
-        if (!getDef(tank).spin) tank.angle = aimAt(tank, prey, tankStats(tank));
+        target = prey;
+      } else {
+        tank.aiState = "wander";
       }
+      tank.aiTarget = target || null;
       if (getDef(tank).spin) tank.angle += 2.4 * dt;
-      const st = tankStats(tank);
+      else if (target) tank.angle = aimAt(tank, target, st);
       const ang = Math.atan2(ty - tank.y, tx - tank.x);
       const push = tank.fodder ? 70 : 48;
       tank.vx += Math.cos(ang) * st.moveSpeed * push * dt;
@@ -4221,10 +4344,17 @@
     let tx = tank.x;
     let ty = tank.y;
     if (tank.aiState === "home" && tank.team) {
-      const home = baseCenter(tank.team);
-      const steered = steerAround(tank, home.x, home.y);
-      tx = steered.x;
-      ty = steered.y;
+      if (state.mode === "siege") {
+        const s = nearest(tank, liveSanctuaries(), 99999) || { x: WORLD.w * 0.5, y: WORLD.h * 0.5 };
+        const steered = steerAround(tank, s.x, s.y);
+        tx = steered.x;
+        ty = steered.y;
+      } else {
+        const home = baseCenter(tank.team);
+        const steered = steerAround(tank, home.x, home.y);
+        tx = steered.x;
+        ty = steered.y;
+      }
       const lock = tank.aiTarget || enemy;
       if (lock && canSee(tank, lock)) tank.angle = aimAt(tank, lock, st);
     } else if (tank.aiState === "storm") {
@@ -4697,7 +4827,7 @@
         if (burn > 0) tank.health -= burn;
         tank.bodyHitT = 0.08;
         if (tank === state.player) shake = Math.max(shake, inStorm ? 3 : 4);
-        if (tank.health <= 0) killTank(tank, null, inStorm ? "the storm" : `the ${zoneAt(tank.x, tank.y)} base`);
+        if (tank.health <= 0) killTank(tank, null, inStorm ? "the storm" : (state.mode === "siege" ? "the red zone" : `the ${zoneAt(tank.x, tank.y)} base`));
       } else {
         tank.health = Math.min(tank.maxHealth, tank.health + st.regen * dt);
         tank.shieldDelay = Math.max(0, (tank.shieldDelay || 0) - dt);
@@ -5611,6 +5741,24 @@
         paint("red", WORLD.w - BASE_W, 0, BASE_W, WORLD.h);
       }
     }
+    if (state.mode === "siege") {
+      const n = siegeNestSize();
+      const paintNest = (x, y) => {
+        ctx.fillStyle = TEAMS.boss.color;
+        ctx.globalAlpha = 0.18;
+        ctx.fillRect(x, y, n, n);
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = TEAMS.boss.color;
+        ctx.globalAlpha = 0.55;
+        ctx.lineWidth = 8;
+        ctx.strokeRect(x + 4, y + 4, n - 8, n - 8);
+        ctx.globalAlpha = 1;
+      };
+      paintNest(0, 0);
+      paintNest(WORLD.w - n, 0);
+      paintNest(0, WORLD.h - n);
+      paintNest(WORLD.w - n, WORLD.h - n);
+    }
     if (state.mode === "assault") {
       for (const d of assaultDoms()) {
         const col = d.destroyed ? "#8a8a8a" : (TEAMS[d.team] ? TEAMS[d.team].color : "#8a8a8a");
@@ -5810,6 +5958,12 @@
     } else if (state.mode === "tdm") {
       paintZone("blue", 0, 0, BASE_W, WORLD.h);
       paintZone("red", WORLD.w - BASE_W, 0, BASE_W, WORLD.h);
+    } else if (state.mode === "siege") {
+      const n = siegeNestSize();
+      paintZone("boss", 0, 0, n, n);
+      paintZone("boss", WORLD.w - n, 0, n, n);
+      paintZone("boss", 0, WORLD.h - n, n, n);
+      paintZone("boss", WORLD.w - n, WORLD.h - n, n, n);
     }
     for (const d of state.doms) {
       mctx.beginPath();
@@ -6033,7 +6187,7 @@
     maze: "FFA inside generated walls · start at 45 · fresh server after 4 hours",
     domination: "Capture 4 points · random team · start at 45 · win or 4 hours starts a fresh server",
     assault: "Blue attacks Green · smaller maze · capture zones · start at 45 · Green wins in 10:00 if they hold 3/4 · win or 4 hours starts a fresh server",
-    siege: "Blue defends sanctuaries · waves of bosses · start at 45 · restore fallen sanctuaries by destroying them · win or 4 hours starts a fresh server",
+    siege: "Open maps · red corners kill you · bosses spawn outside and siege sanctuaries · restore fallen sanctuaries · win or 4 hours starts a fresh server",
     growth: "FFA · grow past 45 to 1000 · everyone starts at 45 · never below 45 · [N] skip to 45 · fresh server after 4 hours",
     onehp: "Everyone for themselves · 1 HP · no shields · health stats do nothing · medium map · start at 45 · fresh server after 4 hours",
     royale: "1 min prep · shrinking storm to a random point · closes fully · damage ramps · last tank wins · then a fresh server",
