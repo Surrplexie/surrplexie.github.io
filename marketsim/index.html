@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Browser-based stock, ETF, and crypto market simulator — runs entirely in your browser on GitHub Pages." />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>MarketSim</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css?v=1" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div>
+        <h1>MarketSim</h1>
+        <a class="back" href="../labs/">← Labs &amp; Projects</a>
+      </div>
+      <div class="meta">
+        <span>Mode <strong id="hdr-mode">—</strong></span>
+        <span>Tick <strong id="hdr-tick">0</strong></span>
+        <span>Equity <strong id="hdr-equity">—</strong></span>
+        <span>Cash <strong id="hdr-cash">—</strong></span>
+      </div>
+    </header>
+
+    <div class="main">
+      <aside class="side">
+        <div class="panel">
+          <h2>Session</h2>
+          <div class="field">
+            <label for="sel-mode">Preset</label>
+            <select id="sel-mode">
+              <option value="simple">simple</option>
+              <option value="easy">easy</option>
+              <option value="hard">hard</option>
+              <option value="complex">complex</option>
+              <option value="free">free</option>
+              <option value="custom">custom</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="start-cash">Starting cash (USD)</label>
+            <input id="start-cash" type="number" min="0.0001" max="100000000" step="any" value="25000000" />
+          </div>
+          <div class="check-row">
+            <input id="chk-gd" type="checkbox" />
+            <label for="chk-gd">Great Depression event</label>
+          </div>
+          <div class="row-btns">
+            <button type="button" id="btn-apply-cash">Apply cash</button>
+            <button type="button" id="btn-new-game" class="primary">New game</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Time</h2>
+          <div class="row-btns">
+            <button type="button" id="btn-step1">+1</button>
+            <button type="button" id="btn-step5">+5</button>
+            <button type="button" id="btn-step50">+50</button>
+            <button type="button" id="btn-run-day">+1 day</button>
+          </div>
+          <div class="check-row">
+            <input id="chk-auto" type="checkbox" />
+            <label for="chk-auto">Auto step</label>
+          </div>
+          <div class="field">
+            <label for="auto-rate">Auto interval (ms)</label>
+            <input id="auto-rate" type="number" min="100" max="5000" step="50" value="400" />
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Overrides</h2>
+          <div class="field">
+            <label>Volatility <span id="vol-val">1.00</span></label>
+            <input id="vol-slider" type="range" min="0.25" max="2.5" step="0.05" value="1" />
+          </div>
+          <div class="field">
+            <label>Trend <span id="trend-val">0.00</span></label>
+            <input id="trend-slider" type="range" min="-1" max="1" step="0.05" value="0" />
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Order</h2>
+          <div class="field">
+            <label for="order-ticker">Ticker</label>
+            <input id="order-ticker" type="text" placeholder="NORTH" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label for="order-side">Side</label>
+            <select id="order-side">
+              <option value="buy">Buy</option>
+              <option value="sell">Sell</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="order-type">Type</label>
+            <select id="order-type">
+              <option value="market">Market</option>
+              <option value="limit">Limit</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="order-size">Size (shares)</label>
+            <input id="order-size" type="number" min="0" step="any" placeholder="100" />
+          </div>
+          <div class="field">
+            <label for="order-cash">Or cash (buy only)</label>
+            <input id="order-cash" type="number" min="0" step="any" placeholder="5000" />
+          </div>
+          <div class="field">
+            <label for="order-price">Limit price</label>
+            <input id="order-price" type="number" min="0" step="any" placeholder="optional" />
+          </div>
+          <button type="button" id="btn-order" class="primary" style="width:100%">Submit order</button>
+        </div>
+      </aside>
+
+      <section class="center">
+        <div class="watch-wrap">
+          <div class="chart-head">Chart: <span id="chart-title">—</span></div>
+          <div id="chart"></div>
+          <div class="watch-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Ticker</th>
+                  <th>Class</th>
+                  <th>Sector</th>
+                  <th class="num">Mid</th>
+                  <th class="num">24h</th>
+                  <th class="num">Vol</th>
+                  <th class="num">Ask sz</th>
+                </tr>
+              </thead>
+              <tbody id="watch-body"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="news" id="news-line">—</div>
+      </section>
+
+      <aside class="right">
+        <div class="panel">
+          <h2>Positions</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Ticker</th>
+                <th class="num">Qty</th>
+                <th class="num">Mid</th>
+                <th class="num">MV</th>
+              </tr>
+            </thead>
+            <tbody id="pos-body"></tbody>
+          </table>
+        </div>
+        <div class="panel">
+          <h2>State (debug)</h2>
+          <pre class="json-out" id="json-out">{}</pre>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+  <script src="js/rng.js?v=1"></script>
+  <script src="js/config.js?v=1"></script>
+  <script src="js/clob.js?v=1"></script>
+  <script src="js/universe.js?v=1"></script>
+  <script src="js/market.js?v=1"></script>
+  <script src="js/player.js?v=1"></script>
+  <script src="js/execution.js?v=1"></script>
+  <script src="js/engine.js?v=1"></script>
+  <script src="js/state.js?v=1"></script>
+  <script src="js/app.js?v=1"></script>
+</body>
+</html>

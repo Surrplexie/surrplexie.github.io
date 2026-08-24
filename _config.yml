@@ -19,6 +19,10 @@ defaults:
       path: "tankfield"
     values:
       sitemap: false
+  - scope:
+      path: "marketsim"
+    values:
+      sitemap: false
 
 exclude:
   - README.md
