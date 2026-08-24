@@ -6044,6 +6044,7 @@
     "protect-ar": "Mothership Protect · Arms Race class tree · random team · start at 45 · [N] skip · [H] to take control · win or 4 hours starts a fresh server",
     "assault-ar": "Assault · Arms Race class tree · Blue attacks Green · capture zones · Green wins in 10:00 if they hold 3/4 · win or 4 hours starts a fresh server",
     "tdm-ar": "Red vs blue · Arms Race class tree · random team · start at 45 · kills pay 80–90% · respawn 15–20% · fresh server after 4 hours",
+    "4tdm-ar": "Four bases · Arms Race class tree · random team · start at 45 · fresh server after 4 hours",
     "royalemaze-ar": "Royale Maze · Arms Race class tree · L / Y / zig clusters · storm closes fully · last tank wins · then a fresh server",
     "manhunt-ar": "Manhunt · Arms Race class tree · hunted kill pays 95% · other kills 80–90% · respawn 15–20% · fresh server after 4 hours",
     "teamhunt-ar": "Team Manhunt · Arms Race class tree · hunted vs hunter team · new #1 joins the hunted team · hunted kill pays 95% · other kills 80–90% · respawn 15–20% · fresh server after 4 hours",
