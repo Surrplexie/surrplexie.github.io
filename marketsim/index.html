@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=2" />
+  <link rel="stylesheet" href="css/style.css?v=5" />
 </head>
 <body>
   <div class="app">
@@ -72,6 +72,7 @@
             <input id="chk-auto" type="checkbox" />
             <label for="chk-auto">Auto step</label>
           </div>
+          <p id="auto-follow-hint" class="hint auto-hint" hidden>Auto follows selected watchlist row (chart + orders).</p>
           <div class="field">
             <label for="auto-rate">Auto interval (ms)</label>
             <input id="auto-rate" type="number" min="100" max="5000" step="50" value="400" />
@@ -206,19 +207,40 @@
               </select>
             </div>
             <div id="chart-interval-hint" class="chart-hint"></div>
+            <div id="chart-ohlc" class="chart-ohlc" aria-live="polite">
+              <span class="ohlc-item"><span class="ohlc-k">O</span> <span id="ohlc-o" class="ohlc-v">—</span></span>
+              <span class="ohlc-item"><span class="ohlc-k">H</span> <span id="ohlc-h" class="ohlc-v">—</span></span>
+              <span class="ohlc-item"><span class="ohlc-k">L</span> <span id="ohlc-l" class="ohlc-v">—</span></span>
+              <span class="ohlc-item"><span class="ohlc-k">C</span> <span id="ohlc-c" class="ohlc-v">—</span></span>
+              <span id="ohlc-chg" class="ohlc-chg">—</span>
+            </div>
           </div>
           <div id="chart"></div>
+          <div class="watch-toolbar">
+            <div class="filter-group" role="group" aria-label="Asset class filter">
+              <span class="filter-label">Show</span>
+              <label class="filter-chip"><input type="checkbox" id="flt-stock" checked /> Stocks</label>
+              <label class="filter-chip"><input type="checkbox" id="flt-fund" checked /> ETFs</label>
+              <label class="filter-chip"><input type="checkbox" id="flt-crypto" checked /> Crypto</label>
+            </div>
+            <input id="watch-search" type="search" class="watch-search" placeholder="Search ticker…" autocomplete="off" />
+            <select id="watch-sector" class="watch-sector" title="Sector filter">
+              <option value="">All sectors</option>
+            </select>
+            <span id="watch-count" class="watch-count"></span>
+          </div>
           <div class="watch-scroll">
-            <table>
+            <table id="watch-table">
               <thead>
                 <tr>
-                  <th>Ticker</th>
-                  <th>Class</th>
-                  <th>Sector</th>
-                  <th class="num">Mid</th>
-                  <th class="num">24h</th>
-                  <th class="num" title="Volume + model turnover">Vol</th>
-                  <th class="num" title="Resting ask size">Ask sz</th>
+                  <th class="sortable" data-sort="ticker">Ticker</th>
+                  <th class="sortable" data-sort="asset_class">Class</th>
+                  <th class="sortable" data-sort="sector">Sector</th>
+                  <th class="sortable num" data-sort="mid">Mid</th>
+                  <th class="sortable num" data-sort="mcap">Mcap</th>
+                  <th class="sortable num" data-sort="pct_24h">24h</th>
+                  <th class="sortable num" data-sort="volume">Vol</th>
+                  <th class="sortable num" data-sort="ask_size">Ask sz</th>
                 </tr>
               </thead>
               <tbody id="watch-body"></tbody>
@@ -264,8 +286,8 @@
   <script src="js/player.js?v=2"></script>
   <script src="js/execution.js?v=2"></script>
   <script src="js/engine.js?v=2"></script>
-  <script src="js/state.js?v=3"></script>
+  <script src="js/state.js?v=5"></script>
   <script src="js/api.js?v=3"></script>
-  <script src="js/app.js?v=3"></script>
+  <script src="js/app.js?v=5"></script>
 </body>
 </html>

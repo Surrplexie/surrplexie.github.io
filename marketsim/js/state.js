@@ -15,6 +15,25 @@
     return s || "0";
   }
 
+  function fmtMcap(x) {
+    if (!Number.isFinite(x)) return "—";
+    const ax = Math.abs(x);
+    if (ax >= 1e12) return `$${(x / 1e12).toFixed(2)}T`;
+    if (ax >= 1e9) return `$${(x / 1e9).toFixed(2)}B`;
+    if (ax >= 1e6) return `$${(x / 1e6).toFixed(2)}M`;
+    if (ax >= 1e3) return `$${(x / 1e3).toFixed(2)}K`;
+    return `$${Number(x).toFixed(0)}`;
+  }
+
+  function fmtPrice(x) {
+    if (!Number.isFinite(x)) return "—";
+    const ax = Math.abs(x);
+    if (ax >= 1000) return x.toFixed(2);
+    if (ax >= 1) return x.toFixed(4);
+    if (ax >= 0.01) return x.toFixed(6);
+    return x.toFixed(8);
+  }
+
   function serializeState(session) {
     const { market, player, config } = session;
     const eq = equity(session);
@@ -173,6 +192,8 @@
     chartSeries,
     fmtMoney,
     fmtQty,
+    fmtMcap,
+    fmtPrice,
     bucketTicksFromSpec,
     bucketLabel,
     CHART_EPOCH,

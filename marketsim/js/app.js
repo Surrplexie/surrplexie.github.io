@@ -1,13 +1,16 @@
 (function () {
   const API = globalThis.MarketSimAPI;
-  const { Result, resultMsg } = globalThis.MarketSimExecution;
-  const { fmtMoney, fmtQty, CHART_EPOCH } = globalThis.MarketSimState;
+  const { fmtMoney, fmtQty, fmtMcap, fmtPrice, CHART_EPOCH } = globalThis.MarketSimState;
   const { STARTING_CASH_MIN_USD, STARTING_CASH_MAX_USD } = globalThis.MarketSimConfig;
 
   let selectedTicker = null;
   let chart = null;
   let candleSeries = null;
   let autoTimer = null;
+
+  const watchSort = { col: "ticker", dir: "asc" };
+  let sectorOptionsBuilt = false;
+  let lastChartBars = [];
 
   const $ = (id) => document.getElementById(id);
 
@@ -20,6 +23,148 @@
     showToast._t = setTimeout(() => {
       el.hidden = true;
     }, 3200);
+  }
+
+  function isAutoOn() {
+    return $("chk-auto")?.checked === true;
+  }
+
+  function classFilterSet() {
+    const set = new Set();
+    if ($("flt-stock")?.checked) set.add("stock");
+    if ($("flt-fund")?.checked) set.add("fund");
+    if ($("flt-crypto")?.checked) set.add("crypto");
+    return set;
+  }
+
+  function classLabel(cls) {
+    if (cls === "fund") return "ETF";
+    if (cls === "crypto") return "Crypto";
+    return "Stock";
+  }
+
+  function compareRows(a, b, col, dir) {
+    const mul = dir === "desc" ? -1 : 1;
+    let va;
+    let vb;
+    switch (col) {
+      case "ticker":
+        va = a.ticker;
+        vb = b.ticker;
+        return mul * String(va).localeCompare(String(vb));
+      case "asset_class":
+        va = a.asset_class;
+        vb = b.asset_class;
+        return mul * String(va).localeCompare(String(vb));
+      case "sector":
+        va = a.sector || "";
+        vb = b.sector || "";
+        return mul * String(va).localeCompare(String(vb));
+      case "mid":
+      case "mcap":
+      case "pct_24h":
+      case "volume":
+      case "ask_size":
+        va = Number(a[col]) || 0;
+        vb = Number(b[col]) || 0;
+        return mul * (va - vb);
+      default:
+        return 0;
+    }
+  }
+
+  function filterAndSortInstruments(instruments) {
+    const classes = classFilterSet();
+    const q = ($("watch-search")?.value || "").trim().toUpperCase();
+    const sector = ($("watch-sector")?.value || "").trim();
+
+    let rows = instruments.filter((row) => {
+      if (!classes.has(row.asset_class)) return false;
+      if (sector && (row.sector || "") !== sector) return false;
+      if (q && !row.ticker.toUpperCase().includes(q) && !(row.name || "").toUpperCase().includes(q)) {
+        return false;
+      }
+      return true;
+    });
+
+    rows = rows.slice().sort((a, b) => compareRows(a, b, watchSort.col, watchSort.dir));
+    return rows;
+  }
+
+  function updateSortHeaders() {
+    document.querySelectorAll("#watch-table th.sortable").forEach((th) => {
+      const col = th.dataset.sort;
+      const active = col === watchSort.col;
+      th.classList.toggle("active", active);
+      const ind = th.querySelector(".sort-ind");
+      if (ind) ind.textContent = active ? (watchSort.dir === "asc" ? "▲" : "▼") : "↕";
+    });
+  }
+
+  function rebuildSectorOptions(instruments) {
+    if (sectorOptionsBuilt) return;
+    const sel = $("watch-sector");
+    if (!sel) return;
+    const sectors = [...new Set(instruments.map((x) => x.sector).filter(Boolean))].sort();
+    for (const s of sectors) {
+      const opt = document.createElement("option");
+      opt.value = s;
+      opt.textContent = s;
+      sel.appendChild(opt);
+    }
+    sectorOptionsBuilt = true;
+  }
+
+  function renderWatchlist(st) {
+    rebuildSectorOptions(st.instruments);
+    const rows = filterAndSortInstruments(st.instruments);
+    $("watch-count").textContent = `${rows.length} / ${st.instruments.length} shown`;
+
+    const tbody = $("watch-body");
+    tbody.innerHTML = "";
+    const auto = isAutoOn();
+
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="8" class="muted">No rows match filters</td></tr>';
+      updateSortHeaders();
+      return;
+    }
+
+    for (const row of rows) {
+      const tr = document.createElement("tr");
+      tr.dataset.ticker = row.ticker;
+      if (row.ticker === selectedTicker) {
+        tr.classList.add("sel");
+        if (auto) tr.classList.add("auto-follow");
+      }
+      const ch = row.pct_24h;
+      tr.innerHTML = `
+        <td class="tck">${row.ticker}</td>
+        <td><span class="class-tag ${row.asset_class}">${classLabel(row.asset_class)}</span></td>
+        <td class="sec">${row.sector || "—"}</td>
+        <td class="num">${fmtMoney(row.mid)}</td>
+        <td class="num" title="mid × units out">${fmtMcap(row.mcap)}</td>
+        <td class="num ch ${ch >= 0 ? "up" : "dn"}">${ch >= 0 ? "+" : ""}${ch.toFixed(2)}%</td>
+        <td class="num" title="μ=${(row.mu ?? 0).toFixed(3)} σ=${(row.sigma ?? 0).toFixed(3)}">${fmtQty(row.volume)}</td>
+        <td class="num">${fmtQty(row.ask_size)}</td>
+      `;
+      tr.addEventListener("click", () => selectTicker(row.ticker));
+      tbody.appendChild(tr);
+    }
+    updateSortHeaders();
+  }
+
+  function updateAutoHint() {
+    const hint = $("auto-follow-hint");
+    if (!hint) return;
+    if (isAutoOn()) {
+      hint.hidden = false;
+      hint.textContent = selectedTicker
+        ? `Auto stepping · chart following ${selectedTicker}`
+        : "Auto stepping · click a row to follow on chart";
+    } else {
+      hint.hidden = true;
+    }
   }
 
   function loadGbmFields(st) {
@@ -50,7 +195,9 @@
     $("gbm-sigma-ticker").value = ov.sigma != null ? ov.sigma : row?.base_sigma ?? row?.sigma ?? "";
   }
 
-  function renderState() {
+  function renderState(opts) {
+    opts = opts || {};
+    const full = opts.full !== false;
     const st = API.getState();
 
     $("hdr-mode").textContent = st.mode;
@@ -62,25 +209,8 @@
 
     $("news-line").textContent = st.news.length ? st.news[0].text : "—";
 
-    const tbody = $("watch-body");
-    tbody.innerHTML = "";
-    for (const row of st.instruments) {
-      const tr = document.createElement("tr");
-      tr.dataset.ticker = row.ticker;
-      if (row.ticker === selectedTicker) tr.classList.add("sel");
-      const ch = row.pct_24h;
-      tr.innerHTML = `
-        <td class="tck">${row.ticker}</td>
-        <td class="cls">${row.asset_class}</td>
-        <td class="sec">${row.sector || "—"}</td>
-        <td class="num">${fmtMoney(row.mid)}</td>
-        <td class="num ch ${ch >= 0 ? "up" : "dn"}">${ch >= 0 ? "+" : ""}${ch.toFixed(2)}%</td>
-        <td class="num" title="μ=${(row.mu ?? 0).toFixed(3)} σ=${(row.sigma ?? 0).toFixed(3)}">${fmtQty(row.volume)}</td>
-        <td class="num">${fmtQty(row.ask_size)}</td>
-      `;
-      tr.addEventListener("click", () => selectTicker(row.ticker));
-      tbody.appendChild(tr);
-    }
+    renderWatchlist(st);
+    updateAutoHint();
 
     const posBody = $("pos-body");
     posBody.innerHTML = "";
@@ -100,32 +230,79 @@
       }
     }
 
-    $("json-out").textContent = JSON.stringify(st, null, 2);
-    loadGbmFields(st);
+    if (full) {
+      $("json-out").textContent = JSON.stringify(st, null, 2);
+      loadGbmFields(st);
+    }
+
     if (selectedTicker) refreshChart();
   }
 
   function selectTicker(ticker) {
     selectedTicker = ticker;
     $("order-ticker").value = ticker;
-    renderState();
+    $("corp-ticker").value = ticker;
+    renderState({ full: !isAutoOn() });
   }
 
   function chartIntervalSpec() {
     return $("chart-interval").value || "day:1";
   }
 
+  function updateOhlcDisplay(candle) {
+    if (!candle || candle.open == null) {
+      clearOhlcDisplay();
+      return;
+    }
+    const o = Number(candle.open);
+    const h = Number(candle.high);
+    const l = Number(candle.low);
+    const c = Number(candle.close);
+    const chg = c - o;
+    const pct = o ? (chg / o) * 100 : 0;
+    const cls = chg >= 0 ? "up" : "dn";
+
+    $("ohlc-o").textContent = fmtPrice(o);
+    $("ohlc-h").textContent = fmtPrice(h);
+    $("ohlc-l").textContent = fmtPrice(l);
+    $("ohlc-c").textContent = fmtPrice(c);
+
+    ["ohlc-o", "ohlc-h", "ohlc-l", "ohlc-c"].forEach((id) => {
+      $(id).className = `ohlc-v ${cls}`;
+    });
+
+    const sign = chg >= 0 ? "+" : "";
+    $("ohlc-chg").textContent = `${sign}${fmtPrice(chg)} (${sign}${pct.toFixed(2)}%)`;
+    $("ohlc-chg").className = `ohlc-chg ${cls}`;
+  }
+
+  function clearOhlcDisplay() {
+    ["ohlc-o", "ohlc-h", "ohlc-l", "ohlc-c"].forEach((id) => {
+      $(id).textContent = "—";
+      $(id).className = "ohlc-v";
+    });
+    $("ohlc-chg").textContent = "—";
+    $("ohlc-chg").className = "ohlc-chg";
+  }
+
+  function showLatestOhlc() {
+    if (lastChartBars.length) updateOhlcDisplay(lastChartBars[lastChartBars.length - 1]);
+    else clearOhlcDisplay();
+  }
+
   function refreshChart() {
     if (!selectedTicker || !candleSeries) return;
     const spec = chartIntervalSpec();
-    const st = API.getState();
     const { bars, bucket_label } = API.chart(selectedTicker, spec, 400);
     $("chart-title").textContent = selectedTicker;
     $("chart-interval-hint").textContent = bucket_label || "";
     if (!bars.length) {
+      lastChartBars = [];
       candleSeries.setData([]);
+      clearOhlcDisplay();
       return;
     }
+    lastChartBars = bars;
     candleSeries.setData(
       bars.map((b) => ({
         time: b.time,
@@ -136,6 +313,7 @@
       }))
     );
     chart.timeScale().fitContent();
+    showLatestOhlc();
   }
 
   function simTickFromChartTime(time, mpt) {
@@ -187,24 +365,66 @@
     window.addEventListener("resize", () => {
       if (chart) chart.applyOptions({ width: el.clientWidth });
     });
+
+    chart.subscribeCrosshairMove((param) => {
+      if (!param.time || !param.seriesData || !candleSeries) {
+        showLatestOhlc();
+        return;
+      }
+      const d = param.seriesData.get(candleSeries);
+      if (d && d.open != null) updateOhlcDisplay(d);
+      else showLatestOhlc();
+    });
+  }
+
+  function initSortHeaders() {
+    document.querySelectorAll("#watch-table th.sortable").forEach((th) => {
+      if (!th.querySelector(".sort-ind")) {
+        const span = document.createElement("span");
+        span.className = "sort-ind";
+        span.textContent = "↕";
+        th.appendChild(span);
+      }
+      th.addEventListener("click", () => {
+        const col = th.dataset.sort;
+        if (watchSort.col === col) {
+          watchSort.dir = watchSort.dir === "asc" ? "desc" : "asc";
+        } else {
+          watchSort.col = col;
+          watchSort.dir =
+            col === "ticker" || col === "sector" || col === "asset_class" ? "asc" : "desc";
+        }
+        renderState({ full: false });
+      });
+    });
+    updateSortHeaders();
+  }
+
+  function bindWatchFilters() {
+    const rerender = () => renderState({ full: false });
+    $("flt-stock").addEventListener("change", rerender);
+    $("flt-fund").addEventListener("change", rerender);
+    $("flt-crypto").addEventListener("change", rerender);
+    $("watch-search").addEventListener("input", rerender);
+    $("watch-sector").addEventListener("change", rerender);
   }
 
   function bind() {
     $("btn-step1").addEventListener("click", () => {
       API.step({ ticks: 1 });
-      renderState();
+      renderState({ full: false });
     });
     $("btn-step5").addEventListener("click", () => {
       API.step({ ticks: 5 });
-      renderState();
+      renderState({ full: false });
     });
     $("btn-step50").addEventListener("click", () => {
       API.step({ ticks: 50 });
-      renderState();
+      renderState({ full: false });
     });
     $("btn-run-day").addEventListener("click", () => {
       API.step({ unit: "day", n: 1 });
-      renderState();
+      renderState({ full: false });
     });
 
     $("btn-order").addEventListener("click", () => {
@@ -244,6 +464,9 @@
           sim_minutes_per_tick: parseFloat($("gbm-mpt").value),
         });
         selectedTicker = null;
+        sectorOptionsBuilt = false;
+        const sel = $("watch-sector");
+        while (sel.options.length > 1) sel.remove(1);
         showToast("new game", true);
         renderState();
       } catch (e) {
@@ -265,14 +488,14 @@
       const v = parseFloat(e.target.value);
       $("vol-val").textContent = v.toFixed(2);
       API.volatilityOverride({ value: v });
-      renderState();
+      renderState({ full: false });
     });
 
     $("trend-slider").addEventListener("input", (e) => {
       const v = parseFloat(e.target.value);
       $("trend-val").textContent = v.toFixed(2);
       API.trendOverride({ value: v });
-      renderState();
+      renderState({ full: false });
     });
 
     $("btn-gbm-global").addEventListener("click", () => {
@@ -347,12 +570,21 @@
     $("chk-auto").addEventListener("change", (e) => {
       clearInterval(autoTimer);
       autoTimer = null;
+      updateAutoHint();
       if (e.target.checked) {
         const ms = parseInt($("auto-rate").value, 10) || 400;
         autoTimer = setInterval(() => {
           API.step({ ticks: 1 });
-          renderState();
+          renderState({ full: false });
         }, ms);
+      } else {
+        renderState({ full: false });
+      }
+    });
+
+    $("auto-rate").addEventListener("change", () => {
+      if ($("chk-auto").checked) {
+        $("chk-auto").dispatchEvent(new Event("change"));
       }
     });
 
@@ -362,10 +594,13 @@
     $("chart-interval").addEventListener("change", () => {
       if (selectedTicker) refreshChart();
     });
+
+    bindWatchFilters();
   }
 
   document.addEventListener("DOMContentLoaded", () => {
     initChart();
+    initSortHeaders();
     bind();
     renderState();
   });

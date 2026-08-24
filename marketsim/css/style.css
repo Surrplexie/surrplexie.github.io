@@ -220,9 +220,133 @@ tbody tr {
   cursor: pointer;
 }
 
-tbody tr:hover,
+tbody tr:hover {
+  background: #141c26;
+}
+
+.watch-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: #0d1117;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.filter-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.filter-chip:has(input:checked) {
+  border-color: var(--accent);
+  background: #152536;
+}
+
+.filter-chip input {
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.watch-search {
+  min-width: 120px;
+  flex: 1;
+  max-width: 160px;
+  padding: 5px 8px;
+  background: #121820;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.watch-sector {
+  padding: 5px 8px;
+  background: #121820;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 12px;
+  max-width: 130px;
+}
+
+.watch-count {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+th.sortable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+th.sortable:hover {
+  color: var(--text);
+}
+
+th.sortable .sort-ind {
+  opacity: 0.35;
+  font-size: 9px;
+  margin-left: 2px;
+}
+
+th.sortable.active .sort-ind {
+  opacity: 1;
+  color: var(--accent);
+}
+
 tbody tr.sel {
   background: #17202c;
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+tbody tr.auto-follow.sel {
+  box-shadow: inset 3px 0 0 var(--green);
+}
+
+.auto-hint {
+  margin: 4px 0 0;
+}
+
+.class-tag {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.class-tag.fund {
+  color: #79c0ff;
+}
+
+.class-tag.crypto {
+  color: #ffa657;
 }
 
 .num {
@@ -284,6 +408,47 @@ tbody tr.sel {
   font-size: 10px;
   color: var(--muted);
   margin-top: 4px;
+}
+
+.chart-ohlc {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px 14px;
+  margin-top: 6px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ohlc-item {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.ohlc-k {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.ohlc-v {
+  font-weight: 600;
+}
+
+.ohlc-v.up,
+.ohlc-chg.up {
+  color: var(--green);
+}
+
+.ohlc-v.dn,
+.ohlc-chg.dn {
+  color: var(--red);
+}
+
+.ohlc-chg {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .json-out {
