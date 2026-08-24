@@ -7,6 +7,7 @@
   const MIN_LOT = 1e-8;
   const MIN_NOTIONAL = 1e-6;
   const SIM_MINUTES_PER_TICK_DEFAULT = 15;
+  const TICKS_PER_SIM_DAY = (24 * 60) / SIM_MINUTES_PER_TICK_DEFAULT;
 
   const SECTORS = [
     "Tech",
@@ -20,38 +21,10 @@
   ];
 
   const STOCK_NAMES = [
-    "NORTH",
-    "APEX",
-    "LUMEN",
-    "ORBIT",
-    "VANTA",
-    "HELIX",
-    "PRISM",
-    "CIPHER",
-    "FORGE",
-    "ATLAS",
-    "NOVA",
-    "PULSE",
-    "VERTEX",
-    "EMBER",
-    "STRIDE",
-    "CLOUD",
-    "MATRIX",
-    "HARBOR",
-    "SUMMIT",
-    "RIDGE",
-    "FLUX",
-    "SPHERE",
-    "CANYON",
-    "BLOOM",
-    "TITAN",
-    "GLIDE",
-    "MERC",
-    "SOLAR",
-    "QUANT",
-    "DELTA",
-    "CREST",
-    "ZENITH",
+    "NORTH", "APEX", "LUMEN", "ORBIT", "VANTA", "HELIX", "PRISM", "CIPHER",
+    "FORGE", "ATLAS", "NOVA", "PULSE", "VERTEX", "EMBER", "STRIDE", "CLOUD",
+    "MATRIX", "HARBOR", "SUMMIT", "RIDGE", "FLUX", "SPHERE", "CANYON", "BLOOM",
+    "TITAN", "GLIDE", "MERC", "SOLAR", "QUANT", "DELTA", "CREST", "ZENITH",
   ];
 
   const CRYPTO_NAMES = ["BTCX", "ETHX", "SOLX", "ADAX", "DOTX", "AVAX", "LINKX", "DOGX"];
@@ -75,6 +48,10 @@
         stockFundAnnualReturn: 0.08,
         greatDepression: false,
         cryptoTopTier: 3,
+        cryptoTierVolMult: 0.72,
+        cryptoMcapVolPower: 0.22,
+        cryptoMcapRefUsd: 1e11,
+        cryptoVolMaxMult: 2.5,
         maxLeverage: 1,
         maintenanceMarginRate: 0.25,
         shortingEnabled: false,
@@ -83,17 +60,18 @@
         overnightGapMaxBps: 0,
         takerFeeBps: 0,
         slippageBpsBase: 0,
+        frontRunBps: 0,
+        npcDepthUsd: 250_000,
+        floatFlowBpsPerTick: 0.002,
+        cryptoMintProb: 0.012,
+        cryptoMintMaxPct: 0.0015,
       },
       overrides || {}
     );
   }
 
   const PRESETS = {
-    simple: baseMega("simple", {
-      volMultiplier: 0.5,
-      spreadBps: 8,
-      startingCash: 25_000_000,
-    }),
+    simple: baseMega("simple", { volMultiplier: 0.5, spreadBps: 8, startingCash: 25_000_000 }),
     easy: baseMega("easy", {
       volMultiplier: 0.6,
       driftBias: 0.00005,
@@ -114,6 +92,7 @@
       overnightGapMaxBps: 0.8,
       takerFeeBps: 2.2,
       slippageBpsBase: 1.6,
+      frontRunBps: 0.6,
     }),
     complex: baseMega("complex", {
       volMultiplier: 1.1,
@@ -128,21 +107,22 @@
       overnightGapMaxBps: 0.4,
     }),
     free: baseMega("free", { volMultiplier: 0.9 }),
-    custom: baseMega("free", { label: "custom" }),
+    custom: baseMega("custom", { volMultiplier: 1 }),
   };
 
   function preset(mode) {
-    const key = String(mode || "simple").toLowerCase();
-    return Object.assign({}, PRESETS[key] || PRESETS.simple);
+    return Object.assign({}, PRESETS[String(mode || "simple").toLowerCase()] || PRESETS.simple);
+  }
+
+  function buildCustom(opts) {
+    return baseMega("custom", Object.assign({}, opts || {}));
   }
 
   function clampStartingCash(v) {
     const x = Number(v);
     if (!Number.isFinite(x)) throw new Error("cash must be a finite number");
     if (x < STARTING_CASH_MIN_USD || x > STARTING_CASH_MAX_USD) {
-      throw new Error(
-        `cash must be between ${STARTING_CASH_MIN_USD} and ${STARTING_CASH_MAX_USD} USD`
-      );
+      throw new Error(`cash must be between ${STARTING_CASH_MIN_USD} and ${STARTING_CASH_MAX_USD} USD`);
     }
     return x;
   }
@@ -156,12 +136,14 @@
     MIN_LOT,
     MIN_NOTIONAL,
     SIM_MINUTES_PER_TICK_DEFAULT,
+    TICKS_PER_SIM_DAY,
     SECTORS,
     STOCK_NAMES,
     CRYPTO_NAMES,
     FUND_NAMES,
     PRESETS,
     preset,
+    buildCustom,
     clampStartingCash,
   };
 })(typeof window !== "undefined" ? window : globalThis);

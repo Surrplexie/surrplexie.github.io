@@ -1,76 +1,63 @@
-# MarketSim (browser)
+# MarketSim (browser — full JS port)
 
-Play at **[surrplexie.github.io/marketsim/](https://surrplexie.github.io/marketsim/)** after you push this folder to GitHub Pages.
+Play at **[surrplexie.github.io/marketsim/](https://surrplexie.github.io/marketsim/)**.
 
-This is a **client-only** port of the Python [marketsim](https://github.com/Surrplexie/marketsim) toy market: no server, no install. The simulation runs in JavaScript in your tab (same idea as the local `python -m marketsim --web` UI, but without FastAPI).
+Client-side port of the Python MarketSim stack: same module boundaries (`config`, `instrument`, `gbm`, `clob`, `market`, `player`, `execution`, `engine`, `api`, `state`) running entirely in the browser for GitHub Pages.
 
-## Quick start
+## Module map (Python → JS)
 
-1. Open **`/marketsim/`** on the site (or open `marketsim/index.html` locally).
-2. Choose a **preset** and **starting cash** ($0.0001–$100M), then **New game**.
-3. **Apply cash** only at **tick 0** with a flat book (no positions).
-4. Advance with **+1 / +5 / +50 / +1 day** or enable **Auto step**.
-5. Click a watchlist row for the **chart**; place **market** or **limit** orders from the left panel.
+| Python | JavaScript |
+|--------|------------|
+| `modes.py` | `js/config.js` |
+| `instrument.py` | `js/instrument.js` |
+| `sim_time.py` | `js/sim_time.js` |
+| GBM core | `js/gbm.js` |
+| `clob.py` | `js/clob.js` |
+| `market.py` | `js/market.js` |
+| `player.py` | `js/player.js` |
+| `execution.py` | `js/execution.js` |
+| `engine.py` | `js/engine.js` |
+| `api.py` | `js/api.js` |
+| TUI N/A | `js/app.js` + `index.html` |
 
-## Presets
+## Features
 
-| Mode | Notes |
-|------|--------|
-| **simple** | Lower vol, wider learning curve |
-| **easy** | More starting cash, tighter spreads |
-| **hard** | Shorting, leverage, fees, wider spreads |
-| **complex** | Mild negative drift bias + margin features |
-| **free / custom** | Same baseline config in this build |
+- **GBM pricing** with editable **μ**, **σ**, drift bias, vol multiplier, sim minutes/tick (global + per-scope/per-ticker)
+- **Mega universe** (32+4+8) or classic generator for other counts
+- **Order book** with NPC liquidity, opening spread calendar, market/limit orders, book liquidity caps
+- **Margin / leverage / shorting** (hard & complex presets), borrow accrual, SEC & taker fees, slippage
+- **Overnight gaps**, headline shocks, Great Depression + recovery path
+- **Supply**: float flow, crypto mint/dilution, 21M-unit cap coin
+- **Volume**: fills + synthetic turnover
+- **Corp actions**: split, dividend, buyback
+- **Fund NAV sync** from equal-weight baskets
 
-Optional **Great Depression** schedules a one-time broad crash, then partial recovery.
+## GBM controls
 
-## Universe
+Formula: **S′ = S × exp((μ − σ²/2)Δt + σ√Δt Z)**
 
-Default **mega** set: **32 stocks** (sectors), **4 index-style funds** (T16, T25, C3, S10 baskets), **8 cryptos** (tiered vol by market cap; first coin capped at **21M** units).
+- **Apply global GBM** — stock/fund annual μ, drift bias, vol mult, minutes per tick
+- **Apply scope GBM** — override μ/σ for selected ticker, all stocks, funds, crypto, or all
+- **Regime sliders** — listed vol mult + trend bias (live)
 
-## Overrides
+## API (in-browser)
 
-- **Volatility** — scales effective σ (stocks, funds, crypto).
-- **Trend** — biases drift for all names.
+`MarketSimAPI` mirrors the Python FastAPI routes:
 
-Headlines may appear in the news strip and briefly lift volatility.
+- `getState()`, `step(body)`, `order(body)`, `reset(body)`
+- `startingCash(body)`, `volatilityOverride(body)`, `trendOverride(body)`
+- `gbmParams(body)`, `stockSplit`, `stockDividend`, `stockBuyback`, `chart(ticker)`
 
-## Orders & liquidity
-
-- **Market buys** walk the **ask** book (size or USD notional).
-- **Market sells** walk the **bid** book; **hard/complex** allow shorting beyond your position when enabled in config.
-- If the book is empty on your side, you get **not enough resting liquidity** (same idea as `NO_LIQUIDITY` in the Python sim).
-
-## Local development
-
-Static files only — any static server works:
+## Local run
 
 ```bash
 cd marketsim
 python -m http.server 8080
-# open http://127.0.0.1:8080/
 ```
 
-Or serve from the repo root and visit `/marketsim/`.
+Open `http://127.0.0.1:8080/`.
 
-## Files
+## Not included
 
-| Path | Role |
-|------|------|
-| `index.html` | Layout + script tags |
-| `css/style.css` | Terminal-style theme |
-| `js/engine.js` | Session, reset, step |
-| `js/market.js` | GBM step, funds, news, GD |
-| `js/clob.js` | Order book + NPC liquidity |
-| `js/app.js` | UI wiring |
-
-## Python version
-
-For the full terminal UI, headless batches, and API-driven workflows, use the Python package:
-
-```bash
-pip install -e .
-python -m marketsim --web
-```
-
-This web folder is meant for **GitHub Pages** hosting alongside [surrplexie.github.io](https://surrplexie.github.io).
+- Python **TUI** (`python -m marketsim` without `--web`) — use the Python package locally if needed
+- Server-side persistence (one tab = one session)

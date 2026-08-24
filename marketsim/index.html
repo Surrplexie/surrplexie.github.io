@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Browser-based stock, ETF, and crypto market simulator — runs entirely in your browser on GitHub Pages." />
+  <meta name="description" content="Full browser port of MarketSim — GBM dynamics, order book, margin, corp actions." />
   <meta name="robots" content="noindex, nofollow" />
   <title>MarketSim</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=1" />
+  <link rel="stylesheet" href="css/style.css?v=2" />
 </head>
 <body>
   <div class="app">
@@ -23,6 +23,7 @@
         <span>Tick <strong id="hdr-tick">0</strong></span>
         <span>Equity <strong id="hdr-equity">—</strong></span>
         <span>Cash <strong id="hdr-cash">—</strong></span>
+        <span>Margin <strong id="hdr-margin">—</strong></span>
       </div>
     </header>
 
@@ -43,7 +44,11 @@
           </div>
           <div class="field">
             <label for="start-cash">Starting cash (USD)</label>
-            <input id="start-cash" type="number" min="0.0001" max="100000000" step="any" value="25000000" />
+            <input id="start-cash" type="number" step="any" value="25000000" />
+          </div>
+          <div class="field">
+            <label for="seed">Seed (optional)</label>
+            <input id="seed" type="number" step="1" placeholder="random" />
           </div>
           <div class="check-row">
             <input id="chk-gd" type="checkbox" />
@@ -74,10 +79,51 @@
         </div>
 
         <div class="panel">
-          <h2>Overrides</h2>
+          <h2>GBM parameters</h2>
+          <p class="hint">S′ = S × exp((μ − σ²/2)Δt + σ√Δt Z). μ, σ are annual; Δt from sim min/tick.</p>
           <div class="field">
-            <label>Volatility <span id="vol-val">1.00</span></label>
-            <input id="vol-slider" type="range" min="0.25" max="2.5" step="0.05" value="1" />
+            <label for="gbm-mu-global">Stock/fund μ (annual return)</label>
+            <input id="gbm-mu-global" type="number" step="0.001" value="0.08" />
+          </div>
+          <div class="field">
+            <label for="gbm-drift">Drift bias</label>
+            <input id="gbm-drift" type="number" step="0.0001" value="0" />
+          </div>
+          <div class="field">
+            <label for="gbm-vol">Vol multiplier</label>
+            <input id="gbm-vol" type="number" step="0.05" value="1" />
+          </div>
+          <div class="field">
+            <label for="gbm-mpt">Sim minutes / tick</label>
+            <input id="gbm-mpt" type="number" step="1" value="15" />
+          </div>
+          <button type="button" id="btn-gbm-global" class="primary" style="width:100%">Apply global GBM</button>
+          <hr class="sep" />
+          <div class="field">
+            <label for="gbm-scope">Scope override</label>
+            <select id="gbm-scope">
+              <option value="selected">Selected ticker</option>
+              <option value="stocks">All stocks</option>
+              <option value="funds">All funds</option>
+              <option value="crypto">All crypto</option>
+              <option value="all">All (ex-funds)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Ticker <span id="gbm-ticker-label">—</span></label>
+            <label for="gbm-mu-ticker">μ override</label>
+            <input id="gbm-mu-ticker" type="number" step="0.001" placeholder="leave blank = default" />
+            <label for="gbm-sigma-ticker">σ override</label>
+            <input id="gbm-sigma-ticker" type="number" step="0.01" placeholder="leave blank = default" />
+          </div>
+          <button type="button" id="btn-gbm-scope" style="width:100%">Apply scope GBM</button>
+        </div>
+
+        <div class="panel">
+          <h2>Regime sliders</h2>
+          <div class="field">
+            <label>Listed vol <span id="vol-val">1.00</span></label>
+            <input id="vol-slider" type="range" min="0.1" max="3" step="0.05" value="1" />
           </div>
           <div class="field">
             <label>Trend <span id="trend-val">0.00</span></label>
@@ -107,17 +153,38 @@
           </div>
           <div class="field">
             <label for="order-size">Size (shares)</label>
-            <input id="order-size" type="number" min="0" step="any" placeholder="100" />
+            <input id="order-size" type="number" step="any" />
           </div>
           <div class="field">
-            <label for="order-cash">Or cash (buy only)</label>
-            <input id="order-cash" type="number" min="0" step="any" placeholder="5000" />
+            <label for="order-cash">Or cash (buy)</label>
+            <input id="order-cash" type="number" step="any" />
           </div>
           <div class="field">
             <label for="order-price">Limit price</label>
-            <input id="order-price" type="number" min="0" step="any" placeholder="optional" />
+            <input id="order-price" type="number" step="any" />
           </div>
           <button type="button" id="btn-order" class="primary" style="width:100%">Submit order</button>
+        </div>
+
+        <div class="panel">
+          <h2>Corp actions (stocks)</h2>
+          <div class="field">
+            <label for="corp-ticker">Ticker</label>
+            <input id="corp-ticker" type="text" placeholder="NORTH" />
+          </div>
+          <div class="field">
+            <label for="corp-ratio">Split ratio</label>
+            <input id="corp-ratio" type="number" step="any" value="2" />
+          </div>
+          <div class="field">
+            <label for="corp-amt">Div $/sh or buyback fraction</label>
+            <input id="corp-amt" type="number" step="any" value="1" />
+          </div>
+          <div class="row-btns">
+            <button type="button" id="btn-split">Split</button>
+            <button type="button" id="btn-div">Dividend</button>
+            <button type="button" id="btn-buyback">Buyback</button>
+          </div>
         </div>
       </aside>
 
@@ -134,8 +201,8 @@
                   <th>Sector</th>
                   <th class="num">Mid</th>
                   <th class="num">24h</th>
-                  <th class="num">Vol</th>
-                  <th class="num">Ask sz</th>
+                  <th class="num" title="Volume + model turnover">Vol</th>
+                  <th class="num" title="Resting ask size">Ask sz</th>
                 </tr>
               </thead>
               <tbody id="watch-body"></tbody>
@@ -161,7 +228,7 @@
           </table>
         </div>
         <div class="panel">
-          <h2>State (debug)</h2>
+          <h2>State (API JSON)</h2>
           <pre class="json-out" id="json-out">{}</pre>
         </div>
       </aside>
@@ -171,15 +238,18 @@
   <div id="toast" class="toast" hidden></div>
 
   <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
-  <script src="js/rng.js?v=1"></script>
-  <script src="js/config.js?v=1"></script>
-  <script src="js/clob.js?v=1"></script>
-  <script src="js/universe.js?v=1"></script>
-  <script src="js/market.js?v=1"></script>
-  <script src="js/player.js?v=1"></script>
-  <script src="js/execution.js?v=1"></script>
-  <script src="js/engine.js?v=1"></script>
-  <script src="js/state.js?v=1"></script>
-  <script src="js/app.js?v=1"></script>
+  <script src="js/rng.js?v=2"></script>
+  <script src="js/config.js?v=2"></script>
+  <script src="js/sim_time.js?v=2"></script>
+  <script src="js/gbm.js?v=2"></script>
+  <script src="js/clob.js?v=2"></script>
+  <script src="js/instrument.js?v=2"></script>
+  <script src="js/market.js?v=2"></script>
+  <script src="js/player.js?v=2"></script>
+  <script src="js/execution.js?v=2"></script>
+  <script src="js/engine.js?v=2"></script>
+  <script src="js/state.js?v=2"></script>
+  <script src="js/api.js?v=2"></script>
+  <script src="js/app.js?v=2"></script>
 </body>
 </html>
