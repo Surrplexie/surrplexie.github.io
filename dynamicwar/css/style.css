@@ -68,6 +68,7 @@ h1 { margin: 0; font-size: clamp(1.25rem, 3vw, 2rem); letter-spacing: .05em; }
 .faction-swatch { width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 8px currentColor; }
 .faction-name { font-weight: 700; }
 .faction-stat { color: #d7ddcc; font-variant-numeric: tabular-nums; }
+.faction-stance { grid-column: 2 / 4; color: #9aa38f; font-size: .68rem; }
 
 .control-bar { grid-column: 2 / 4; height: 3px; background: #394034; border-radius: 2px; overflow: hidden; }
 .control-bar > i { display: block; height: 100%; transition: width .2s linear; }

@@ -21,10 +21,22 @@
       this.staticLayer = document.createElement("canvas");
       this.staticLayer.width = config.worldWidth;
       this.staticLayer.height = config.worldHeight;
-      this.fieldLayer = document.createElement("canvas");
-      this.fieldLayer.width = config.gridWidth;
-      this.fieldLayer.height = config.gridHeight;
-      this.fieldImage = this.fieldLayer.getContext("2d").createImageData(config.gridWidth, config.gridHeight);
+      this.fieldScale = 3;
+      this.field = document.createElement("canvas");
+      this.field.width = config.gridWidth * this.fieldScale;
+      this.field.height = config.gridHeight * this.fieldScale;
+      this.fieldCtx = this.field.getContext("2d");
+      this.fieldImage = this.fieldCtx.createImageData(this.field.width, this.field.height);
+      this.fieldLand = new Uint8Array(this.field.width * this.field.height);
+      for (let py = 0; py < this.field.height; py++) {
+        for (let px = 0; px < this.field.width; px++) {
+          const wx = (px + .5) / this.field.width * config.worldWidth;
+          const wy = (py + .5) / this.field.height * config.worldHeight;
+          this.fieldLand[py * this.field.width + px] = map.isLand(wx, wy) ? 1 : 0;
+        }
+      }
+      this.fieldDirty = true;
+      this.fieldAge = 0;
       this.drawStaticMap();
       this.resize();
     }
@@ -128,26 +140,39 @@
       }
     }
 
-    updateField(field) {
+    updateField(field, force) {
+      if (!force && this.fieldAge < 0.12) return;
+      this.fieldAge = 0;
       const data = this.fieldImage.data;
       const colors = this.config.factions.map(f => hexToRgb(f.color));
-      for (let i = 0; i < field.owner.length; i++) {
-        const owner = field.owner[i], at = i * 4;
-        if (owner < 0 || !field.land[i]) {
-          data[at + 3] = 0;
-          continue;
+      const fw = this.field.width, fh = this.field.height;
+      for (let py = 0; py < fh; py++) {
+        for (let px = 0; px < fw; px++) {
+          const at = (py * fw + px) * 4;
+          const wx = (px + .5) / fw * this.config.worldWidth;
+          const wy = (py + .5) / fh * this.config.worldHeight;
+          if (!this.fieldLand[py * fw + px]) {
+            data[at + 3] = 0;
+            continue;
+          }
+          let best = -1, bestValue = 0, second = 0, total = 0;
+          for (let f = 0; f < colors.length; f++) {
+            const v = field.sample(f, wx, wy);
+            total += v;
+            if (v > bestValue) { second = bestValue; bestValue = v; best = f; }
+            else if (v > second) second = v;
+          }
+          const owner = field.ownerAt(wx, wy);
+          const shown = owner >= 0 ? owner : (total > 0.12 ? best : -1);
+          if (shown < 0) { data[at + 3] = 0; continue; }
+          const rgb = colors[shown];
+          const contrast = total > 0.001 ? (bestValue - second) / total : 1;
+          const edge = contrast < 0.22;
+          data[at] = rgb[0]; data[at + 1] = rgb[1]; data[at + 2] = rgb[2];
+          data[at + 3] = edge ? 150 : 86;
         }
-        const rgb = colors[owner];
-        let contested = false;
-        const x = i % field.w, y = Math.floor(i / field.w);
-        if (x > 0 && field.owner[i - 1] !== owner) contested = true;
-        if (x < field.w - 1 && field.owner[i + 1] !== owner) contested = true;
-        if (y > 0 && field.owner[i - field.w] !== owner) contested = true;
-        if (y < field.h - 1 && field.owner[i + field.w] !== owner) contested = true;
-        data[at] = rgb[0]; data[at + 1] = rgb[1]; data[at + 2] = rgb[2];
-        data[at + 3] = contested ? 200 : 96;
       }
-      this.fieldLayer.getContext("2d").putImageData(this.fieldImage, 0, 0);
+      this.fieldCtx.putImageData(this.fieldImage, 0, 0);
     }
 
     render(session) {
@@ -164,6 +189,7 @@
         } else this.followId = null;
       }
 
+      this.fieldAge += 1 / 60;
       this.updateField(session.influence);
       const scale = this.baseScale() * this.camera.zoom;
       ctx.save();
@@ -172,37 +198,10 @@
       ctx.translate(-this.camera.x, -this.camera.y);
       ctx.drawImage(this.staticLayer, 0, 0);
       ctx.imageSmoothingEnabled = true;
-      ctx.drawImage(this.fieldLayer, 0, 0, this.config.worldWidth, this.config.worldHeight);
-      this.drawFronts(ctx, session);
+      ctx.drawImage(this.field, 0, 0, this.config.worldWidth, this.config.worldHeight);
       this.drawUnits(ctx, session.units, scale);
       ctx.restore();
       this.drawMinimap(ctx, session);
-    }
-
-    drawFronts(ctx, session) {
-      const field = session.influence;
-      const cellW = this.config.worldWidth / field.w;
-      const cellH = this.config.worldHeight / field.h;
-      ctx.save();
-      ctx.lineWidth = 2.4;
-      ctx.lineJoin = "round";
-      ctx.strokeStyle = "rgba(248, 246, 232, .55)";
-      ctx.beginPath();
-      for (let y = 0; y < field.h; y++) {
-        for (let x = 0; x < field.w; x++) {
-          const i = y * field.w + x;
-          const owner = field.owner[i];
-          if (owner < 0 || !field.land[i]) continue;
-          const right = x < field.w - 1 && field.owner[i + 1] !== owner && field.land[i + 1];
-          const down = y < field.h - 1 && field.owner[i + field.w] !== owner && field.land[i + field.w];
-          const wx = (x + 1) * cellW, wy = (y + .5) * cellH;
-          const hx = (x + .5) * cellW, hy = (y + 1) * cellH;
-          if (right) { ctx.moveTo(wx, wy - cellH * .4); ctx.lineTo(wx, wy + cellH * .4); }
-          if (down) { ctx.moveTo(hx - cellW * .4, hy); ctx.lineTo(hx + cellW * .4, hy); }
-        }
-      }
-      ctx.stroke();
-      ctx.restore();
     }
 
     drawUnits(ctx, units, scale) {
@@ -212,8 +211,10 @@
         const r = Math.max(5, 7 / Math.sqrt(scale));
         ctx.save();
         ctx.translate(unit.x, unit.y);
-        ctx.rotate(Math.atan2(unit.vy, unit.vx));
-        ctx.fillStyle = unit.flash > 0 ? "#fff" : faction.color;
+        ctx.rotate(unit.heading || 0);
+        const flash = Math.min(1, unit.flash * 4);
+        ctx.fillStyle = faction.color;
+        ctx.globalAlpha = 1;
         ctx.strokeStyle = "#111";
         ctx.lineWidth = 1.6 / scale;
         ctx.beginPath();
@@ -221,11 +222,16 @@
         ctx.lineTo(-r, r * .78);
         ctx.lineTo(-r, -r * .78);
         ctx.closePath();
-        ctx.fill(); ctx.stroke();
+        ctx.fill();
+        if (flash > 0) {
+          ctx.fillStyle = `rgba(255,255,255,${0.45 * flash})`;
+          ctx.fill();
+        }
+        ctx.stroke();
         ctx.fillStyle = "#1c231b";
         ctx.fillRect(-r, r + 2 / scale, r * 2, 2.2 / scale);
         ctx.fillStyle = unit.health > 45 ? "#b7e663" : "#ff725e";
-        ctx.fillRect(-r, r + 2 / scale, r * 2 * unit.health / 100, 2.2 / scale);
+        ctx.fillRect(-r, r + 2 / scale, r * 2 * Math.max(0, unit.health) / 100, 2.2 / scale);
         ctx.restore();
       }
     }
@@ -238,7 +244,7 @@
       ctx.fillStyle = "#111811";
       ctx.fillRect(x - 3, y - 3, w + 6, h + 6);
       ctx.drawImage(this.staticLayer, x, y, w, h);
-      ctx.drawImage(this.fieldLayer, x, y, w, h);
+      ctx.drawImage(this.field, x, y, w, h);
       for (const unit of session.units) {
         if (unit.dead) continue;
         ctx.fillStyle = this.config.factions[unit.faction].color;

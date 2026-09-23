@@ -41,6 +41,11 @@
       return this.landRings.some(ring => pointInRing(lon, lat, ring));
     }
 
+    clampLand(x, y) {
+      if (this.isLand(x, y)) return { x, y };
+      return this.nearestLand(x, y);
+    }
+
     nearestLand(x, y, rng) {
       if (this.isLand(x, y)) return { x, y };
       for (let radius = 12; radius < 360; radius += 12) {

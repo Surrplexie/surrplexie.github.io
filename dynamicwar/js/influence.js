@@ -32,16 +32,32 @@
       this.shares.fill(0);
     }
 
+    sampleBilinear(grid, wx, wy) {
+      const gx = wx / this.config.worldWidth * this.w - 0.5;
+      const gy = wy / this.config.worldHeight * this.h - 0.5;
+      const x0 = Math.max(0, Math.min(this.w - 1, Math.floor(gx)));
+      const y0 = Math.max(0, Math.min(this.h - 1, Math.floor(gy)));
+      const x1 = Math.min(this.w - 1, x0 + 1);
+      const y1 = Math.min(this.h - 1, y0 + 1);
+      const tx = gx - x0, ty = gy - y0;
+      const a = grid[y0 * this.w + x0], b = grid[y0 * this.w + x1];
+      const c = grid[y1 * this.w + x0], d = grid[y1 * this.w + x1];
+      return a * (1 - tx) * (1 - ty) + b * tx * (1 - ty) + c * (1 - tx) * ty + d * tx * ty;
+    }
+
     sample(faction, wx, wy) {
-      const x = Math.max(0, Math.min(this.w - 1, Math.floor(wx / this.config.worldWidth * this.w)));
-      const y = Math.max(0, Math.min(this.h - 1, Math.floor(wy / this.config.worldHeight * this.h)));
-      return this.values[faction][y * this.w + x];
+      return this.sampleBilinear(this.values[faction], wx, wy);
     }
 
     ownerAt(wx, wy) {
+      const i = this.cellIndex(wx, wy);
+      return this.land[i] ? this.owner[i] : -1;
+    }
+
+    cellIndex(wx, wy) {
       const x = Math.max(0, Math.min(this.w - 1, Math.floor(wx / this.config.worldWidth * this.w)));
       const y = Math.max(0, Math.min(this.h - 1, Math.floor(wy / this.config.worldHeight * this.h)));
-      return this.owner[y * this.w + x];
+      return y * this.w + x;
     }
 
     update(units, dt) {
@@ -63,6 +79,8 @@
           for (let gx = minX; gx <= maxX; gx++) {
             const i = gy * this.w + gx;
             if (!this.land[i]) continue;
+            const wx = (gx + .5) * cellW, wy = (gy + .5) * cellH;
+            if (!this.map.isLand(wx, wy)) continue;
             const dx = (gx + .5 - cx) / rx, dy = (gy + .5 - cy) / ry;
             const d2 = dx * dx + dy * dy;
             if (d2 <= 1) grid[i] += (1 - d2) * unit.strength * dt * .85;

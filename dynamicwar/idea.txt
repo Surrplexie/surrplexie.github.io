@@ -39,4 +39,16 @@ Later systems
 - Air reconnaissance and air control as additional influence layers.
 - Replay/export support using only the map, seed, scenario, and command history.
 
+Known issues from the first live screenshots
+- Control paint used to leak into the sea; land-mask clipping and bilinear sampling should stop that.
+- Hit flashes used to freeze units white; heading is now stored and flash is a short overlay.
+- Pixel-grid fronts showed stair steps; overlay is now upscaled and smoothed, with no dashed cell outline.
+- Britain still gets leftover control because units can sit on the island with no naval crossing. That is a later design item, not a renderer bug.
+
+Bugs still to watch
+- Isolation / supply: inland blobs with no nearby units should fade faster.
+- Encirclement holes and overseas leftovers until naval rules exist.
+- Hold relations can stall the whole map if heat never reaches war.
+- Unit spacing can still shove people toward coasts.
+
 Keep the next version focused: improve front shape, unit spacing, strategic objectives, and supply before adding a large economy or global map.

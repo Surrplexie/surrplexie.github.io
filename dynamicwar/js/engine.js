@@ -26,7 +26,7 @@
         DW.updateBot(unit, this, dt);
         DW.updateMovement(unit, this.map, dt);
       }
-      DW.separateUnits(this.units, this.config);
+      DW.separateUnits(this.units, this.map, this.config);
       for (const unit of this.units) {
         if (!unit.dead && !this.map.isLand(unit.x, unit.y)) {
           const safe = this.map.nearestLand(unit.x, unit.y);
@@ -68,8 +68,8 @@
           units: army.length,
           stance: this.config.factions
             .filter(other => other.id !== f.id)
-            .map(other => this.relations.label(f.id, other.id))
-            .join("/"),
+            .map(other => `${other.name.split(" ")[0]} ${this.relations.label(f.id, other.id)}`)
+            .join(" · "),
           strength: army.reduce((sum, u) => sum + u.health, 0) / 100
         };
       });

@@ -48,8 +48,9 @@
       <div class="faction-row">
         <i class="faction-swatch" style="background:${s.color};color:${s.color}"></i>
         <span class="faction-name">${s.name}</span>
-        <span class="faction-stat">${(s.control * 100).toFixed(1)}% · ${s.units} · ${s.stance}</span>
+        <span class="faction-stat">${(s.control * 100).toFixed(0)}% · ${s.units}</span>
         <span class="control-bar"><i style="width:${s.control * 100}%;background:${s.color}"></i></span>
+        <span class="faction-stance">${s.stance}</span>
       </div>`).join("");
     const hours = Math.floor(session.time);
     clock.textContent = `D+${Math.floor(hours / 24)} ${String(hours % 24).padStart(2, "0")}:${String(Math.floor(session.time * 60) % 60).padStart(2, "0")}`;
