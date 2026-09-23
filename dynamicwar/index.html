@@ -6,7 +6,7 @@
   <meta name="description" content="Dynamic War — an offline bots-first soft-border strategy demo." />
   <meta name="robots" content="noindex, nofollow" />
   <title>Dynamic War</title>
-  <link rel="stylesheet" href="css/style.css?v=3" />
+  <link rel="stylesheet" href="css/style.css?v=4" />
 </head>
 <body>
   <main id="app">
@@ -40,7 +40,18 @@
         Seed
         <input id="seed" type="number" step="1" value="1944" />
       </label>
-      <p class="hint">Factions hold until relations turn tense, then war. Drag to pan · wheel to zoom · click a unit to follow</p>
+      <label>
+        Play as
+        <select id="faction">
+          <option value="0">Atlantic Union</option>
+          <option value="1">Rhine Pact</option>
+          <option value="2">Southern League</option>
+        </select>
+      </label>
+      <div class="button-row">
+        <button id="place" type="button">Place troops</button>
+      </div>
+      <p id="place-hint" class="hint">Click land to drop your units. Selected units move to the next click. Bots hold, rival, ally, or go to war.</p>
     </section>
 
     <div id="status" class="status" role="status">Loading offline map…</div>
@@ -53,15 +64,15 @@
     <footer>Map data © OpenStreetMap contributors · Offline simplified extract</footer>
   </main>
 
-  <script src="js/config.js?v=3"></script>
-  <script src="js/rng.js?v=3"></script>
-  <script src="js/map.js?v=3"></script>
-  <script src="js/influence.js?v=3"></script>
-  <script src="js/relations.js?v=3"></script>
-  <script src="js/units.js?v=3"></script>
-  <script src="js/bots.js?v=3"></script>
-  <script src="js/engine.js?v=3"></script>
-  <script src="js/render.js?v=3"></script>
-  <script src="js/app.js?v=3"></script>
+  <script src="js/config.js?v=4"></script>
+  <script src="js/rng.js?v=4"></script>
+  <script src="js/map.js?v=4"></script>
+  <script src="js/influence.js?v=4"></script>
+  <script src="js/relations.js?v=4"></script>
+  <script src="js/units.js?v=4"></script>
+  <script src="js/bots.js?v=4"></script>
+  <script src="js/engine.js?v=4"></script>
+  <script src="js/render.js?v=4"></script>
+  <script src="js/app.js?v=4"></script>
 </body>
 </html>

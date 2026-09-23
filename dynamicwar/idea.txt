@@ -8,7 +8,9 @@ Core concept
 
 Current bots-first demo
 - Three autonomous factions contest a compact Benelux map.
-- Faction relations start at hold, warm to tense probes, then war. Combat only fires after war.
+- Faction relations drift among ally, hold, rival, and war instead of stalling forever.
+- Occupied land stays yours after units walk through it until another army takes it or a revolt fires. Isolated inland blobs not sitting on a city can decay.
+- The player can choose a faction and click land to place/move troops.
 - Units space out, hold standoff ranges, and form visible fronts instead of instantly charging.
 - A low-resolution influence field turns unit vision into colored territorial control.
 - Captures use delay and hysteresis so borders do not flicker.
@@ -23,7 +25,7 @@ Next gameplay improvements
 6. Add reinforcement and supply lines; isolated units should lose strength and control.
 7. Distinguish scouts, infantry, armor, artillery, and headquarters by vision and combat role.
 8. Add fog of war so factions only act on currently observed enemies and remembered positions.
-9. Let the player select a faction, issue move/front-line orders, or remain in spectator mode.
+9. Let the player select a faction, issue move/front-line orders, or remain in spectator mode. (started: click-to-place troops)
 10. Add scenario setup: faction count, unit count, spawn areas, victory share, and map selection.
 
 Border and map improvements
@@ -46,9 +48,9 @@ Known issues from the first live screenshots
 - Britain still gets leftover control because units can sit on the island with no naval crossing. That is a later design item, not a renderer bug.
 
 Bugs still to watch
-- Isolation / supply: inland blobs with no nearby units should fade faster.
+- Isolation / supply: inland blobs with no nearby units should fade, except captured cities.
 - Encirclement holes and overseas leftovers until naval rules exist.
-- Hold relations can stall the whole map if heat never reaches war.
+- Relations now drift into ally / hold / rival / war rather than freezing.
 - Unit spacing can still shove people toward coasts.
 
 Keep the next version focused: improve front shape, unit spacing, strategic objectives, and supply before adding a large economy or global map.

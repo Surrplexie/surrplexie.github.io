@@ -60,7 +60,7 @@
       let relationBias = 0;
       if (owner >= 0 && owner !== unit.faction) {
         const stance = relations.stance(unit.faction, owner);
-        relationBias = stance === DW.REL_WAR ? 1.15 : stance === DW.REL_TENSE ? 0.15 : -1.4;
+        relationBias = stance === DW.REL_WAR ? 1.15 : stance === DW.REL_RIVAL ? 0.2 : stance === DW.REL_ALLY ? -1.8 : -0.9;
       }
       const holdLine = Math.abs(mine - enemy) < 0.35 ? 0.85 : 0;
       const score = ownerScore + relationBias + holdLine + enemy * 0.22 - distance / 1100 + rng.next() * 0.12;
@@ -82,7 +82,7 @@
 
   function updateBot(unit, session, dt) {
     unit.decisionIn -= dt;
-    if (unit.dead || unit.decisionIn > 0) return;
+    if (unit.dead || unit.player || unit.decisionIn > 0) return;
     unit.decisionIn = session.config.decisionInterval * session.rng.range(0.75, 1.25);
 
     const relations = session.relations;
@@ -101,20 +101,26 @@
       const stance = relations.stance(unit.faction, nearby.faction);
       const dist = Math.hypot(unit.x - nearby.x, unit.y - nearby.y);
 
+      if (stance === DW.REL_ALLY) {
+        unit.targetX = unit.x + (group.x - unit.x) * 0.2;
+        unit.targetY = unit.y + (group.y - unit.y) * 0.2;
+        return;
+      }
+
       if (unit.health < 32 || (stance === DW.REL_WAR && foes > friends + 2 && enemyPressure > mine)) {
         const retreat = standoffFrom(unit, nearby, session, 70);
         unit.targetX = retreat.x; unit.targetY = retreat.y;
         return;
       }
 
-      if (stance === DW.REL_HOLD || (stance === DW.REL_TENSE && !relations.shouldProbe(unit.faction, nearby.faction))) {
+      if ((stance === DW.REL_HOLD || stance === DW.REL_RIVAL) && !relations.shouldProbe(unit.faction, nearby.faction)) {
         const hold = standoffFrom(unit, nearby, session, stance === DW.REL_HOLD ? 18 : 4);
         unit.targetX = hold.x + (group.x - unit.x) * 0.08;
         unit.targetY = hold.y + (group.y - unit.y) * 0.08;
         return;
       }
 
-      if (stance === DW.REL_TENSE && relations.shouldProbe(unit.faction, nearby.faction)) {
+      if (stance === DW.REL_RIVAL && relations.shouldProbe(unit.faction, nearby.faction)) {
         relations.consumeProbe(unit.faction, nearby.faction, session.rng);
         unit.targetX = nearby.x + (group.x - unit.x) * 0.1;
         unit.targetY = nearby.y + (group.y - unit.y) * 0.1;

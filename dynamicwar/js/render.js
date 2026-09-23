@@ -228,6 +228,13 @@
           ctx.fill();
         }
         ctx.stroke();
+        if (unit.player) {
+          ctx.beginPath();
+          ctx.arc(0, 0, r * 1.85, 0, Math.PI * 2);
+          ctx.strokeStyle = "#fff7d6";
+          ctx.lineWidth = 1.5 / scale;
+          ctx.stroke();
+        }
         ctx.fillStyle = "#1c231b";
         ctx.fillRect(-r, r + 2 / scale, r * 2, 2.2 / scale);
         ctx.fillStyle = unit.health > 45 ? "#b7e663" : "#ff725e";

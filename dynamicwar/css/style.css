@@ -76,11 +76,13 @@ h1 { margin: 0; font-size: clamp(1.25rem, 3vw, 2rem); letter-spacing: .05em; }
 .controls {
   left: 16px;
   bottom: 34px;
-  width: 250px;
+  width: 270px;
   padding: 12px;
   display: grid;
   gap: 9px;
 }
+
+#game.placing { cursor: crosshair; }
 
 .button-row { display: flex; gap: 6px; }
 button, select, input {

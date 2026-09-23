@@ -28,6 +28,34 @@
     return units;
   }
 
+  let nextId = 1;
+  function nextUnitId(units) {
+    nextId = Math.max(nextId, ...units.map(u => u.id), 1) + 1;
+    return nextId;
+  }
+
+  function makeUnit(faction, x, y, config, rng, player) {
+    const angle = rng ? rng.next() * Math.PI * 2 : 0;
+    return {
+      id: 0, faction, x, y, vx: 0, vy: 0, targetX: x, targetY: y,
+      health: 100, strength: rng ? rng.range(.82, 1.18) : 1,
+      vision: config.unitVision * (rng ? rng.range(.9, 1.12) : 1),
+      speed: config.unitSpeed * (rng ? rng.range(.88, 1.12) : 1),
+      attackRange: config.unitAttackRange,
+      job: player ? "player" : "push",
+      heading: angle, decisionIn: rng ? rng.range(0, config.decisionInterval) : 0,
+      flash: 0, dead: false, kills: 0, player: Boolean(player)
+    };
+  }
+
+  function spawnPlayerUnit(session, x, y) {
+    const p = session.map.nearestLand(x, y, session.rng);
+    const unit = makeUnit(session.playerFaction, p.x, p.y, session.config, session.rng, true);
+    unit.id = nextUnitId(session.units);
+    session.units.push(unit);
+    return unit;
+  }
+
   function separateUnits(units, map, config) {
     const min = config.unitSpacing;
     for (let i = 0; i < units.length; i++) {
@@ -96,6 +124,7 @@
   }
 
   DW.createArmy = createArmy;
+  DW.spawnPlayerUnit = spawnPlayerUnit;
   DW.separateUnits = separateUnits;
   DW.updateMovement = updateMovement;
   DW.resolveCombat = resolveCombat;

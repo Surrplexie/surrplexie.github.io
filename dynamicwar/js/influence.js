@@ -14,12 +14,22 @@
       this.pending = new Int8Array(this.w * this.h).fill(-1);
       this.pendingTime = new Float32Array(this.w * this.h);
       this.land = new Uint8Array(this.w * this.h);
+      this.city = new Int16Array(this.w * this.h).fill(-1);
       this.shares = new Float32Array(this.count);
+      this.cities = (map.cities || []).map(c => ({ name: c.name, x: c.x, y: c.y, owner: -1 }));
+      const radius = config.cityHoldRadius || 52;
       for (let y = 0; y < this.h; y++) {
         for (let x = 0; x < this.w; x++) {
           const wx = (x + .5) / this.w * config.worldWidth;
           const wy = (y + .5) / this.h * config.worldHeight;
-          this.land[y * this.w + x] = map.isLand(wx, wy) ? 1 : 0;
+          const i = y * this.w + x;
+          this.land[i] = map.isLand(wx, wy) ? 1 : 0;
+          let best = -1, bestD = radius;
+          this.cities.forEach((city, idx) => {
+            const d = Math.hypot(city.x - wx, city.y - wy);
+            if (d < bestD) { best = idx; bestD = d; }
+          });
+          this.city[i] = best;
         }
       }
     }
@@ -60,10 +70,28 @@
       return y * this.w + x;
     }
 
-    update(units, dt) {
+    update(units, dt, rng) {
       const fade = Math.exp(-this.config.influenceDecay * dt);
-      this.values.forEach(grid => {
-        for (let i = 0; i < grid.length; i++) grid[i] *= fade;
+      const keep = this.config.occupyKeep;
+      const occupied = new Uint8Array(this.cities.length);
+      for (const unit of units) {
+        if (unit.dead) continue;
+        this.cities.forEach((city, idx) => {
+          if (Math.hypot(city.x - unit.x, city.y - unit.y) < this.config.cityHoldRadius) occupied[idx] = 1;
+        });
+      }
+
+      this.values.forEach((grid, faction) => {
+        for (let i = 0; i < grid.length; i++) {
+          if (!this.land[i]) { grid[i] = 0; continue; }
+          const cityIdx = this.city[i];
+          const cityHeld = cityIdx >= 0 && occupied[cityIdx] && this.owner[i] === faction;
+          if (this.owner[i] === faction && (cityHeld || grid[i] >= keep * 0.5)) {
+            grid[i] = Math.max(grid[i] * fade, keep);
+          } else {
+            grid[i] *= fade;
+          }
+        }
       });
 
       const cellW = this.config.worldWidth / this.w;
@@ -75,23 +103,22 @@
         const minX = Math.max(0, Math.floor(cx - rx)), maxX = Math.min(this.w - 1, Math.ceil(cx + rx));
         const minY = Math.max(0, Math.floor(cy - ry)), maxY = Math.min(this.h - 1, Math.ceil(cy + ry));
         const grid = this.values[unit.faction];
+        const stamp = this.config.occupyStamp * unit.strength * dt;
         for (let gy = minY; gy <= maxY; gy++) {
           for (let gx = minX; gx <= maxX; gx++) {
             const i = gy * this.w + gx;
             if (!this.land[i]) continue;
-            const wx = (gx + .5) * cellW, wy = (gy + .5) * cellH;
-            if (!this.map.isLand(wx, wy)) continue;
             const dx = (gx + .5 - cx) / rx, dy = (gy + .5 - cy) / ry;
             const d2 = dx * dx + dy * dy;
-            if (d2 <= 1) grid[i] += (1 - d2) * unit.strength * dt * .85;
+            if (d2 <= 1) grid[i] = Math.max(grid[i], (1 - d2) * stamp + keep);
           }
         }
       }
 
-      this.resolveOwners(dt);
+      this.resolveOwners(dt, rng, occupied);
     }
 
-    resolveOwners(dt) {
+    resolveOwners(dt, rng, occupied) {
       this.shares.fill(0);
       let controlled = 0;
       for (let i = 0; i < this.owner.length; i++) {
@@ -103,15 +130,28 @@
           if (v > bestValue) { second = bestValue; bestValue = v; best = f; }
           else if (v > second) second = v;
         }
-        const candidate = total > .05 && bestValue / total >= this.config.captureThreshold &&
-          bestValue - second >= this.config.captureMargin ? best : -1;
+
+        const cityIdx = this.city[i];
+        const cityHeld = cityIdx >= 0 && occupied[cityIdx];
+        let candidate = this.owner[i];
+        const captured = total > .08 && bestValue / total >= this.config.captureThreshold &&
+          bestValue - second >= this.config.captureMargin;
+        if (captured) candidate = best;
+
+        const isolated = cityIdx < 0 && !captured && total < this.config.occupyKeep * 0.35;
+        if (isolated && rng && rng.next() < this.config.revoltChance * dt) {
+          candidate = -1;
+          this.values.forEach(grid => { grid[i] *= 0.15; });
+        }
+
         if (candidate !== this.owner[i]) {
           if (this.pending[i] !== candidate) {
             this.pending[i] = candidate;
             this.pendingTime[i] = 0;
           } else {
             this.pendingTime[i] += dt;
-            if (this.pendingTime[i] >= this.config.captureDelay) {
+            const wait = cityHeld ? this.config.captureDelay * 1.8 : this.config.captureDelay;
+            if (this.pendingTime[i] >= wait) {
               this.owner[i] = candidate;
               this.pendingTime[i] = 0;
             }
@@ -125,6 +165,7 @@
           controlled++;
         }
       }
+      this.cities.forEach(city => { city.owner = this.ownerAt(city.x, city.y); });
       if (controlled) for (let f = 0; f < this.count; f++) this.shares[f] /= controlled;
     }
   }

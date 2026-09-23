@@ -9,6 +9,9 @@
   const resetButton = document.getElementById("reset");
   const speedSelect = document.getElementById("speed");
   const seedInput = document.getElementById("seed");
+  const factionSelect = document.getElementById("faction");
+  const placeButton = document.getElementById("place");
+  const placeHint = document.getElementById("place-hint");
   const scoreboard = document.getElementById("scoreboard");
   const clock = document.getElementById("clock");
   const winner = document.getElementById("winner");
@@ -35,6 +38,10 @@
     accumulator = 0;
     winnerShown = false;
     winner.classList.add("hidden");
+    session.playerFaction = Number(factionSelect.value) || 0;
+    session.placing = false;
+    placeButton.textContent = "Place troops";
+    canvas.classList.remove("placing");
     startButton.disabled = session.running;
     pauseButton.disabled = !session.running;
     pauseButton.textContent = "Pause";
@@ -47,7 +54,7 @@
     scoreboard.innerHTML = stats.map(s => `
       <div class="faction-row">
         <i class="faction-swatch" style="background:${s.color};color:${s.color}"></i>
-        <span class="faction-name">${s.name}</span>
+        <span class="faction-name">${s.you ? s.name + " (you)" : s.name}</span>
         <span class="faction-stat">${(s.control * 100).toFixed(0)}% · ${s.units}</span>
         <span class="control-bar"><i style="width:${s.control * 100}%;background:${s.color}"></i></span>
         <span class="faction-stance">${s.stance}</span>
@@ -102,6 +109,18 @@
   });
   resetButton.addEventListener("click", () => makeSession(false));
   document.getElementById("winner-reset").addEventListener("click", () => makeSession(true));
+  factionSelect.addEventListener("change", () => {
+    if (session) session.playerFaction = Number(factionSelect.value) || 0;
+  });
+  placeButton.addEventListener("click", () => {
+    if (!session) return;
+    session.placing = !session.placing;
+    placeButton.textContent = session.placing ? "Placing…" : "Place troops";
+    canvas.classList.toggle("placing", session.placing);
+    placeHint.textContent = session.placing
+      ? "Click land to spawn your troops. Click an existing unit to select it, then click land to move."
+      : "Click land to drop your units. Selected units move to the next click. Bots hold, rival, ally, or go to war.";
+  });
 
   canvas.addEventListener("pointerdown", event => {
     dragging = true; dragged = false;
@@ -121,8 +140,19 @@
   });
   canvas.addEventListener("pointerup", event => {
     if (!dragged && session) {
+      const world = renderer.screenToWorld(event.clientX, event.clientY);
       const unit = nearestUnitAt(event.clientX, event.clientY);
-      renderer.followId = unit ? unit.id : null;
+      if (session.placing) {
+        if (unit && unit.player) session.playerSelected = unit.id;
+        else if (session.playerSelected && session.units.some(u => u.id === session.playerSelected && u.player && !u.dead)) {
+          session.orderSelected(world.x, world.y);
+        } else {
+          session.placePlayer(world.x, world.y);
+        }
+      } else {
+        renderer.followId = unit ? unit.id : null;
+        if (unit && unit.player) session.playerSelected = unit.id;
+      }
     }
     dragging = false;
     canvas.classList.remove("dragging");

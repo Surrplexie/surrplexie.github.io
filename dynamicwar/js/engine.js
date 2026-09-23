@@ -11,6 +11,9 @@
       this.influence = new DW.InfluenceField(config, map);
       this.relations = new DW.Relations(config.factions, this.rng);
       this.units = DW.createArmy(config, map, this.rng);
+      this.playerFaction = 0;
+      this.playerSelected = null;
+      this.placing = false;
       this.time = 0;
       this.winner = -1;
       this.holdFaction = -1;
@@ -23,8 +26,12 @@
       this.time += dt;
       this.relations.update(this, dt);
       for (const unit of this.units) {
+        if (unit.player) continue;
         DW.updateBot(unit, this, dt);
         DW.updateMovement(unit, this.map, dt);
+      }
+      for (const unit of this.units) {
+        if (unit.player && !unit.dead) DW.updateMovement(unit, this.map, dt);
       }
       DW.separateUnits(this.units, this.map, this.config);
       for (const unit of this.units) {
@@ -34,7 +41,7 @@
         }
       }
       DW.resolveCombat(this.units, dt, this.rng, this.relations);
-      this.influence.update(this.units, dt);
+      this.influence.update(this.units, dt, this.rng);
       this.checkVictory(dt);
     }
 
@@ -59,11 +66,25 @@
       }
     }
 
+    placePlayer(x, y) {
+      const unit = DW.spawnPlayerUnit(this, x, y);
+      this.playerSelected = unit.id;
+      return unit;
+    }
+
+    orderSelected(x, y) {
+      const unit = this.units.find(u => u.id === this.playerSelected && !u.dead);
+      if (!unit || !unit.player) return null;
+      const p = this.map.nearestLand(x, y, this.rng);
+      unit.targetX = p.x; unit.targetY = p.y;
+      return unit;
+    }
+
     factionStats() {
       return this.config.factions.map(f => {
         const army = this.units.filter(u => !u.dead && u.faction === f.id);
         return {
-          id: f.id, name: f.name, color: f.color,
+          id: f.id, name: f.name, color: f.color, you: f.id === this.playerFaction,
           control: this.influence.shares[f.id] || 0,
           units: army.length,
           stance: this.config.factions

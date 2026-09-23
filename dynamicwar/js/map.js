@@ -20,6 +20,12 @@
       this.landRings = this.features
         .filter(f => f.properties.kind === "land")
         .flatMap(f => f.geometry.type === "Polygon" ? [f.geometry.coordinates[0]] : f.geometry.coordinates.map(p => p[0]));
+      this.cities = this.features
+        .filter(f => f.properties.kind === "city")
+        .map(f => {
+          const p = this.project(f.geometry.coordinates);
+          return { name: f.properties.name, x: p.x, y: p.y };
+        });
     }
 
     project(coord) {
@@ -41,9 +47,13 @@
       return this.landRings.some(ring => pointInRing(lon, lat, ring));
     }
 
-    clampLand(x, y) {
-      if (this.isLand(x, y)) return { x, y };
-      return this.nearestLand(x, y);
+    nearestCity(x, y) {
+      let best = null, bestD = Infinity;
+      for (const city of this.cities) {
+        const d = Math.hypot(city.x - x, city.y - y);
+        if (d < bestD) { best = city; bestD = d; }
+      }
+      return best ? { city: best, dist: bestD } : null;
     }
 
     nearestLand(x, y, rng) {
