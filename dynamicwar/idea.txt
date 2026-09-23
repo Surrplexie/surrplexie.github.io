@@ -1,0 +1,42 @@
+DYNAMIC WAR — IDEAS
+
+Core concept
+- A strategy game inspired by Hearts of Iron, but without fixed provinces, hexes, or capture zones.
+- Armies project control through their vision and presence. Territory follows the military front dynamically.
+- Borders should look soft and irregular rather than revealing the underlying influence grid.
+- Use offline OpenStreetMap-derived geography as the base map.
+
+Current bots-first demo
+- Three autonomous factions contest a compact Benelux map.
+- Faction relations start at hold, warm to tense probes, then war. Combat only fires after war.
+- Units space out, hold standoff ranges, and form visible fronts instead of instantly charging.
+- A low-resolution influence field turns unit vision into colored territorial control.
+- Captures use delay and hysteresis so borders do not flicker.
+- Seeded simulations, pause, speed controls, reset, camera follow, and a minimap are available.
+
+Next gameplay improvements
+1. Make armies form clearer front lines instead of dense overlapping swarms. (started)
+2. Add collision/separation so friendly units spread out and avoid stacking. (started)
+3. Replace round influence blobs with terrain-aware propagation and connected front contours.
+4. Add movement costs for roads, rivers, cities, coastlines, and difficult terrain.
+5. Give bots strategic objectives such as cities, crossings, ports, and encirclement routes.
+6. Add reinforcement and supply lines; isolated units should lose strength and control.
+7. Distinguish scouts, infantry, armor, artillery, and headquarters by vision and combat role.
+8. Add fog of war so factions only act on currently observed enemies and remembered positions.
+9. Let the player select a faction, issue move/front-line orders, or remain in spectator mode.
+10. Add scenario setup: faction count, unit count, spawn areas, victory share, and map selection.
+
+Border and map improvements
+- Smooth the visible control mask with marching squares or signed-distance contours.
+- Show a thin contested-front line where opposing influence is nearly equal.
+- Keep legal national borders subtle and separate from military control.
+- Split larger maps into loadable regional chunks before attempting a global map.
+- For a world version, use simplified vector tiles and simulation levels of detail so distant wars run cheaply.
+
+Later systems
+- Casualties, manpower, morale, organization, production, diplomacy, alliances, and scripted scenarios.
+- Naval transport and amphibious landings so separated landmasses can participate.
+- Air reconnaissance and air control as additional influence layers.
+- Replay/export support using only the map, seed, scenario, and command history.
+
+Keep the next version focused: improve front shape, unit spacing, strategic objectives, and supply before adding a large economy or global map.

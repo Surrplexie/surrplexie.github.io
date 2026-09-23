@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <meta name="description" content="Dynamic War — an offline bots-first soft-border strategy demo." />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Dynamic War</title>
+  <link rel="stylesheet" href="css/style.css?v=2" />
+</head>
+<body>
+  <main id="app">
+    <canvas id="game" aria-label="Dynamic War simulation map"></canvas>
+
+    <header class="topbar">
+      <div>
+        <h1>Dynamic War</h1>
+        <p>Bots-first front simulation</p>
+      </div>
+      <div id="clock" class="clock">D+0 00:00</div>
+    </header>
+
+    <section id="scoreboard" class="panel scoreboard" aria-label="Faction control"></section>
+
+    <section class="panel controls" aria-label="Simulation controls">
+      <div class="button-row">
+        <button id="start" type="button" class="primary">Start war</button>
+        <button id="pause" type="button" disabled>Pause</button>
+        <button id="reset" type="button">Reset</button>
+      </div>
+      <label>
+        Speed
+        <select id="speed">
+          <option value="1">1×</option>
+          <option value="2">2×</option>
+          <option value="4">4×</option>
+        </select>
+      </label>
+      <label>
+        Seed
+        <input id="seed" type="number" step="1" value="1944" />
+      </label>
+      <p class="hint">Factions hold until relations turn tense, then war. Drag to pan · wheel to zoom · click a unit to follow</p>
+    </section>
+
+    <div id="status" class="status" role="status">Loading offline map…</div>
+    <div id="winner" class="winner hidden" role="dialog" aria-live="polite">
+      <div class="winner-card">
+        <p id="winner-text"></p>
+        <button id="winner-reset" type="button" class="primary">Run again</button>
+      </div>
+    </div>
+    <footer>Map data © OpenStreetMap contributors · Offline simplified extract</footer>
+  </main>
+
+  <script src="js/config.js?v=2"></script>
+  <script src="js/rng.js?v=2"></script>
+  <script src="js/map.js?v=2"></script>
+  <script src="js/influence.js?v=2"></script>
+  <script src="js/relations.js?v=2"></script>
+  <script src="js/units.js?v=2"></script>
+  <script src="js/bots.js?v=2"></script>
+  <script src="js/engine.js?v=2"></script>
+  <script src="js/render.js?v=2"></script>
+  <script src="js/app.js?v=2"></script>
+</body>
+</html>

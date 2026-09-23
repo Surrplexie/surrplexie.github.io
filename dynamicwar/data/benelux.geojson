@@ -1,0 +1,115 @@
+{
+  "type": "FeatureCollection",
+  "name": "Simplified Benelux and southern North Sea offline extract",
+  "attribution": "© OpenStreetMap contributors, ODbL 1.0; simplified for this demo",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "kind": "land", "name": "Mainland Europe" },
+      "geometry": { "type": "Polygon", "coordinates": [[
+        [-5.80,48.40],[ -4.10,48.40],[ -2.40,48.40],[ -0.70,48.40],[ 1.10,48.40],[ 2.80,48.40],[ 4.60,48.40],[ 6.40,48.40],[ 8.20,48.40],[10.00,48.40],
+        [10.00,49.20],[10.00,50.10],[10.00,51.10],[10.00,52.10],[10.00,53.20],[10.00,54.30],
+        [8.95,54.30],[8.55,54.05],[8.20,53.82],[7.70,53.70],[7.15,53.58],[6.85,53.42],[6.55,53.38],
+        [6.15,53.42],[5.85,53.28],[5.45,53.05],[5.18,52.88],[5.02,52.62],[4.98,52.38],[5.05,52.18],
+        [4.92,51.98],[4.72,51.82],[4.38,51.72],[4.05,51.58],[3.72,51.45],[3.42,51.38],[3.12,51.32],
+        [2.78,51.18],[2.42,51.12],[2.05,51.08],[1.62,51.00],[1.15,50.95],[0.62,50.88],[0.10,50.82],
+        [-0.52,50.76],[-1.18,50.68],[-1.82,50.55],[-2.38,50.38],[-2.92,50.22],[-3.42,50.08],[-3.95,49.95],
+        [-4.48,49.78],[-4.95,49.60],[-5.38,49.38],[-5.68,49.12],[-5.80,48.88],[-5.80,48.40]
+      ]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "kind": "land", "name": "Southern Britain" },
+      "geometry": { "type": "Polygon", "coordinates": [[
+        [-5.80,50.05],[-5.45,50.08],[-4.95,50.18],[-4.42,50.28],[-3.92,50.38],[-3.38,50.48],[-2.78,50.55],
+        [-2.18,50.62],[-1.55,50.68],[-0.92,50.74],[-0.28,50.80],[0.32,50.88],[0.88,50.98],[1.32,51.18],
+        [1.48,51.38],[1.22,51.55],[0.85,51.68],[0.38,51.78],[-0.12,51.82],[-0.68,51.80],[-1.22,51.85],
+        [-1.78,52.02],[-2.35,52.18],[-2.95,52.28],[-3.55,52.32],[-4.18,52.28],[-4.78,52.18],[-5.32,52.02],
+        [-5.80,51.78],[-5.80,50.05]
+      ]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "kind": "land", "name": "Isle of Wight" },
+      "geometry": { "type": "Polygon", "coordinates": [[
+        [-1.58,50.58],[-1.32,50.58],[-1.10,50.62],[-1.18,50.72],[-1.42,50.74],[-1.60,50.68],[-1.58,50.58]
+      ]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "kind": "border", "name": "Belgium–Netherlands" },
+      "geometry": { "type": "LineString", "coordinates": [[2.55,51.12],[3.05,51.28],[3.62,51.38],[4.18,51.42],[4.72,51.45],[5.22,51.48],[5.62,51.32],[6.12,50.90]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "kind": "border", "name": "Belgium–France" },
+      "geometry": { "type": "LineString", "coordinates": [[2.55,51.12],[2.82,50.88],[3.18,50.62],[3.62,50.32],[4.05,50.08],[4.48,49.95],[5.05,49.78],[5.55,49.62],[6.02,49.48]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "kind": "border", "name": "Germany–Benelux" },
+      "geometry": { "type": "LineString", "coordinates": [[6.02,49.48],[6.18,50.05],[6.12,50.90],[6.22,51.35],[6.48,51.82],[6.95,52.22],[7.12,52.72],[7.08,53.28]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "kind": "border", "name": "France–Germany" },
+      "geometry": { "type": "LineString", "coordinates": [[6.02,49.48],[6.55,49.12],[7.18,48.82],[7.62,48.58],[8.05,48.52]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "kind": "river", "name": "Rhine" },
+      "geometry": { "type": "LineString", "coordinates": [[8.22,48.52],[7.95,48.92],[7.72,49.35],[7.48,49.82],[7.22,50.22],[7.02,50.62],[6.82,51.02],[6.55,51.38],[6.18,51.72],[5.72,51.92],[5.18,52.02],[4.62,51.98],[4.18,51.90]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "kind": "river", "name": "Meuse" },
+      "geometry": { "type": "LineString", "coordinates": [[5.58,48.62],[5.68,49.05],[5.72,49.48],[5.58,49.92],[5.52,50.32],[5.68,50.72],[5.82,51.02],[5.42,51.42],[4.95,51.72],[4.38,51.88]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "kind": "river", "name": "Seine" },
+      "geometry": { "type": "LineString", "coordinates": [[2.35,48.86],[1.85,49.22],[1.22,49.42],[0.62,49.42],[0.12,49.38]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "kind": "road", "name": "Amsterdam–Paris" },
+      "geometry": { "type": "LineString", "coordinates": [[4.90,52.37],[4.72,52.12],[4.48,51.92],[4.40,51.22],[4.35,50.85],[3.72,50.72],[3.06,50.63],[2.72,49.85],[2.35,48.86]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "kind": "road", "name": "Brussels–Cologne" },
+      "geometry": { "type": "LineString", "coordinates": [[4.35,50.85],[4.88,50.72],[5.58,50.63],[6.10,50.78],[6.58,50.88],[6.96,50.94]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "kind": "road", "name": "Rotterdam–Antwerp" },
+      "geometry": { "type": "LineString", "coordinates": [[4.48,51.92],[4.42,51.55],[4.40,51.22]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "kind": "road", "name": "Amsterdam–Cologne" },
+      "geometry": { "type": "LineString", "coordinates": [[4.90,52.37],[5.48,52.08],[6.08,51.62],[6.55,51.22],[6.96,50.94]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "kind": "road", "name": "Paris–Cologne" },
+      "geometry": { "type": "LineString", "coordinates": [[2.35,48.86],[3.55,49.12],[4.85,49.42],[5.72,49.85],[6.35,50.42],[6.96,50.94]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "kind": "road", "name": "London–Dover" },
+      "geometry": { "type": "LineString", "coordinates": [[-0.13,51.51],[0.28,51.38],[0.72,51.28],[1.08,51.18],[1.32,51.13]] }
+    },
+    { "type": "Feature", "properties": { "kind": "city", "name": "London" }, "geometry": { "type": "Point", "coordinates": [-0.13,51.51] } },
+    { "type": "Feature", "properties": { "kind": "city", "name": "Dover" }, "geometry": { "type": "Point", "coordinates": [1.32,51.13] } },
+    { "type": "Feature", "properties": { "kind": "city", "name": "Amsterdam" }, "geometry": { "type": "Point", "coordinates": [4.90,52.37] } },
+    { "type": "Feature", "properties": { "kind": "city", "name": "The Hague" }, "geometry": { "type": "Point", "coordinates": [4.30,52.08] } },
+    { "type": "Feature", "properties": { "kind": "city", "name": "Rotterdam" }, "geometry": { "type": "Point", "coordinates": [4.48,51.92] } },
+    { "type": "Feature", "properties": { "kind": "city", "name": "Antwerp" }, "geometry": { "type": "Point", "coordinates": [4.40,51.22] } },
+    { "type": "Feature", "properties": { "kind": "city", "name": "Brussels" }, "geometry": { "type": "Point", "coordinates": [4.35,50.85] } },
+    { "type": "Feature", "properties": { "kind": "city", "name": "Lille" }, "geometry": { "type": "Point", "coordinates": [3.06,50.63] } },
+    { "type": "Feature", "properties": { "kind": "city", "name": "Luxembourg" }, "geometry": { "type": "Point", "coordinates": [6.13,49.61] } },
+    { "type": "Feature", "properties": { "kind": "city", "name": "Cologne" }, "geometry": { "type": "Point", "coordinates": [6.96,50.94] } },
+    { "type": "Feature", "properties": { "kind": "city", "name": "Paris" }, "geometry": { "type": "Point", "coordinates": [2.35,48.86] } }
+  ]
+}
