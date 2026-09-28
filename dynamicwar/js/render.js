@@ -84,20 +84,20 @@
       const land = this.map.features.filter(f => f.properties.kind === "land");
       for (const feature of land) {
         this.drawPath(ctx, feature.geometry, true);
-        ctx.fillStyle = "#8fb25a";
+        ctx.fillStyle = "#d8c48a";
         ctx.fill();
       }
       ctx.save();
-      ctx.globalAlpha = 0.18;
+      ctx.globalAlpha = 0.22;
       for (const feature of land) {
         this.drawPath(ctx, feature.geometry, true);
-        ctx.fillStyle = "#c5d98a";
+        ctx.fillStyle = "#eee4c4";
         ctx.fill();
       }
       ctx.restore();
       for (const feature of land) {
         this.drawPath(ctx, feature.geometry, true);
-        ctx.strokeStyle = "#dce7aa";
+        ctx.strokeStyle = "#f4ead0";
         ctx.lineWidth = 2.2;
         ctx.stroke();
       }
@@ -155,21 +155,20 @@
             data[at + 3] = 0;
             continue;
           }
-          let best = -1, bestValue = 0, second = 0, total = 0;
-          for (let f = 0; f < colors.length; f++) {
-            const v = field.sample(f, wx, wy);
-            total += v;
-            if (v > bestValue) { second = bestValue; bestValue = v; best = f; }
-            else if (v > second) second = v;
-          }
           const owner = field.ownerAt(wx, wy);
-          const shown = owner >= 0 ? owner : (total > 0.12 ? best : -1);
-          if (shown < 0) { data[at + 3] = 0; continue; }
-          const rgb = colors[shown];
-          const contrast = total > 0.001 ? (bestValue - second) / total : 1;
-          const edge = contrast < 0.22;
+          if (owner < 0) { data[at + 3] = 0; continue; }
+          const rgb = colors[owner];
+          let edge = false;
+          const gx = Math.floor(wx / this.config.worldWidth * field.w);
+          const gy = Math.floor(wy / this.config.worldHeight * field.h);
+          const i = Math.max(0, Math.min(field.owner.length - 1, gy * field.w + gx));
+          const n = [i - 1, i + 1, i - field.w, i + field.w];
+          for (const j of n) {
+            if (j < 0 || j >= field.owner.length) continue;
+            if (field.land[j] && field.owner[j] !== owner && field.owner[j] >= 0) { edge = true; break; }
+          }
           data[at] = rgb[0]; data[at + 1] = rgb[1]; data[at + 2] = rgb[2];
-          data[at + 3] = edge ? 150 : 86;
+          data[at + 3] = edge ? 210 : 118;
         }
       }
       this.fieldCtx.putImageData(this.fieldImage, 0, 0);
@@ -178,7 +177,7 @@
     render(session) {
       const ctx = this.ctx;
       ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-      ctx.fillStyle = "#18231b";
+      ctx.fillStyle = "#1a1d22";
       ctx.fillRect(0, 0, this.width, this.height);
 
       if (this.followId != null) {
@@ -199,46 +198,65 @@
       ctx.drawImage(this.staticLayer, 0, 0);
       ctx.imageSmoothingEnabled = true;
       ctx.drawImage(this.field, 0, 0, this.config.worldWidth, this.config.worldHeight);
+      this.drawFrontGlow(ctx, session);
       this.drawUnits(ctx, session.units, scale);
       ctx.restore();
       this.drawMinimap(ctx, session);
     }
 
+    drawFrontGlow(ctx, session) {
+      const fronts = session.influence.fronts;
+      if (!fronts) return;
+      ctx.save();
+      ctx.lineWidth = 7;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.globalAlpha = 0.45;
+      for (let f = 0; f < fronts.length; f++) {
+        const pts = fronts[f];
+        if (!pts.length) continue;
+        ctx.strokeStyle = this.config.factions[f].color;
+        ctx.beginPath();
+        pts.forEach((p, i) => {
+          if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+        });
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
     drawUnits(ctx, units, scale) {
-      for (const unit of units) {
-        if (unit.dead) continue;
+      const sorted = units.filter(u => !u.dead).slice().sort((a, b) => a.y - b.y);
+      for (const unit of sorted) {
         const faction = this.config.factions[unit.faction];
-        const r = Math.max(5, 7 / Math.sqrt(scale));
+        const r = Math.max(6.5, 9 / Math.sqrt(Math.max(0.7, scale)));
         ctx.save();
         ctx.translate(unit.x, unit.y);
-        ctx.rotate(unit.heading || 0);
         const flash = Math.min(1, unit.flash * 4);
-        ctx.fillStyle = faction.color;
-        ctx.globalAlpha = 1;
-        ctx.strokeStyle = "#111";
-        ctx.lineWidth = 1.6 / scale;
         ctx.beginPath();
-        ctx.moveTo(r * 1.3, 0);
-        ctx.lineTo(-r, r * .78);
-        ctx.lineTo(-r, -r * .78);
-        ctx.closePath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.fillStyle = faction.color;
+        ctx.fill();
+        ctx.lineWidth = 2.1 / Math.max(0.6, scale);
+        ctx.strokeStyle = "rgba(250,248,238,.92)";
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.62, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255,255,255,.16)";
         ctx.fill();
         if (flash > 0) {
-          ctx.fillStyle = `rgba(255,255,255,${0.45 * flash})`;
+          ctx.beginPath();
+          ctx.arc(0, 0, r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255,255,255,${0.4 * flash})`;
           ctx.fill();
         }
-        ctx.stroke();
         if (unit.player) {
           ctx.beginPath();
-          ctx.arc(0, 0, r * 1.85, 0, Math.PI * 2);
+          ctx.arc(0, 0, r + 3.2 / scale, 0, Math.PI * 2);
           ctx.strokeStyle = "#fff7d6";
-          ctx.lineWidth = 1.5 / scale;
+          ctx.lineWidth = 1.6 / scale;
           ctx.stroke();
         }
-        ctx.fillStyle = "#1c231b";
-        ctx.fillRect(-r, r + 2 / scale, r * 2, 2.2 / scale);
-        ctx.fillStyle = unit.health > 45 ? "#b7e663" : "#ff725e";
-        ctx.fillRect(-r, r + 2 / scale, r * 2 * Math.max(0, unit.health) / 100, 2.2 / scale);
         ctx.restore();
       }
     }
@@ -255,7 +273,9 @@
       for (const unit of session.units) {
         if (unit.dead) continue;
         ctx.fillStyle = this.config.factions[unit.faction].color;
-        ctx.fillRect(x + unit.x / this.config.worldWidth * w - 1, y + unit.y / this.config.worldHeight * h - 1, 3, 3);
+        ctx.beginPath();
+        ctx.arc(x + unit.x / this.config.worldWidth * w, y + unit.y / this.config.worldHeight * h, 2.1, 0, Math.PI * 2);
+        ctx.fill();
       }
       ctx.strokeStyle = "#e9ebda";
       ctx.lineWidth = 1;

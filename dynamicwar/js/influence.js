@@ -16,6 +16,7 @@
       this.land = new Uint8Array(this.w * this.h);
       this.city = new Int16Array(this.w * this.h).fill(-1);
       this.shares = new Float32Array(this.count);
+      this.fronts = Array.from({ length: this.count }, () => []);
       this.cities = (map.cities || []).map(c => ({ name: c.name, x: c.x, y: c.y, owner: -1 }));
       const radius = config.cityHoldRadius || 52;
       for (let y = 0; y < this.h; y++) {
@@ -40,6 +41,7 @@
       this.pending.fill(-1);
       this.pendingTime.fill(0);
       this.shares.fill(0);
+      this.fronts = Array.from({ length: this.count }, () => []);
     }
 
     sampleBilinear(grid, wx, wy) {
@@ -167,7 +169,66 @@
       }
       this.cities.forEach(city => { city.owner = this.ownerAt(city.x, city.y); });
       if (controlled) for (let f = 0; f < this.count; f++) this.shares[f] /= controlled;
+      this.refreshFronts();
     }
+
+    refreshFronts() {
+      this.fronts = Array.from({ length: this.count }, () => []);
+      const cellW = this.config.worldWidth / this.w;
+      const cellH = this.config.worldHeight / this.h;
+      for (let y = 0; y < this.h; y++) {
+        for (let x = 0; x < this.w; x++) {
+          const i = y * this.w + x;
+          const owner = this.owner[i];
+          if (owner < 0 || !this.land[i]) continue;
+          let edge = false, other = -1;
+          const n = [i - 1, i + 1, i - this.w, i + this.w];
+          for (const j of n) {
+            if (j < 0 || j >= this.owner.length || !this.land[j]) continue;
+            if (this.owner[j] !== owner && this.owner[j] >= 0) {
+              edge = true;
+              other = this.owner[j];
+              break;
+            }
+          }
+          if (!edge) continue;
+          this.fronts[owner].push({
+            x: (x + 0.5) * cellW,
+            y: (y + 0.5) * cellH,
+            other
+          });
+        }
+      }
+      this.fronts = this.fronts.map(list => chainFront(list));
+    }
+
+    nearestFront(faction, x, y) {
+      const list = this.fronts && this.fronts[faction];
+      if (!list || !list.length) return null;
+      let best = null, bestD = Infinity;
+      for (const p of list) {
+        const d = Math.hypot(p.x - x, p.y - y);
+        if (d < bestD) { best = p; bestD = d; }
+      }
+      return best ? { point: best, dist: bestD } : null;
+    }
+  }
+
+  function chainFront(list) {
+    if (list.length < 3) return list;
+    const unused = list.slice();
+    unused.sort((a, b) => a.y - b.y || a.x - b.x);
+    const chain = [unused.shift()];
+    while (unused.length) {
+      const last = chain[chain.length - 1];
+      let best = 0, bestD = Infinity;
+      for (let i = 0; i < unused.length; i++) {
+        const d = Math.hypot(unused[i].x - last.x, unused[i].y - last.y);
+        if (d < bestD) { bestD = d; best = i; }
+      }
+      chain.push(unused.splice(best, 1)[0]);
+    }
+    return chain;
   }
 
   DW.InfluenceField = InfluenceField;

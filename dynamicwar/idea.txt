@@ -7,7 +7,7 @@ Core concept
 - Use offline OpenStreetMap-derived geography as the base map.
 
 Current bots-first demo
-- Three autonomous factions contest a compact Benelux map.
+- Units stack as circular counters along the contact line, with solid rear fills and a bright front glow.
 - Faction relations drift among ally, hold, rival, and war instead of stalling forever.
 - Occupied land stays yours after units walk through it until another army takes it or a revolt fires. Isolated inland blobs not sitting on a city can decay.
 - The player can choose a faction and click land to place/move troops.

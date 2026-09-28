@@ -66,9 +66,9 @@
         if (b.dead) continue;
         const dx = b.x - a.x, dy = b.y - a.y;
         const dist = Math.hypot(dx, dy) || 0.001;
-        const need = a.faction === b.faction ? min : min * 0.72;
+        const need = a.faction === b.faction ? min : min * 0.55;
         if (dist >= need) continue;
-        const push = (need - dist) * 0.42 / dist;
+        const push = (need - dist) * 0.28 / dist;
         const ax = a.x - dx * push, ay = a.y - dy * push;
         const bx = b.x + dx * push, by = b.y + dy * push;
         if (map.isLand(ax, ay)) { a.x = ax; a.y = ay; }
