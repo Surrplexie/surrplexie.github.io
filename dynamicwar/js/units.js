@@ -83,8 +83,8 @@
     const dist = Math.hypot(dx, dy);
     if (dist > 4) {
       const desiredX = dx / dist * unit.speed, desiredY = dy / dist * unit.speed;
-      unit.vx += (desiredX - unit.vx) * Math.min(1, dt * 2.6);
-      unit.vy += (desiredY - unit.vy) * Math.min(1, dt * 2.6);
+      unit.vx += (desiredX - unit.vx) * Math.min(1, dt * 1.6);
+      unit.vy += (desiredY - unit.vy) * Math.min(1, dt * 1.6);
       const nx = unit.x + unit.vx * dt, ny = unit.y + unit.vy * dt;
       if (map.isLand(nx, ny)) { unit.x = nx; unit.y = ny; }
       else if (map.isLand(nx, unit.y)) { unit.x = nx; unit.vy *= 0.2; }

@@ -199,7 +199,7 @@
           });
         }
       }
-      this.fronts = this.fronts.map(list => chainFront(list));
+      this.fronts = this.fronts.map(list => list.sort((a, b) => a.y - b.y || a.x - b.x));
     }
 
     nearestFront(faction, x, y) {
@@ -212,23 +212,6 @@
       }
       return best ? { point: best, dist: bestD } : null;
     }
-  }
-
-  function chainFront(list) {
-    if (list.length < 3) return list;
-    const unused = list.slice();
-    unused.sort((a, b) => a.y - b.y || a.x - b.x);
-    const chain = [unused.shift()];
-    while (unused.length) {
-      const last = chain[chain.length - 1];
-      let best = 0, bestD = Infinity;
-      for (let i = 0; i < unused.length; i++) {
-        const d = Math.hypot(unused[i].x - last.x, unused[i].y - last.y);
-        if (d < bestD) { bestD = d; best = i; }
-      }
-      chain.push(unused.splice(best, 1)[0]);
-    }
-    return chain;
   }
 
   DW.InfluenceField = InfluenceField;

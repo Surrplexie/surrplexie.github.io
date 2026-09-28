@@ -21,18 +21,23 @@
       this.staticLayer = document.createElement("canvas");
       this.staticLayer.width = config.worldWidth;
       this.staticLayer.height = config.worldHeight;
-      this.fieldScale = 3;
+      this.fieldScale = 2;
       this.field = document.createElement("canvas");
       this.field.width = config.gridWidth * this.fieldScale;
       this.field.height = config.gridHeight * this.fieldScale;
       this.fieldCtx = this.field.getContext("2d");
-      this.fieldImage = this.fieldCtx.createImageData(this.field.width, this.field.height);
-      this.fieldLand = new Uint8Array(this.field.width * this.field.height);
-      for (let py = 0; py < this.field.height; py++) {
-        for (let px = 0; px < this.field.width; px++) {
-          const wx = (px + .5) / this.field.width * config.worldWidth;
-          const wy = (py + .5) / this.field.height * config.worldHeight;
-          this.fieldLand[py * this.field.width + px] = map.isLand(wx, wy) ? 1 : 0;
+      this.fieldCtx.imageSmoothingEnabled = true;
+      this.rawField = document.createElement("canvas");
+      this.rawField.width = config.gridWidth;
+      this.rawField.height = config.gridHeight;
+      this.rawCtx = this.rawField.getContext("2d");
+      this.fieldImage = this.rawCtx.createImageData(config.gridWidth, config.gridHeight);
+      this.fieldLand = new Uint8Array(config.gridWidth * config.gridHeight);
+      for (let py = 0; py < config.gridHeight; py++) {
+        for (let px = 0; px < config.gridWidth; px++) {
+          const wx = (px + .5) / config.gridWidth * config.worldWidth;
+          const wy = (py + .5) / config.gridHeight * config.worldHeight;
+          this.fieldLand[py * config.gridWidth + px] = map.isLand(wx, wy) ? 1 : 0;
         }
       }
       this.fieldDirty = true;
@@ -141,37 +146,33 @@
     }
 
     updateField(field, force) {
-      if (!force && this.fieldAge < 0.12) return;
+      if (!force && this.fieldAge < 0.2) return;
       this.fieldAge = 0;
       const data = this.fieldImage.data;
       const colors = this.config.factions.map(f => hexToRgb(f.color));
-      const fw = this.field.width, fh = this.field.height;
+      const fw = this.rawField.width, fh = this.rawField.height;
       for (let py = 0; py < fh; py++) {
         for (let px = 0; px < fw; px++) {
           const at = (py * fw + px) * 4;
-          const wx = (px + .5) / fw * this.config.worldWidth;
-          const wy = (py + .5) / fh * this.config.worldHeight;
           if (!this.fieldLand[py * fw + px]) {
             data[at + 3] = 0;
             continue;
           }
+          const wx = (px + .5) / fw * this.config.worldWidth;
+          const wy = (py + .5) / fh * this.config.worldHeight;
           const owner = field.ownerAt(wx, wy);
           if (owner < 0) { data[at + 3] = 0; continue; }
           const rgb = colors[owner];
-          let edge = false;
-          const gx = Math.floor(wx / this.config.worldWidth * field.w);
-          const gy = Math.floor(wy / this.config.worldHeight * field.h);
-          const i = Math.max(0, Math.min(field.owner.length - 1, gy * field.w + gx));
-          const n = [i - 1, i + 1, i - field.w, i + field.w];
-          for (const j of n) {
-            if (j < 0 || j >= field.owner.length) continue;
-            if (field.land[j] && field.owner[j] !== owner && field.owner[j] >= 0) { edge = true; break; }
-          }
           data[at] = rgb[0]; data[at + 1] = rgb[1]; data[at + 2] = rgb[2];
-          data[at + 3] = edge ? 210 : 118;
+          data[at + 3] = 108;
         }
       }
-      this.fieldCtx.putImageData(this.fieldImage, 0, 0);
+      this.rawCtx.putImageData(this.fieldImage, 0, 0);
+      this.fieldCtx.clearRect(0, 0, this.field.width, this.field.height);
+      this.fieldCtx.imageSmoothingEnabled = true;
+      this.fieldCtx.filter = "blur(2.2px)";
+      this.fieldCtx.drawImage(this.rawField, 0, 0, this.field.width, this.field.height);
+      this.fieldCtx.filter = "none";
     }
 
     render(session) {
@@ -196,33 +197,18 @@
       ctx.scale(scale, scale);
       ctx.translate(-this.camera.x, -this.camera.y);
       ctx.drawImage(this.staticLayer, 0, 0);
+      ctx.save();
+      ctx.beginPath();
+      for (const feature of this.map.features.filter(f => f.properties.kind === "land")) {
+        this.drawPath(ctx, feature.geometry, true);
+      }
+      ctx.clip();
       ctx.imageSmoothingEnabled = true;
       ctx.drawImage(this.field, 0, 0, this.config.worldWidth, this.config.worldHeight);
-      this.drawFrontGlow(ctx, session);
+      ctx.restore();
       this.drawUnits(ctx, session.units, scale);
       ctx.restore();
       this.drawMinimap(ctx, session);
-    }
-
-    drawFrontGlow(ctx, session) {
-      const fronts = session.influence.fronts;
-      if (!fronts) return;
-      ctx.save();
-      ctx.lineWidth = 7;
-      ctx.lineJoin = "round";
-      ctx.lineCap = "round";
-      ctx.globalAlpha = 0.45;
-      for (let f = 0; f < fronts.length; f++) {
-        const pts = fronts[f];
-        if (!pts.length) continue;
-        ctx.strokeStyle = this.config.factions[f].color;
-        ctx.beginPath();
-        pts.forEach((p, i) => {
-          if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
-        });
-        ctx.stroke();
-      }
-      ctx.restore();
     }
 
     drawUnits(ctx, units, scale) {
