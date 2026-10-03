@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <meta name="robots" content="noindex, nofollow" />
   <title>Tankfield</title>
-  <link rel="stylesheet" href="css/style.css?v=115" />
+  <link rel="stylesheet" href="css/style.css?v=117" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet" />
@@ -36,6 +36,7 @@
         <div class="opt-row"><kbd>H</kbd><span>Take / leave mothership</span></div>
         <div class="opt-row"><kbd>N</kbd><span>Protect / Growth / Arms Race: skip to level 45</span></div>
         <div class="opt-row"><kbd>Shift</kbd>+<kbd>/</kbd>+<kbd>]</kbd><span>Developer CLI</span></div>
+        <div class="opt-row"><kbd>Shift</kbd>+<kbd>/</kbd>+<kbd>C</kbd><span>Developer chart</span></div>
         <div class="opt-row"><kbd>Esc</kbd><span>Pause / close workshop / leave a field</span></div>
         <div class="opt-note">Hold fire to send drones to the cursor. Hold right-click to send drones and swarms straight away from the cursor.</div>
       </div>
@@ -181,6 +182,36 @@
       <div class="dev-cli-hint">Shift + / + ] · Esc closes</div>
     </section>
 
+    <section id="dev-chart" class="hidden" aria-hidden="true" aria-label="Developer chart">
+      <div id="dev-chart-plot" class="dev-chart-plot">
+        <canvas id="dev-chart-canvas"></canvas>
+        <div id="dev-chart-tip" class="dev-chart-tip hidden"></div>
+      </div>
+      <div class="dev-chart-foot">
+        <div id="dev-chart-legend" class="dev-chart-legend"></div>
+        <div class="dev-chart-actions">
+          <div class="dev-chart-ranges" role="group" aria-label="Time range">
+            <button type="button" tabindex="-1" data-range="30">Last 30s</button>
+            <button type="button" tabindex="-1" data-range="100">Last 100s</button>
+            <button type="button" tabindex="-1" data-range="300">Last 300s</button>
+            <button type="button" tabindex="-1" data-range="all" class="active">All</button>
+          </div>
+          <div class="dev-chart-picks">
+            <button type="button" tabindex="-1" id="dev-chart-mode" aria-pressed="true">Multi select</button>
+            <button type="button" tabindex="-1" id="dev-chart-all">All players</button>
+            <div class="dev-chart-graph-wrap">
+              <button type="button" tabindex="-1" id="dev-chart-graph" aria-expanded="false" aria-haspopup="menu">Select graph</button>
+              <div id="dev-chart-menu" class="dev-chart-menu hidden" role="menu">
+                <button type="button" tabindex="-1" data-graph="count" role="menuitem">Live count</button>
+                <button type="button" tabindex="-1" data-graph="scores" role="menuitem" class="active">Scores</button>
+              </div>
+            </div>
+          </div>
+          <div class="dev-chart-hint">Shift + / + C · debug</div>
+        </div>
+      </div>
+    </section>
+
     <div id="status-wrap">
       <div id="player-name">Tank</div>
       <div class="hud-bar score-bar"><div id="score-fill"></div><span id="score-text">Score: 0</span></div>
@@ -321,7 +352,7 @@
   </div>
 
   <script src="js/defs.js?v=111"></script>
-  <script src="js/game.js?v=126"></script>
+  <script src="js/game.js?v=128"></script>
   <script src="js/editor.js?v=111"></script>
 </body>
 </html>

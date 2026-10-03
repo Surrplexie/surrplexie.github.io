@@ -169,6 +169,15 @@
     devCli: document.getElementById("dev-cli"),
     devCliOutput: document.getElementById("dev-cli-output"),
     devCliInput: document.getElementById("dev-cli-input"),
+    devChart: document.getElementById("dev-chart"),
+    devChartPlot: document.getElementById("dev-chart-plot"),
+    devChartCanvas: document.getElementById("dev-chart-canvas"),
+    devChartTip: document.getElementById("dev-chart-tip"),
+    devChartLegend: document.getElementById("dev-chart-legend"),
+    devChartMenu: document.getElementById("dev-chart-menu"),
+    devChartGraphBtn: document.getElementById("dev-chart-graph"),
+    devChartMode: document.getElementById("dev-chart-mode"),
+    devChartAll: document.getElementById("dev-chart-all"),
   };
 
   const keys = new Set();
@@ -177,8 +186,35 @@
   const devHistory = [];
   let devHistoryIndex = 0;
   let devChordLatched = false;
+  let devChartLatched = false;
   let devMoveEnabled = false;
   let devDrag = null;
+  const DEV_CHART_DT = 0.5;
+  const DEV_CHART_CAP = 43200;
+  const devChart = {
+    open: false,
+    graph: "scores",
+    range: "all",
+    multi: true,
+    selectAll: true,
+    selected: new Set(),
+    showTotal: true,
+    showCombined: true,
+    showAlive: true,
+    showHumans: true,
+    showBots: true,
+    actors: new Map(),
+    times: [],
+    total: [],
+    alive: [],
+    humans: [],
+    bots: [],
+    hover: null,
+    hoverHit: null,
+    legendSig: "",
+  };
+  let devChartAcc = 0;
+  let devChartDrawQueued = false;
   let dpr = 1;
   let width = 0;
   let height = 0;
@@ -2870,6 +2906,7 @@
 
   function startGame(name, opts = {}) {
     try {
+    const reopenChart = devChart.open;
     resetDevCli();
     state.spawnName = trimNick(name, "Unnamed Tank");
     const parsed = parseArmsKey(
@@ -3021,6 +3058,9 @@
     const colorBox = document.getElementById("sandbox-colors");
     if (colorBox) colorBox.classList.toggle("hidden", state.mode !== "sandbox");
     if (els.arenaMode) els.arenaMode.textContent = modeLabel();
+      devChartAcc = 0;
+      pushDevChartSample();
+      if (reopenChart) setDevChartOpen(true);
       try { renderStats(); } catch (err) { console.error(err); }
       try { renderClassPanel(); } catch (err) { console.error(err); }
       render();
@@ -3663,6 +3703,7 @@
     document.body.classList.remove("dev-move");
     if (els.devCliOutput) els.devCliOutput.textContent = "";
     if (els.devCliInput) els.devCliInput.value = "";
+    resetDevChart();
   }
 
   function tokenizeDevCommand(line) {
@@ -3979,26 +4020,718 @@
   }
 
   function handleDevChord(e, down) {
-    const relevant = e.code === "ShiftLeft" || e.code === "ShiftRight" || e.code === "Slash" || e.code === "BracketRight";
-    if (!relevant) return false;
+    const shiftCode = e.code === "ShiftLeft" || e.code === "ShiftRight";
+    const slash = e.code === "Slash";
+    const bracket = e.code === "BracketRight";
+    const keyC = e.code === "KeyC";
+    if (!shiftCode && !slash && !bracket && !keyC) return false;
+    if (keyC && down) {
+      const shiftHeld = devChordKeys.has("ShiftLeft") || devChordKeys.has("ShiftRight");
+      if (!shiftHeld || !devChordKeys.has("Slash")) return false;
+    }
     if (down) {
       devChordKeys.add(e.code);
-      keys.add(String(e.key || "").toLowerCase());
-      keys.add(String(e.code || "").toLowerCase());
+      if (!keyC) {
+        keys.add(String(e.key || "").toLowerCase());
+        keys.add(String(e.code || "").toLowerCase());
+      }
     } else {
       devChordKeys.delete(e.code);
     }
     const shift = devChordKeys.has("ShiftLeft") || devChordKeys.has("ShiftRight");
-    const complete = shift && devChordKeys.has("Slash") && devChordKeys.has("BracketRight");
-    if (complete && !devChordLatched && running && !state.spectating) {
+    const cliComplete = shift && devChordKeys.has("Slash") && devChordKeys.has("BracketRight");
+    const chartComplete = shift && devChordKeys.has("Slash") && devChordKeys.has("KeyC");
+    if (cliComplete && !devChordLatched && running && !state.spectating) {
       devChordLatched = true;
       if (devCliOpen() && els.devCliInput) els.devCliInput.value = "";
       setDevCliOpen(!devCliOpen());
     }
-    if (!complete) devChordLatched = false;
+    if (!cliComplete) devChordLatched = false;
+    if (chartComplete && !devChartLatched && running) {
+      devChartLatched = true;
+      setDevChartOpen(!devChartOpen());
+    }
+    if (!chartComplete) devChartLatched = false;
     if (!down || !running) return false;
-    if (e.target === els.devCliInput) return complete;
+    if (e.target === els.devCliInput) return cliComplete || chartComplete;
+    if (keyC) return chartComplete;
     return true;
+  }
+
+  function devChartOpen() {
+    return !!(els.devChart && !els.devChart.classList.contains("hidden"));
+  }
+
+  function chartNameKey(tank) {
+    const name = String((tank && tank.name) || "").trim().toLowerCase();
+    return name || String((tank && tank.id) || "tank");
+  }
+
+  function chartContestants() {
+    return state.tanks.filter((t) => t && t.alive && !t.closer && !t.mothership && !t.dominator && !t.boss && !t.fodder);
+  }
+
+  function resetDevChart() {
+    setDevChartOpen(false);
+    devChart.selected.clear();
+    devChart.actors.clear();
+    devChart.times.length = 0;
+    devChart.total.length = 0;
+    devChart.alive.length = 0;
+    devChart.humans.length = 0;
+    devChart.bots.length = 0;
+    devChart.hover = null;
+    devChart.hoverHit = null;
+    devChart.legendSig = "";
+    devChart.selectAll = true;
+    devChartAcc = 0;
+    devChartLatched = false;
+    if (els.devChartMenu) els.devChartMenu.classList.add("hidden");
+    if (els.devChartTip) els.devChartTip.classList.add("hidden");
+  }
+
+  function trimDevChart() {
+    const extra = devChart.times.length - DEV_CHART_CAP;
+    if (extra <= 0) return;
+    devChart.times.splice(0, extra);
+    devChart.total.splice(0, extra);
+    devChart.alive.splice(0, extra);
+    devChart.humans.splice(0, extra);
+    devChart.bots.splice(0, extra);
+    for (const actor of devChart.actors.values()) actor.scores.splice(0, extra);
+  }
+
+  function pushDevChartSample() {
+    const tanks = chartContestants();
+    const seen = new Set();
+    let total = 0;
+    let humans = 0;
+    let bots = 0;
+    for (const tank of tanks) {
+      const key = chartNameKey(tank);
+      seen.add(key);
+      const score = Math.max(0, Number(tank.score) || 0);
+      total += score;
+      if (tank.ai) bots += 1;
+      else humans += 1;
+      let actor = devChart.actors.get(key);
+      if (!actor) {
+        actor = {
+          key,
+          name: tank.name || "Tank",
+          color: tank.color || "#dddddd",
+          ai: !!tank.ai,
+          you: tank === state.player,
+          alive: true,
+          scores: devChart.times.map(() => null),
+        };
+        devChart.actors.set(key, actor);
+        if (devChart.selectAll) devChart.selected.add(key);
+      }
+      actor.name = tank.name || actor.name;
+      actor.color = tank.color || actor.color;
+      actor.ai = !!tank.ai;
+      actor.you = tank === state.player;
+      actor.alive = true;
+      actor.scores.push(score);
+    }
+    for (const actor of devChart.actors.values()) {
+      if (seen.has(actor.key)) continue;
+      actor.alive = false;
+      actor.scores.push(null);
+    }
+    devChart.times.push(state.time);
+    devChart.total.push(total);
+    devChart.alive.push(humans + bots);
+    devChart.humans.push(humans);
+    devChart.bots.push(bots);
+    trimDevChart();
+    if (devChart.open) {
+      syncDevChartLegend();
+      requestDevChartDraw();
+    }
+  }
+
+  function sampleDevChart(dt) {
+    devChartAcc += dt;
+    if (devChartAcc < DEV_CHART_DT) return;
+    devChartAcc -= DEV_CHART_DT;
+    pushDevChartSample();
+  }
+
+  function seriesEnabled(id, key) {
+    if (id === "total") return devChart.showTotal;
+    if (id === "combined") return devChart.showCombined;
+    if (id === "alive") return devChart.showAlive;
+    if (id === "humans") return devChart.showHumans;
+    if (id === "bots") return devChart.showBots;
+    return devChart.selected.has(key);
+  }
+
+  function toggleChartSeries(id, key) {
+    if (id === "total") devChart.showTotal = !devChart.showTotal;
+    else if (id === "combined") devChart.showCombined = !devChart.showCombined;
+    else if (id === "alive") devChart.showAlive = !devChart.showAlive;
+    else if (id === "humans") devChart.showHumans = !devChart.showHumans;
+    else if (id === "bots") devChart.showBots = !devChart.showBots;
+    else if (key) {
+      devChart.selectAll = false;
+      if (devChart.multi) {
+        if (devChart.selected.has(key)) devChart.selected.delete(key);
+        else devChart.selected.add(key);
+      } else {
+        devChart.selected.clear();
+        devChart.selected.add(key);
+      }
+    }
+    syncDevChartLegend();
+    requestDevChartDraw();
+  }
+
+  function selectAllChartPlayers() {
+    devChart.selectAll = true;
+    devChart.selected.clear();
+    for (const key of devChart.actors.keys()) devChart.selected.add(key);
+    syncDevChartLegend();
+    requestDevChartDraw();
+  }
+
+  function setChartMulti(multi) {
+    devChart.multi = !!multi;
+    if (!devChart.multi) {
+      devChart.selectAll = false;
+      let keep = "";
+      for (const actor of devChart.actors.values()) {
+        if (actor.you && devChart.selected.has(actor.key)) keep = actor.key;
+      }
+      if (!keep) {
+        for (const key of devChart.selected) {
+          keep = key;
+          break;
+        }
+      }
+      if (!keep) {
+        for (const actor of devChart.actors.values()) {
+          if (actor.you) keep = actor.key;
+        }
+      }
+      devChart.selected.clear();
+      if (keep) devChart.selected.add(keep);
+    }
+    syncDevChartControls();
+    syncDevChartLegend();
+    requestDevChartDraw();
+  }
+
+  function legendButton(id, key, label, color, on) {
+    const keyAttr = key ? ` data-key="${escapeHtml(key)}"` : "";
+    return `<button type="button" tabindex="-1" class="dev-chart-key${on ? "" : " off"}" data-series="${escapeHtml(id)}"${keyAttr} aria-pressed="${on ? "true" : "false"}"><i style="background:${escapeHtml(color)}"></i><span>${escapeHtml(label)}</span></button>`;
+  }
+
+  function chartActorLabel(actor) {
+    return `${actor.name}${actor.you ? " (you)" : ""}${actor.alive ? "" : " · dead"}`;
+  }
+
+  function devChartLegendSignature() {
+    if (devChart.graph === "count") return "count";
+    const parts = [];
+    for (const actor of devChart.actors.values()) {
+      parts.push([actor.key, actor.name, actor.color, actor.you ? 1 : 0].join("~"));
+    }
+    parts.sort();
+    return `scores|${parts.join("|")}`;
+  }
+
+  function paintDevChartLegend() {
+    if (!els.devChartLegend) return;
+    els.devChartLegend.querySelectorAll(".dev-chart-key").forEach((btn) => {
+      const on = seriesEnabled(btn.dataset.series, btn.dataset.key || "");
+      btn.classList.toggle("off", !on);
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+      const actor = btn.dataset.key ? devChart.actors.get(btn.dataset.key) : null;
+      const span = btn.querySelector("span");
+      if (actor && span) span.textContent = chartActorLabel(actor);
+    });
+  }
+
+  function syncDevChartLegend(force) {
+    if (!els.devChartLegend) return;
+    const sig = devChartLegendSignature();
+    if (!force && sig === devChart.legendSig) {
+      paintDevChartLegend();
+      return;
+    }
+    devChart.legendSig = sig;
+    const top = els.devChartLegend.scrollTop;
+    const html = [];
+    if (devChart.graph === "count") {
+      html.push(legendButton("alive", "", "Players + bots", "#f4e24a", devChart.showAlive));
+      html.push(legendButton("humans", "", "Players", "#5ec8e6", devChart.showHumans));
+      html.push(legendButton("bots", "", "Bots", "#7dce6a", devChart.showBots));
+    } else {
+      html.push(legendButton("total", "", "Total score", "#f4e24a", devChart.showTotal));
+      html.push(legendButton("combined", "", "Combined score", "#e39b2b", devChart.showCombined));
+      const actors = [...devChart.actors.values()].sort((a, b) => {
+        if (a.you !== b.you) return a.you ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+      for (const actor of actors) {
+        html.push(legendButton("player", actor.key, chartActorLabel(actor), actor.color || "#dddddd", devChart.selected.has(actor.key)));
+      }
+    }
+    els.devChartLegend.innerHTML = html.join("");
+    els.devChartLegend.scrollTop = top;
+  }
+
+  function syncDevChartControls() {
+    const root = els.devChart;
+    if (!root) return;
+    root.querySelectorAll("[data-range]").forEach((btn) => {
+      btn.classList.toggle("active", (btn.dataset.range || "all") === devChart.range);
+    });
+    root.querySelectorAll("[data-graph]").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.graph === devChart.graph);
+    });
+    if (els.devChartMode) {
+      els.devChartMode.textContent = devChart.multi ? "Multi select" : "Single select";
+      els.devChartMode.setAttribute("aria-pressed", devChart.multi ? "true" : "false");
+    }
+    if (els.devChartGraphBtn && els.devChartMenu) {
+      els.devChartGraphBtn.setAttribute("aria-expanded", els.devChartMenu.classList.contains("hidden") ? "false" : "true");
+    }
+  }
+
+  function setDevChartOpen(open) {
+    if (!els.devChart) return;
+    const next = !!open && running;
+    devChart.open = next;
+    els.devChart.classList.toggle("hidden", !next);
+    els.devChart.setAttribute("aria-hidden", next ? "false" : "true");
+    if (!next) {
+      devChart.hover = null;
+      devChart.hoverHit = null;
+      if (els.devChartMenu) els.devChartMenu.classList.add("hidden");
+      if (els.devChartTip) els.devChartTip.classList.add("hidden");
+      return;
+    }
+    syncDevChartControls();
+    syncDevChartLegend(true);
+    requestDevChartDraw();
+  }
+
+  function chartSlice() {
+    const n = devChart.times.length;
+    if (!n) return null;
+    const end = devChart.times[n - 1];
+    const windowSec = devChart.range === "all" ? null : Number(devChart.range);
+    const start = windowSec == null ? devChart.times[0] : Math.max(devChart.times[0], end - windowSec);
+    let lo = 0;
+    let hi = n - 1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (devChart.times[mid] < start) lo = mid + 1;
+      else hi = mid - 1;
+    }
+    return { i0: Math.max(0, lo - 1), i1: n - 1, t0: Math.min(start, end), t1: end };
+  }
+
+  function combinedAt(i) {
+    if (!devChart.selected.size) return 0;
+    let sum = 0;
+    for (const key of devChart.selected) {
+      const actor = devChart.actors.get(key);
+      const value = actor && actor.scores[i];
+      if (value != null) sum += value;
+    }
+    return sum;
+  }
+
+  function chartSeries() {
+    const list = [];
+    if (devChart.graph === "count") {
+      if (devChart.showAlive) list.push({ id: "alive", label: "Players + bots", color: "#f4e24a", width: 2, at: (i) => devChart.alive[i] });
+      if (devChart.showHumans) list.push({ id: "humans", label: "Players", color: "#5ec8e6", width: 1.6, at: (i) => devChart.humans[i] });
+      if (devChart.showBots) list.push({ id: "bots", label: "Bots", color: "#7dce6a", width: 1.6, at: (i) => devChart.bots[i] });
+      return list;
+    }
+    if (devChart.showTotal) list.push({ id: "total", label: "Total score", color: "#f4e24a", width: 2.1, at: (i) => devChart.total[i] });
+    if (devChart.showCombined) list.push({ id: "combined", label: "Combined score", color: "#e39b2b", width: 2.2, dash: [8, 5], at: (i) => combinedAt(i) });
+    const actors = [...devChart.actors.values()].filter((actor) => devChart.selected.has(actor.key));
+    actors.sort((a, b) => (a.you === b.you ? 0 : a.you ? -1 : 1));
+    for (const actor of actors) {
+      list.push({
+        id: "player",
+        key: actor.key,
+        label: actor.you ? `${actor.name} (you)` : actor.name,
+        color: actor.color || "#dddddd",
+        width: actor.you ? 2 : 1.45,
+        at: (i) => actor.scores[i],
+      });
+    }
+    return list;
+  }
+
+  function chartCeil(max) {
+    if (!(max > 0)) return 1;
+    const padded = max * 1.08;
+    const pow = Math.pow(10, Math.floor(Math.log10(padded)));
+    const n = padded / pow;
+    const nice = n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10;
+    return nice * pow;
+  }
+
+  function chartTimeStep(span) {
+    const raw = Math.max(span / 5, 0.5);
+    const steps = [0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600];
+    for (const step of steps) if (step >= raw) return step;
+    const pow = Math.pow(10, Math.floor(Math.log10(raw)));
+    const n = raw / pow;
+    const nice = n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10;
+    return nice * pow;
+  }
+
+  function chartAxisNumber(n, counts) {
+    if (counts) return String(Math.round(n));
+    if (Math.abs(n) < 10000) return Math.round(n).toLocaleString("en-US");
+    return formatScore(n);
+  }
+
+  function requestDevChartDraw() {
+    if (devChartDrawQueued || !devChart.open) return;
+    devChartDrawQueued = true;
+    requestAnimationFrame(() => {
+      devChartDrawQueued = false;
+      if (devChart.open) drawDevChart();
+    });
+  }
+
+  function drawDevChartLine(g, series, slice, xOf, yOf, plotW) {
+    g.beginPath();
+    g.lineWidth = series.width;
+    g.strokeStyle = series.color;
+    g.lineJoin = "round";
+    g.lineCap = "round";
+    g.setLineDash(series.dash || []);
+    const span = slice.i1 - slice.i0;
+    let pen = false;
+    const drawPoint = (i, value, gap) => {
+      const x = xOf(devChart.times[i]);
+      const y = yOf(value);
+      if (!pen || gap) g.moveTo(x, y);
+      else g.lineTo(x, y);
+      pen = true;
+    };
+    if (span <= Math.max(1, Math.floor(plotW)) * 2) {
+      for (let i = slice.i0; i <= slice.i1; i++) {
+        const value = series.at(i);
+        if (value == null || !Number.isFinite(value)) {
+          pen = false;
+          continue;
+        }
+        drawPoint(i, value, false);
+      }
+    } else {
+      const cols = Math.max(1, Math.floor(plotW));
+      const bucket = span / cols;
+      for (let c = 0; c < cols; c++) {
+        const a = slice.i0 + Math.floor(c * bucket);
+        const b = Math.min(slice.i1, Math.max(a, slice.i0 + Math.floor((c + 1) * bucket) - 1));
+        let lo = Infinity;
+        let hi = -Infinity;
+        let loI = -1;
+        let hiI = -1;
+        let broke = false;
+        let seen = false;
+        for (let i = a; i <= b; i++) {
+          const value = series.at(i);
+          if (value == null || !Number.isFinite(value)) {
+            if (seen) broke = true;
+            continue;
+          }
+          seen = true;
+          if (value < lo) {
+            lo = value;
+            loI = i;
+          }
+          if (value > hi) {
+            hi = value;
+            hiI = i;
+          }
+        }
+        if (loI < 0) {
+          pen = false;
+          continue;
+        }
+        const ordered = loI <= hiI ? [[loI, lo], [hiI, hi]] : [[hiI, hi], [loI, lo]];
+        drawPoint(ordered[0][0], ordered[0][1], broke);
+        if (ordered[1][0] !== ordered[0][0]) drawPoint(ordered[1][0], ordered[1][1], false);
+      }
+    }
+    g.stroke();
+    g.setLineDash([]);
+    if (span === 0) {
+      const value = series.at(slice.i0);
+      if (value != null && Number.isFinite(value)) {
+        g.fillStyle = series.color;
+        g.beginPath();
+        g.arc(xOf(devChart.times[slice.i0]), yOf(value), 2.4, 0, Math.PI * 2);
+        g.fill();
+      }
+    }
+  }
+
+  function drawDevChart() {
+    const canvas = els.devChartCanvas;
+    const plot = els.devChartPlot;
+    if (!canvas || !plot || !devChart.open) return;
+    const rect = plot.getBoundingClientRect();
+    const ratio = window.devicePixelRatio || 1;
+    const w = Math.max(10, rect.width);
+    const h = Math.max(10, rect.height);
+    const bw = Math.max(1, Math.floor(w * ratio));
+    const bh = Math.max(1, Math.floor(h * ratio));
+    if (canvas.width !== bw || canvas.height !== bh) {
+      canvas.width = bw;
+      canvas.height = bh;
+    }
+    const g = canvas.getContext("2d");
+    g.setTransform(ratio, 0, 0, ratio, 0, 0);
+    g.clearRect(0, 0, w, h);
+    g.fillStyle = "#5c636b";
+    g.fillRect(0, 0, w, h);
+
+    const padL = 78;
+    const padR = 16;
+    const padT = 26;
+    const padB = 28;
+    const plotL = padL;
+    const plotT = padT;
+    const plotW = Math.max(1, w - padL - padR);
+    const plotH = Math.max(1, h - padT - padB);
+    const counts = devChart.graph === "count";
+    const series = chartSeries();
+    const slice = chartSlice();
+    g.fillStyle = "rgba(255,255,255,0.9)";
+    g.font = "13px Ubuntu, Segoe UI, sans-serif";
+    g.textAlign = "left";
+    g.textBaseline = "top";
+    g.fillText(counts ? "Live count" : "Scores", 8, 6);
+
+    if (!slice || !series.length) {
+      g.fillStyle = "rgba(255,255,255,0.75)";
+      g.font = "14px Ubuntu, Segoe UI, sans-serif";
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      g.fillText(slice ? "Select a line" : "Waiting for samples", w / 2, h / 2);
+      devChart.hoverHit = null;
+      if (els.devChartTip) els.devChartTip.classList.add("hidden");
+      return;
+    }
+
+    let ymax = 0;
+    for (const line of series) {
+      for (let i = slice.i0; i <= slice.i1; i++) {
+        const value = line.at(i);
+        if (value != null && value > ymax) ymax = value;
+      }
+    }
+    const yMax = chartCeil(ymax);
+    const t0 = slice.t0;
+    const t1 = slice.t1;
+    const xOf = (t) => (t1 <= t0 ? plotL + plotW * 0.5 : plotL + ((t - t0) / (t1 - t0)) * plotW);
+    const yOf = (value) => plotT + (1 - value / yMax) * plotH;
+    const step = chartTimeStep(Math.max(0.5, t1 - t0));
+
+    g.save();
+    g.beginPath();
+    g.rect(plotL, plotT, plotW, plotH);
+    g.clip();
+    g.lineWidth = 1;
+    for (let k = 0; k <= 4; k++) {
+      const y = plotT + (plotH * k) / 4;
+      g.strokeStyle = "rgba(232, 232, 232, 0.34)";
+      g.beginPath();
+      g.moveTo(plotL, y);
+      g.lineTo(plotL + plotW, y);
+      g.stroke();
+    }
+    if (t1 > t0) {
+      for (let tick = Math.ceil(t0 / step) * step; tick <= t1 + 0.001; tick += step) {
+        const x = xOf(tick);
+        g.strokeStyle = "rgba(232, 232, 232, 0.16)";
+        g.beginPath();
+        g.moveTo(x, plotT);
+        g.lineTo(x, plotT + plotH);
+        g.stroke();
+      }
+    }
+    for (const line of series) drawDevChartLine(g, line, slice, xOf, yOf, plotW);
+    g.restore();
+
+    g.fillStyle = "rgba(255,255,255,0.92)";
+    g.font = "11px Ubuntu, Segoe UI, sans-serif";
+    g.textAlign = "right";
+    g.textBaseline = "middle";
+    for (let k = 0; k <= 4; k++) {
+      const value = yMax * (1 - k / 4);
+      g.fillText(chartAxisNumber(value, counts), plotL - 8, plotT + (plotH * k) / 4);
+    }
+    g.textAlign = "center";
+    g.textBaseline = "top";
+    if (t1 <= t0) {
+      g.fillText(formatClock(t0), plotL + plotW * 0.5, plotT + plotH + 8);
+    } else {
+      for (let tick = Math.ceil(t0 / step) * step; tick <= t1 + 0.001; tick += step) {
+        g.fillText(formatClock(tick), xOf(tick), plotT + plotH + 8);
+      }
+    }
+
+    const last = devChart.times.length - 1;
+    if (last >= 0) {
+      const readout = counts
+        ? `${devChart.alive[last]} alive`
+        : `Total ${formatScore(devChart.total[last])}`;
+      g.textAlign = "right";
+      g.textBaseline = "top";
+      g.font = "13px Ubuntu, Segoe UI, sans-serif";
+      g.fillText(readout, w - 8, 6);
+    }
+
+    devChart.hoverHit = null;
+    if (!devChart.hover || !els.devChartTip) {
+      if (els.devChartTip) els.devChartTip.classList.add("hidden");
+      return;
+    }
+    const hx = devChart.hover.x;
+    const hy = devChart.hover.y;
+    let idx = slice.i0;
+    if (t1 > t0) {
+      const target = t0 + clamp((hx - plotL) / plotW, 0, 1) * (t1 - t0);
+      let lo = slice.i0;
+      let hi = slice.i1;
+      while (lo <= hi) {
+        const mid = (lo + hi) >> 1;
+        if (devChart.times[mid] < target) lo = mid + 1;
+        else hi = mid - 1;
+      }
+      const right = clamp(lo, slice.i0, slice.i1);
+      const left = clamp(right - 1, slice.i0, slice.i1);
+      idx = Math.abs(devChart.times[right] - target) < Math.abs(devChart.times[left] - target) ? right : left;
+    }
+    const x = xOf(devChart.times[idx]);
+    g.save();
+    g.beginPath();
+    g.rect(plotL, plotT, plotW, plotH);
+    g.clip();
+    g.strokeStyle = "rgba(255,255,255,0.7)";
+    g.lineWidth = 1;
+    g.beginPath();
+    g.moveTo(x, plotT);
+    g.lineTo(x, plotT + plotH);
+    g.stroke();
+    let nearest = null;
+    let nearestD = 16;
+    const rows = [];
+    for (const line of series) {
+      const value = line.at(idx);
+      if (value == null || !Number.isFinite(value)) continue;
+      const y = yOf(value);
+      g.fillStyle = line.color;
+      g.beginPath();
+      g.arc(x, y, 3.2, 0, Math.PI * 2);
+      g.fill();
+      const shown = counts ? String(Math.round(value)) : Math.round(value).toLocaleString("en-US");
+      rows.push(`<div class="tip-row"><i style="background:${escapeHtml(line.color)}"></i><span>${escapeHtml(line.label)} ${escapeHtml(shown)}</span></div>`);
+      const dist = Math.abs(hy - y);
+      if (dist < nearestD) {
+        nearestD = dist;
+        nearest = line;
+      }
+    }
+    g.restore();
+    devChart.hoverHit = nearest;
+    const tipRows = rows.slice(0, 12);
+    if (rows.length > 12) tipRows.push(`<div class="tip-row"><span>+${rows.length - 12} more</span></div>`);
+    els.devChartTip.innerHTML = `<div class="tip-row"><span>${escapeHtml(formatClock(devChart.times[idx]))}</span></div>${tipRows.join("")}`;
+    els.devChartTip.classList.remove("hidden");
+    const tipW = els.devChartTip.offsetWidth;
+    const tipH = els.devChartTip.offsetHeight;
+    let left = hx + 14;
+    let top = hy + 14;
+    if (left + tipW > w - 4) left = hx - tipW - 14;
+    if (top + tipH > h - 4) top = h - tipH - 4;
+    els.devChartTip.style.left = `${Math.max(4, left)}px`;
+    els.devChartTip.style.top = `${Math.max(4, top)}px`;
+  }
+
+  function bindDevChart() {
+    const root = els.devChart;
+    if (!root || root.dataset.bound) return;
+    root.dataset.bound = "1";
+    if (els.devChartLegend) {
+      els.devChartLegend.addEventListener("click", (e) => {
+        const btn = e.target.closest(".dev-chart-key");
+        if (!btn) return;
+        toggleChartSeries(btn.dataset.series, btn.dataset.key || "");
+      });
+    }
+    root.querySelectorAll("[data-range]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        devChart.range = btn.dataset.range || "all";
+        syncDevChartControls();
+        requestDevChartDraw();
+      });
+    });
+    if (els.devChartMode) els.devChartMode.addEventListener("click", () => setChartMulti(!devChart.multi));
+    if (els.devChartAll) els.devChartAll.addEventListener("click", selectAllChartPlayers);
+    if (els.devChartGraphBtn && els.devChartMenu) {
+      els.devChartGraphBtn.addEventListener("click", () => {
+        els.devChartMenu.classList.toggle("hidden");
+        els.devChartGraphBtn.setAttribute("aria-expanded", els.devChartMenu.classList.contains("hidden") ? "false" : "true");
+      });
+      els.devChartMenu.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-graph]");
+        if (!btn) return;
+        devChart.graph = btn.dataset.graph === "count" ? "count" : "scores";
+        els.devChartMenu.classList.add("hidden");
+        devChart.legendSig = "";
+        syncDevChartControls();
+        syncDevChartLegend(true);
+        requestDevChartDraw();
+      });
+    }
+    if (els.devChartCanvas) {
+      els.devChartCanvas.addEventListener("mousemove", (e) => {
+        const box = els.devChartCanvas.getBoundingClientRect();
+        devChart.hover = { x: e.clientX - box.left, y: e.clientY - box.top };
+        requestDevChartDraw();
+      });
+      els.devChartCanvas.addEventListener("mouseleave", () => {
+        devChart.hover = null;
+        devChart.hoverHit = null;
+        if (els.devChartTip) els.devChartTip.classList.add("hidden");
+        requestDevChartDraw();
+      });
+      els.devChartCanvas.addEventListener("click", () => {
+        const hit = devChart.hoverHit;
+        if (!hit) return;
+        toggleChartSeries(hit.id, hit.key || "");
+      });
+    }
+    root.addEventListener("pointerup", () => {
+      const active = document.activeElement;
+      if (active && active !== document.body && root.contains(active)) active.blur();
+    });
+    if (window.ResizeObserver && els.devChartPlot) {
+      const observer = new ResizeObserver(() => requestDevChartDraw());
+      observer.observe(els.devChartPlot);
+    }
+    document.addEventListener("mousedown", (e) => {
+      if (!els.devChartMenu || els.devChartMenu.classList.contains("hidden")) return;
+      if (e.target && e.target.closest && e.target.closest(".dev-chart-graph-wrap")) return;
+      els.devChartMenu.classList.add("hidden");
+      if (els.devChartGraphBtn) els.devChartGraphBtn.setAttribute("aria-expanded", "false");
+    });
   }
 
   function setUserPaused(on) {
@@ -5987,6 +6720,7 @@
       }
       updateHud();
     }
+    sampleDevChart(dt);
   }
 
   function formatScore(n) {
@@ -6998,6 +7732,7 @@
     window.visualViewport.addEventListener("resize", resize);
   }
   window.addEventListener("wheel", (e) => {
+    if (e.target && e.target.closest && e.target.closest("#dev-chart")) return;
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
       return;
@@ -7114,6 +7849,7 @@
     keys.clear();
     devChordKeys.clear();
     devChordLatched = false;
+    devChartLatched = false;
     devDrag = null;
   });
   window.addEventListener("pointermove", (e) => {
@@ -7121,7 +7857,7 @@
     updateDevDrag();
   });
   window.addEventListener("mousedown", (e) => {
-    if (e.target && e.target.closest && e.target.closest("#dev-cli-input")) return;
+    if (e.target && e.target.closest && (e.target.closest("#dev-cli-input") || e.target.closest("#dev-chart"))) return;
     pointerToGame(e);
     if (!running || state.paused || state.spectating) return;
     if (e.button === 0 && beginDevDrag()) {
@@ -7306,6 +8042,8 @@
       renderClassPanel();
     });
   }
+
+  bindDevChart();
 
   window.TankfieldGame = {
     startGame,
