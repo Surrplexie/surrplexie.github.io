@@ -4232,6 +4232,19 @@
     return `${actor.name}${actor.you ? " (you)" : ""}${actor.alive ? "" : " · dead"}`;
   }
 
+  function actorScoreNow(actor) {
+    const scores = actor && actor.scores;
+    if (!scores) return -1;
+    for (let i = scores.length - 1; i >= 0; i--) if (scores[i] != null) return scores[i];
+    return -1;
+  }
+
+  function compareActorsByScore(a, b) {
+    const ds = actorScoreNow(b) - actorScoreNow(a);
+    if (ds) return ds;
+    return String((a && a.name) || "").localeCompare(String((b && b.name) || ""));
+  }
+
   function devChartLegendSignature() {
     if (devChart.graph === "count") return "count";
     const parts = [];
@@ -4252,6 +4265,12 @@
       const span = btn.querySelector("span");
       if (actor && span) span.textContent = chartActorLabel(actor);
     });
+    if (devChart.graph === "count") return;
+    const buttons = [...els.devChartLegend.querySelectorAll(".dev-chart-key[data-key]")];
+    buttons.sort((a, b) => compareActorsByScore(devChart.actors.get(a.dataset.key), devChart.actors.get(b.dataset.key)));
+    const top = els.devChartLegend.scrollTop;
+    for (const btn of buttons) els.devChartLegend.appendChild(btn);
+    els.devChartLegend.scrollTop = top;
   }
 
   function syncDevChartLegend(force) {
@@ -4271,10 +4290,7 @@
     } else {
       html.push(legendButton("total", "", "Total score", "#f4e24a", devChart.showTotal));
       html.push(legendButton("combined", "", "Combined score", "#e39b2b", devChart.showCombined));
-      const actors = [...devChart.actors.values()].sort((a, b) => {
-        if (a.you !== b.you) return a.you ? -1 : 1;
-        return a.name.localeCompare(b.name);
-      });
+      const actors = [...devChart.actors.values()].sort(compareActorsByScore);
       for (const actor of actors) {
         html.push(legendButton("player", actor.key, chartActorLabel(actor), actor.color || "#dddddd", devChart.selected.has(actor.key)));
       }
@@ -4357,7 +4373,7 @@
     if (devChart.showTotal) list.push({ id: "total", label: "Total score", color: "#f4e24a", width: 2.1, at: (i) => devChart.total[i] });
     if (devChart.showCombined) list.push({ id: "combined", label: "Combined score", color: "#e39b2b", width: 2.2, dash: [8, 5], at: (i) => combinedAt(i) });
     const actors = [...devChart.actors.values()].filter((actor) => devChart.selected.has(actor.key));
-    actors.sort((a, b) => (a.you === b.you ? 0 : a.you ? -1 : 1));
+    actors.sort((a, b) => compareActorsByScore(b, a));
     for (const actor of actors) {
       list.push({
         id: "player",
@@ -4480,6 +4496,58 @@
     }
   }
 
+  function seriesEndPoint(series, slice) {
+    for (let i = slice.i1; i >= slice.i0; i--) {
+      const value = series.at(i);
+      if (value != null && Number.isFinite(value)) return { i, value };
+    }
+    return null;
+  }
+
+  function drawChartNames(g, series, slice, xOf, yOf, plotL, plotT, plotW, plotH) {
+    const labels = [];
+    for (const line of series) {
+      const end = seriesEndPoint(line, slice);
+      if (!end) continue;
+      labels.push({
+        color: line.color,
+        text: line.label,
+        x: xOf(devChart.times[end.i]),
+        y: yOf(end.value),
+        value: end.value,
+      });
+    }
+    labels.sort((a, b) => b.value - a.value);
+    g.font = "12px Ubuntu, Segoe UI, sans-serif";
+    g.textBaseline = "middle";
+    g.textAlign = "left";
+    const placed = [];
+    const right = plotL + plotW - 4;
+    const top = plotT + 8;
+    const bottom = plotT + plotH - 8;
+    for (const label of labels) {
+      const width = g.measureText(label.text).width;
+      let x = label.x + 6;
+      if (x + width > right) x = Math.max(plotL + 4, label.x - width - 6);
+      const y = clamp(label.y, top, bottom);
+      let blocked = false;
+      for (const spot of placed) {
+        const overlapsX = x < spot.x + spot.w + 6 && x + width > spot.x - 6;
+        if (overlapsX && Math.abs(spot.y - y) < 16) {
+          blocked = true;
+          break;
+        }
+      }
+      if (blocked) continue;
+      g.lineWidth = 3;
+      g.strokeStyle = "rgba(18, 20, 22, 0.88)";
+      g.strokeText(label.text, x, y);
+      g.fillStyle = "#fff";
+      g.fillText(label.text, x, y);
+      placed.push({ x, y, w: width });
+    }
+  }
+
   function drawDevChart() {
     const canvas = els.devChartCanvas;
     const plot = els.devChartPlot;
@@ -4566,6 +4634,7 @@
       }
     }
     for (const line of series) drawDevChartLine(g, line, slice, xOf, yOf, plotW);
+    drawChartNames(g, series, slice, xOf, yOf, plotL, plotT, plotW, plotH);
     g.restore();
 
     g.fillStyle = "rgba(255,255,255,0.92)";
@@ -4641,16 +4710,17 @@
       g.arc(x, y, 3.2, 0, Math.PI * 2);
       g.fill();
       const shown = counts ? String(Math.round(value)) : Math.round(value).toLocaleString("en-US");
-      rows.push(`<div class="tip-row"><i style="background:${escapeHtml(line.color)}"></i><span>${escapeHtml(line.label)} ${escapeHtml(shown)}</span></div>`);
+      rows.push({ value, html: `<div class="tip-row"><i style="background:${escapeHtml(line.color)}"></i><span>${escapeHtml(line.label)} ${escapeHtml(shown)}</span></div>` });
       const dist = Math.abs(hy - y);
       if (dist < nearestD) {
         nearestD = dist;
         nearest = line;
       }
     }
+    rows.sort((a, b) => b.value - a.value);
     g.restore();
     devChart.hoverHit = nearest;
-    const tipRows = rows.slice(0, 12);
+    const tipRows = rows.slice(0, 12).map((row) => row.html);
     if (rows.length > 12) tipRows.push(`<div class="tip-row"><span>+${rows.length - 12} more</span></div>`);
     els.devChartTip.innerHTML = `<div class="tip-row"><span>${escapeHtml(formatClock(devChart.times[idx]))}</span></div>${tipRows.join("")}`;
     els.devChartTip.classList.remove("hidden");
