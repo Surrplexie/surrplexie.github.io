@@ -203,12 +203,14 @@
     showAlive: true,
     showHumans: true,
     showBots: true,
+    showTeam: { blue: true, red: true, green: true, purple: true },
     actors: new Map(),
     times: [],
     total: [],
     alive: [],
     humans: [],
     bots: [],
+    teamScores: { blue: [], red: [], green: [], purple: [] },
     hover: null,
     hoverHit: null,
     legendSig: "",
@@ -4080,6 +4082,7 @@
     devChart.alive.length = 0;
     devChart.humans.length = 0;
     devChart.bots.length = 0;
+    for (const id of TEAM4) devChart.teamScores[id].length = 0;
     devChart.hover = null;
     devChart.hoverHit = null;
     devChart.legendSig = "";
@@ -4098,6 +4101,7 @@
     devChart.alive.splice(0, extra);
     devChart.humans.splice(0, extra);
     devChart.bots.splice(0, extra);
+    for (const id of TEAM4) devChart.teamScores[id].splice(0, extra);
     for (const actor of devChart.actors.values()) actor.scores.splice(0, extra);
   }
 
@@ -4145,6 +4149,12 @@
     devChart.alive.push(humans + bots);
     devChart.humans.push(humans);
     devChart.bots.push(bots);
+    const teamIds = chartTeamIds();
+    const teamSums = { blue: 0, red: 0, green: 0, purple: 0 };
+    for (const tank of tanks) {
+      if (tank.team && teamSums[tank.team] != null) teamSums[tank.team] += Math.max(0, Number(tank.score) || 0);
+    }
+    for (const id of TEAM4) devChart.teamScores[id].push(teamIds.includes(id) ? teamSums[id] : null);
     trimDevChart();
     if (devChart.open) {
       syncDevChartLegend();
@@ -4165,6 +4175,7 @@
     if (id === "alive") return devChart.showAlive;
     if (id === "humans") return devChart.showHumans;
     if (id === "bots") return devChart.showBots;
+    if (id === "team") return !!devChart.showTeam[key];
     return devChart.selected.has(key);
   }
 
@@ -4174,6 +4185,7 @@
     else if (id === "alive") devChart.showAlive = !devChart.showAlive;
     else if (id === "humans") devChart.showHumans = !devChart.showHumans;
     else if (id === "bots") devChart.showBots = !devChart.showBots;
+    else if (id === "team" && devChart.showTeam[key] != null) devChart.showTeam[key] = !devChart.showTeam[key];
     else if (key) {
       devChart.selectAll = false;
       if (devChart.multi) {
@@ -4252,7 +4264,7 @@
       parts.push([actor.key, actor.name, actor.color, actor.you ? 1 : 0].join("~"));
     }
     parts.sort();
-    return `scores|${parts.join("|")}`;
+    return `scores|${chartTeamIds().join(",")}|${parts.join("|")}`;
   }
 
   function paintDevChartLegend() {
@@ -4284,6 +4296,10 @@
     } else {
       html.push(legendButton("total", "", "Total score", "#f4e24a", devChart.showTotal));
       html.push(legendButton("combined", "", "Combined score", "#e39b2b", devChart.showCombined));
+      for (const id of chartTeamIds()) {
+        const team = TEAMS[id];
+        html.push(legendButton("team", id, team.name, team.color, !!devChart.showTeam[id]));
+      }
       const actors = [...devChart.actors.values()].sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
       for (const actor of actors) {
         html.push(legendButton("player", actor.key, chartActorLabel(actor), actor.color || "#dddddd", devChart.selected.has(actor.key)));
@@ -4378,7 +4394,29 @@
         at: (i) => actor.scores[i],
       });
     }
+    for (const id of chartTeamIds()) {
+      if (!devChart.showTeam[id]) continue;
+      const team = TEAMS[id];
+      list.push({
+        id: "team",
+        key: id,
+        label: team.name,
+        color: team.color,
+        width: 2.5,
+        at: (i) => devChart.teamScores[id][i],
+      });
+    }
     return list;
+  }
+
+  function chartTeamIds() {
+    if (!teamMode()) return [];
+    if (isFourTeamMode()) return TEAM4.slice();
+    if (state.mode === "assault") return ["blue", "green"];
+    if (state.mode === "tag" || state.mode === "protect") return ["green", "red"];
+    if (state.mode === "siege") return ["blue"];
+    if (isTeamHunt()) return [HUNTER_TEAM, HUNTED_TEAM];
+    return ["blue", "red"];
   }
 
   function chartCeil(max) {
