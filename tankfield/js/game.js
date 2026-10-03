@@ -4265,12 +4265,6 @@
       const span = btn.querySelector("span");
       if (actor && span) span.textContent = chartActorLabel(actor);
     });
-    if (devChart.graph === "count") return;
-    const buttons = [...els.devChartLegend.querySelectorAll(".dev-chart-key[data-key]")];
-    buttons.sort((a, b) => compareActorsByScore(devChart.actors.get(a.dataset.key), devChart.actors.get(b.dataset.key)));
-    const top = els.devChartLegend.scrollTop;
-    for (const btn of buttons) els.devChartLegend.appendChild(btn);
-    els.devChartLegend.scrollTop = top;
   }
 
   function syncDevChartLegend(force) {
@@ -4290,7 +4284,7 @@
     } else {
       html.push(legendButton("total", "", "Total score", "#f4e24a", devChart.showTotal));
       html.push(legendButton("combined", "", "Combined score", "#e39b2b", devChart.showCombined));
-      const actors = [...devChart.actors.values()].sort(compareActorsByScore);
+      const actors = [...devChart.actors.values()].sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
       for (const actor of actors) {
         html.push(legendButton("player", actor.key, chartActorLabel(actor), actor.color || "#dddddd", devChart.selected.has(actor.key)));
       }
@@ -4687,49 +4681,49 @@
       const left = clamp(right - 1, slice.i0, slice.i1);
       idx = Math.abs(devChart.times[right] - target) < Math.abs(devChart.times[left] - target) ? right : left;
     }
+    const inPlot = hx >= plotL && hx <= plotL + plotW && hy >= plotT && hy <= plotT + plotH;
+    if (!inPlot) {
+      if (els.devChartTip) els.devChartTip.classList.add("hidden");
+      return;
+    }
     const x = xOf(devChart.times[idx]);
-    g.save();
-    g.beginPath();
-    g.rect(plotL, plotT, plotW, plotH);
-    g.clip();
-    g.strokeStyle = "rgba(255,255,255,0.7)";
-    g.lineWidth = 1;
-    g.beginPath();
-    g.moveTo(x, plotT);
-    g.lineTo(x, plotT + plotH);
-    g.stroke();
     let nearest = null;
-    let nearestD = 16;
-    const rows = [];
+    let nearestY = 0;
+    let nearestValue = 0;
+    let nearestD = Infinity;
     for (const line of series) {
       const value = line.at(idx);
       if (value == null || !Number.isFinite(value)) continue;
       const y = yOf(value);
-      g.fillStyle = line.color;
-      g.beginPath();
-      g.arc(x, y, 3.2, 0, Math.PI * 2);
-      g.fill();
-      const shown = counts ? String(Math.round(value)) : Math.round(value).toLocaleString("en-US");
-      rows.push({ value, html: `<div class="tip-row"><i style="background:${escapeHtml(line.color)}"></i><span>${escapeHtml(line.label)} ${escapeHtml(shown)}</span></div>` });
       const dist = Math.abs(hy - y);
       if (dist < nearestD) {
         nearestD = dist;
         nearest = line;
+        nearestY = y;
+        nearestValue = value;
       }
     }
-    rows.sort((a, b) => b.value - a.value);
-    g.restore();
     devChart.hoverHit = nearest;
-    const tipRows = rows.slice(0, 12).map((row) => row.html);
-    if (rows.length > 12) tipRows.push(`<div class="tip-row"><span>+${rows.length - 12} more</span></div>`);
-    els.devChartTip.innerHTML = `<div class="tip-row"><span>${escapeHtml(formatClock(devChart.times[idx]))}</span></div>${tipRows.join("")}`;
+    if (!nearest) {
+      els.devChartTip.classList.add("hidden");
+      return;
+    }
+    g.fillStyle = "#fff";
+    g.strokeStyle = "rgba(20, 22, 24, 0.85)";
+    g.lineWidth = 1.5;
+    g.beginPath();
+    g.arc(x, nearestY, 3.6, 0, Math.PI * 2);
+    g.fill();
+    g.stroke();
+    const shown = counts ? String(Math.round(nearestValue)) : Math.round(nearestValue).toLocaleString("en-US");
+    els.devChartTip.innerHTML = `<div class="tip-name">${escapeHtml(nearest.label)}</div><div class="tip-time">${escapeHtml(formatClock(devChart.times[idx]))}</div><div class="tip-value">${escapeHtml(shown)}</div>`;
     els.devChartTip.classList.remove("hidden");
     const tipW = els.devChartTip.offsetWidth;
     const tipH = els.devChartTip.offsetHeight;
-    let left = hx + 14;
-    let top = hy + 14;
-    if (left + tipW > w - 4) left = hx - tipW - 14;
-    if (top + tipH > h - 4) top = h - tipH - 4;
+    let left = x + 12;
+    let top = nearestY + 12;
+    if (left + tipW > w - 4) left = x - tipW - 12;
+    if (top + tipH > h - 4) top = nearestY - tipH - 10;
     els.devChartTip.style.left = `${Math.max(4, left)}px`;
     els.devChartTip.style.top = `${Math.max(4, top)}px`;
   }

@@ -1467,6 +1467,16 @@ kbd {
   white-space: nowrap;
 }
 
+.dev-chart-tip .tip-name,
+.dev-chart-tip .tip-value {
+  font-weight: 700;
+}
+
+.dev-chart-tip .tip-time {
+  font-weight: 500;
+  opacity: 0.78;
+}
+
 .dev-chart-tip .tip-row {
   display: flex;
   align-items: center;
