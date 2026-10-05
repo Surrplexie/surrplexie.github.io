@@ -191,8 +191,8 @@
   let devChartLatched = false;
   let devMoveEnabled = false;
   let devDrag = null;
-  const DEV_CHART_DT = 0.5;
-  const DEV_CHART_CAP = 43200;
+  const DEV_CHART_DT = 0.25;
+  const DEV_CHART_CAP = 86400;
   const devChart = {
     open: false,
     graph: "scores",
@@ -4416,6 +4416,7 @@
         label: actor.you ? `${actor.name} (you)` : actor.name,
         color: actor.color || "#dddddd",
         width: actor.you ? 2 : 1.45,
+        breakOnDrop: true,
         at: (i) => actor.scores[i],
       });
     }
@@ -4495,13 +4496,17 @@
       pen = true;
     };
     if (span <= Math.max(1, Math.floor(plotW)) * 2) {
+      let prev = null;
       for (let i = slice.i0; i <= slice.i1; i++) {
         const value = series.at(i);
         if (value == null || !Number.isFinite(value)) {
           pen = false;
+          prev = null;
           continue;
         }
-        drawPoint(i, value, false);
+        const dropped = !!(series.breakOnDrop && prev != null && value < prev);
+        drawPoint(i, value, dropped);
+        prev = value;
       }
     } else {
       const cols = Math.max(1, Math.floor(plotW));
@@ -4537,7 +4542,10 @@
         }
         const ordered = loI <= hiI ? [[loI, lo], [hiI, hi]] : [[hiI, hi], [loI, lo]];
         drawPoint(ordered[0][0], ordered[0][1], broke);
-        if (ordered[1][0] !== ordered[0][0]) drawPoint(ordered[1][0], ordered[1][1], false);
+        if (ordered[1][0] !== ordered[0][0]) {
+          const dropped = !!(series.breakOnDrop && ordered[1][1] < ordered[0][1]);
+          drawPoint(ordered[1][0], ordered[1][1], dropped);
+        }
       }
     }
     g.stroke();
