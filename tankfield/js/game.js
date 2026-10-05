@@ -131,6 +131,7 @@
     play: document.getElementById("play-btn"),
     workshopBtn: document.getElementById("workshop-btn"),
     again: document.getElementById("again-btn"),
+    devRespawn: document.getElementById("dev-respawn-btn"),
     menu: document.getElementById("menu-btn"),
     stats: document.getElementById("stats-panel"),
     classes: document.getElementById("class-panel"),
@@ -164,6 +165,7 @@
     spectateNext: document.getElementById("spectate-next"),
     spectateFreeBtn: document.getElementById("spectate-free"),
     spectateAgain: document.getElementById("spectate-again"),
+    spectateDevRespawn: document.getElementById("spectate-dev-respawn"),
     spectateMenu: document.getElementById("spectate-menu"),
     notes: document.getElementById("notes"),
     devCli: document.getElementById("dev-cli"),
@@ -3451,10 +3453,24 @@
     try { renderClassPanel(); } catch (err) {}
   }
 
+  function respawnBlocked() {
+    if (royaleLocked()) return true;
+    if (state.mode === "siege" && !liveSanctuaries().length) return true;
+    if (!running || arenaLocked() || state.closing) return true;
+    return !!(state.player && state.player.alive);
+  }
+
   function canRespawn() {
-    if (royaleLocked()) return false;
-    if (state.mode === "siege" && !liveSanctuaries().length) return false;
-    return running && !arenaLocked() && respawnWait() <= 0 && !(state.player && state.player.alive);
+    return !respawnBlocked() && respawnWait() <= 0;
+  }
+
+  function canDevRespawnNow() {
+    return isDevNick() && !respawnBlocked();
+  }
+
+  function respawnPlayerNow() {
+    if (!canDevRespawnNow()) return false;
+    return respawnPlayer(true);
   }
 
   function updateRespawnUi() {
@@ -3472,6 +3488,12 @@
     if (els.spectateAgain) {
       els.spectateAgain.disabled = !ready;
       els.spectateAgain.textContent = label;
+    }
+    const devNow = canDevRespawnNow();
+    for (const btn of [els.devRespawn, els.spectateDevRespawn]) {
+      if (!btn) continue;
+      btn.classList.toggle("hidden", !isDevNick());
+      btn.disabled = !devNow;
     }
     if (els.deathWait) {
       if (lock) els.deathWait.textContent = "Fresh server starting shortly.";
@@ -8136,6 +8158,7 @@
     els.name.addEventListener("change", () => saveName(els.name.value.trim()));
   }
   if (els.again) els.again.addEventListener("click", () => respawnPlayer());
+  if (els.devRespawn) els.devRespawn.addEventListener("click", () => respawnPlayerNow());
   if (els.menu) els.menu.addEventListener("click", goToMenu);
   if (els.resume) els.resume.addEventListener("click", () => setUserPaused(false));
   if (els.pauseMenu) els.pauseMenu.addEventListener("click", goToMenu);
@@ -8143,6 +8166,7 @@
   if (els.spectateNext) els.spectateNext.addEventListener("click", () => cycleSpectate(1));
   if (els.spectateFreeBtn) els.spectateFreeBtn.addEventListener("click", () => enterFreeCam(cameraFocus()));
   if (els.spectateAgain) els.spectateAgain.addEventListener("click", () => respawnPlayer());
+  if (els.spectateDevRespawn) els.spectateDevRespawn.addEventListener("click", () => respawnPlayerNow());
   if (els.spectateMenu) els.spectateMenu.addEventListener("click", goToMenu);
   if (els.editInGame) els.editInGame.addEventListener("click", openWorkshop);
   if (els.skipUpgrade) {
