@@ -3206,7 +3206,7 @@
         bot.spawnProtect = 0;
         state.tanks.push(bot);
         refreshHunted();
-      }, 1800);
+      }, 0);
     }
   }
 
