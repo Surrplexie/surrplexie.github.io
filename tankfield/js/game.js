@@ -406,6 +406,7 @@
   }
 
   function zoneAt(x, y) {
+    if (state.mode === "assault") return inAssaultSpawnRing(x, y) ? "blue" : null;
     if (state.mode === "siege") return inSiegeRed(x, y) ? "boss" : null;
     if (state.mode === "tdm") {
       if (x <= BASE_W) return "blue";
@@ -1571,7 +1572,7 @@
       g.guardOf = dom;
       g.aiJob = "guard";
       g.aiFocus = "gun";
-      g.spawnProtect = 2;
+      g.spawnProtect = 0;
       applyLevel(g);
       g.health = g.maxHealth;
       state.tanks.push(g);
@@ -2483,7 +2484,7 @@
   }
 
   function applyLevel(tank, allowBelowFloor = false) {
-    if (!allowBelowFloor && tank && !tank.devScoreOverrideFloor && (isGrowthVariant() || state.armsRace) && !tank.closer && !tank.mothership && !tank.dominator && !tank.boss && !tank.fodder) {
+    if (!allowBelowFloor && !isZeroFfa() && tank && !tank.devScoreOverrideFloor && (isGrowthVariant() || state.armsRace) && !tank.closer && !tank.mothership && !tank.dominator && !tank.boss && !tank.fodder) {
       tank.score = Math.max(Number(tank.score) || 0, xpForLevel(LEVEL_CAP));
     }
     const next = levelFromScore(tank.score);
@@ -2733,7 +2734,7 @@
       autoUpgradeBot(bot);
       bot.health = bot.maxHealth;
       bot.shield = bot.maxShield || 0;
-      bot.spawnProtect = 4;
+      bot.spawnProtect = 0;
       state.tanks.push(bot);
     }
   }
@@ -3027,11 +3028,13 @@
       note("Defend the blue sanctuaries. The red ring instakills you. Bosses spawn in the outer ring and push inward.");
       note("If every sanctuary falls, you cannot respawn. Destroy the yellow wrecks to restore them.");
     }
-    if (isZeroFfa() && !isGrowthVariant() && !state.armsRace) {
+    if (isZeroFfa()) {
       welcomeSpawnNotes();
-      note("Everyone starts at 0. Score can drop below 45.");
-    }
-    if (isGrowthVariant()) {
+      if (isGrowthVariant() && state.armsRace) note("Everyone starts at 0. Growth to 1000 and the Arms Race class tree are on. Score can drop below 45.");
+      else if (isGrowthVariant()) note("Everyone starts at 0. Grow to level 1000. Score can drop below 45.");
+      else if (state.armsRace) note("Everyone starts at 0. Arms Race class tree is on. Score can drop below 45.");
+      else note("Everyone starts at 0. Score can drop below 45.");
+    } else if (isGrowthVariant()) {
       welcomeSpawnNotes();
       note("Everyone starts at 45. Grow past 45. Level cap is 1000. [N] skips to 45.");
     }
@@ -3200,7 +3203,7 @@
         }
         bot.health = bot.maxHealth;
         bot.shield = bot.maxShield || 0;
-        bot.spawnProtect = 8;
+        bot.spawnProtect = 0;
         state.tanks.push(bot);
         refreshHunted();
       }, 1800);
@@ -3411,7 +3414,7 @@
     autoUpgradeBot(bot, preserveClass);
     bot.health = bot.maxHealth;
     bot.shield = bot.maxShield || 0;
-    bot.spawnProtect = 5;
+    bot.spawnProtect = 0;
     state.tanks.push(bot);
     return bot;
   }
@@ -3432,7 +3435,7 @@
       tank.y = p.y;
       tank.vx = 0;
       tank.vy = 0;
-      tank.spawnProtect = Math.max(tank.spawnProtect || 0, 5);
+      tank.spawnProtect = tank.ai ? 0 : Math.max(tank.spawnProtect || 0, 5);
     }
     if (state.player && state.player.alive) {
       state.spectating = false;
@@ -5347,7 +5350,6 @@
       return !!tank.aiTarget && canSee(tank, tank.aiTarget);
     }
     if (tank.mothership) return true;
-    if (tank.spawnProtect > 0 && tank.ai) return false;
     if (tank.ai) {
       if (isRammer(tank)) return false;
       const combat = tank.aiState === "attack" || tank.aiState === "farm" || tank.aiState === "defend"
@@ -5682,19 +5684,13 @@
   }
 
   function updateAI(tank, dt) {
+    tank.spawnProtect = 0;
     tank.aiMoved = tank.aiPrevX == null
       ? Infinity
       : Math.hypot(tank.x - tank.aiPrevX, tank.y - tank.aiPrevY);
     tank.aiPrevX = tank.x;
     tank.aiPrevY = tank.y;
     tank.aiT -= dt;
-    if (tank.spawnProtect > 0 && !tank.closer && !tank.mothership && !tank.dominator) {
-      tank.vx *= 0.15;
-      tank.vy *= 0.15;
-      tank.aiState = "spawn";
-      tank.aiTarget = null;
-      return;
-    }
     if (tank.dominator) {
       tank.vx = 0;
       tank.vy = 0;
@@ -6038,7 +6034,15 @@
     let tx = tank.x;
     let ty = tank.y;
     if (tank.aiState === "home" && tank.team) {
-      if (state.mode === "siege") {
+      if (state.mode === "assault") {
+        const inset = ASSAULT_ZONE + 140;
+        const home = healerDominator();
+        const gx = home ? clamp(home.x, inset, WORLD.w - inset) : WORLD.w * 0.5;
+        const gy = home ? clamp(home.y, inset, WORLD.h - inset) : WORLD.h * 0.5;
+        const steered = steerAround(tank, gx, gy);
+        tx = steered.x;
+        ty = steered.y;
+      } else if (state.mode === "siege") {
         const s = nearest(tank, liveSanctuaries(), 99999) || { x: WORLD.w * 0.5, y: WORLD.h * 0.5 };
         const steered = steerAround(tank, s.x, s.y);
         tx = steered.x;
@@ -6066,9 +6070,15 @@
         tx = enemy.x;
         ty = enemy.y;
       } else if (ez && ez === enemy.team) {
-        const edge = baseCenter(ez);
-        tx = ez === "blue" ? BASE_W + 140 : ez === "red" ? WORLD.w - BASE_W - 140 : edge.x;
-        ty = ez === "green" ? BASE_W + 140 : ez === "purple" ? WORLD.h - BASE_W - 140 : enemy.y;
+        if (state.mode === "assault") {
+          const inset = ASSAULT_ZONE + 90;
+          tx = clamp(enemy.x, inset, WORLD.w - inset);
+          ty = clamp(enemy.y, inset, WORLD.h - inset);
+        } else {
+          const edge = baseCenter(ez);
+          tx = ez === "blue" ? BASE_W + 140 : ez === "red" ? WORLD.w - BASE_W - 140 : edge.x;
+          ty = ez === "green" ? BASE_W + 140 : ez === "purple" ? WORLD.h - BASE_W - 140 : enemy.y;
+        }
       } else {
         const dist = Math.hypot(enemy.x - tank.x, enemy.y - tank.y) || 1;
         const nx = (enemy.x - tank.x) / dist;
@@ -6184,12 +6194,18 @@
       ty = steered.y;
       if (!tank.aiTarget) tank.angle = Math.atan2(ty - tank.y, tx - tank.x);
     }
-    if ((state.mode === "tdm" || isFourTeamMode()) && tank.team && tank.aiState !== "home") {
+    if ((state.mode === "tdm" || isFourTeamMode() || state.mode === "assault") && tank.team && tank.aiState !== "home") {
       const destZone = zoneAt(tx, ty);
       if (destZone && destZone !== tank.team) {
-        const home = baseCenter(tank.team);
-        tx = home.x;
-        ty = tank.y;
+        if (state.mode === "assault") {
+          const inset = ASSAULT_ZONE + (tank.r || 22) + 30;
+          tx = clamp(tank.x, inset, WORLD.w - inset);
+          ty = clamp(tank.y, inset, WORLD.h - inset);
+        } else {
+          const home = baseCenter(tank.team);
+          tx = home.x;
+          ty = tank.y;
+        }
       }
     }
     const peeled = peelOffShapes(tank, tx, ty);
@@ -8054,9 +8070,6 @@
     if (menuMode !== "sandbox" && menuVariants.maze) extras.push("open maze layout");
     if (menuMode !== "sandbox" && menuVariants.growth) extras.push("grow to level 1000");
     if (menuMode !== "sandbox" && menuVariants.arms) extras.push("Arms Race class tree");
-    if (menuMode === "ffazero" && (menuVariants.growth || menuVariants.arms)) {
-      base = base.replace("start at 0 · score can drop below 45", "progression starts at level 45");
-    }
     hint.textContent = [base, ...extras].filter(Boolean).join(" · ");
   }
 
