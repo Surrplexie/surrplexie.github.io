@@ -1,0 +1,123 @@
+---
+layout: default
+title: Capsim plan | Kai Morgan
+banner_title: "Kai Morgan // Capsim plan"
+description: "Design spec for Capsim, the god-view capitalist economy. The playable build is at /capsim/."
+extra_stylesheets:
+  - capsim/capsim.css
+---
+        <div class="capsim">
+        <section class="card" id="top">
+            <div class="project-header">
+                <h2>Capsim plan</h2>
+                <span class="status-badge status-active">Playable</span>
+            </div>
+            <p>
+                Capsim is a sandbox economy. The player is not a trader. The player watches
+                one to one thousand bots compete for net worth, and can change time, money,
+                rates, law, and news. There is no scripted winner.
+            </p>
+            <p class="capsim-note">
+                <strong>The game is at <a href="{{ '/capsim/' | relative_url }}">/capsim/</a>.</strong>
+                This page is the spec. The browser build follows it in simplified form:
+                prices move through the day, the books close once per in-game day, charts
+                keep that daily history, and an optional API only chooses from the same
+                actions the rules can already take.
+            </p>
+            <p><a href="{{ '/capsim/' | relative_url }}" class="cta-link">Play Capsim &rarr;</a></p>
+        </section>
+
+        <section class="card" id="titans">
+            <h2>Titan lock</h2>
+            <p>
+                Ordinary noise does not pull a bot who has already won back to the pack.
+                A fortune becomes real only if the strategy and the circumstances produce it.
+                After that it stays, unless the bot messes up in a major way, falls off over
+                a long stretch, or the player punishes them.
+            </p>
+            <ul>
+                <li>$1 million opens a company, margin, and small alliances. A bad year can still erase it.</li>
+                <li>$1 billion opens several companies, lobbying, hostile bids, and the policy of refusing poor counterparties. Rank among the rich sticks unless losses persist.</li>
+                <li>$100 billion is the locked tier. Only a major mess-up, a long fall-off, real exposure to a shock, or the player breaks it.</li>
+            </ul>
+            <p>
+                Day-to-day prices still move, including for titans. What the lock stops is a quiet
+                drift back to the average bot. Chaos difficulty makes a real mistake or a real
+                exposure more likely. It does not add a magnet toward the middle.
+            </p>
+        </section>
+
+        <section class="card" id="time">
+            <h2>Time</h2>
+            <p>
+                At 1×, one real second is two in-game hours. 2×, 3×, and 4× multiply that.
+                Pause, rewind, and skip years are separate. A 365-day year is about 73 minutes
+                at 1× and about 18 minutes at 4×. Skip years resolves whole days, writes the
+                history, and labels the jump. Rewind restores a recent daily snapshot or a
+                god action and cuts that branch’s future.
+            </p>
+        </section>
+
+        <section class="card" id="bots">
+            <h2>Bots</h2>
+            <p>
+                Each bot is a capital owner. The public is mood, welfare, and customer headlines,
+                not another crowd of agents. Bots put their own survival and net worth first.
+            </p>
+            <ul>
+                <li>Starting wealth is a skewed draw from $1 into the millions, shaped by the scenario. A flat number or a line per bot replaces the roll. Typed wealth can place a titan on day one.</li>
+                <li>Temperaments: ruthless, cautious, innovative, manipulative, opportunistic, cooperative, paranoid. Weights drift after long winning or losing streaks.</li>
+                <li>Risk appetite is conservative, speculative, or extreme leverage.</li>
+                <li>Private goals start as become richest, dominate a sector, bankrupt someone, or just survive. Near ruin, survival takes over.</li>
+            </ul>
+            <p>
+                A decision pass reads survival, news, rivals, firms, the portfolio, then influence.
+                The reason is stored. Rules are the default. Advanced mode is a wider local pass.
+                A local or API model may pick from that same menu, with a daily request cap,
+                a token budget, and a rules fallback. The model does not invent cash or prices.
+            </p>
+        </section>
+
+        <section class="card" id="markets">
+            <h2>Markets, firms, and banks</h2>
+            <ul>
+                <li>Stocks, ETFs, a mutual pool, a broad index, bonds, and CDs. Each has a chart from day one.</li>
+                <li>Companies live in technology, energy, retail, banking, healthcare, manufacturing, or entertainment. Demand, capacity, approval, and competition set sales. A bad launch can be boycotted.</li>
+                <li>Bots can found firms, launch products, take one over when they are large enough, or be blocked by strict antitrust.</li>
+                <li>Loans need a bank with liquidity and enough credibility. Regulation caps leverage. Unpayable interest compounds. Collateral stress forces selling.</li>
+                <li>Shorts profit when a price falls and can be forced shut when it rises. Position size is capped so a one-cent quote cannot create a fantasy share count.</li>
+                <li>Banks take deposits, lend, and can fail. A failure hits that bank’s depositors and the bots tied to its loans.</li>
+                <li>Wealthy bots remember slights, ally, share a tip, plant a rumor, or refuse a bot they think is a bad bet. A refused bot can be let back in after a real improvement.</li>
+            </ul>
+        </section>
+
+        <section class="card" id="god">
+            <h2>God tools</h2>
+            <ul>
+                <li>News scored 0–100, aimed at the economy, an industry, an asset, a company, or one bot, as a short impulse, a fade, or a persistent fact.</li>
+                <li>Create or destroy a dollar amount at the selected bot, or expand and contract the broad money supply.</li>
+                <li>Set the benchmark rate for a number of days. Set regulation from an open market to strict law.</li>
+                <li>Reward or punish the selected bot with cash, debt forgiveness, a fine, seized assets, a reputation hit, or forced bankruptcy.</li>
+                <li>Every manual action is logged with the before and after on mood and the richest fortune. Later archive lines can point back at that action.</li>
+            </ul>
+            <p>
+                Observer mode leaves pause, speed, rewind, and the archive, and turns the levers off.
+                Fog hides private books and secret goals until a scandal or a fine reveals them.
+                Net worth stays visible either way. There is no required victory. Optional stops
+                are a wealth goal or an economic collapse. Saves replay the seed plus the god log
+                so a branch is another intervention on the same start.
+            </p>
+        </section>
+
+        <section class="card">
+            <h2>What you can read</h2>
+            <ul>
+                <li>A live board of net worth, cash, debt, assets, and lifetime profit.</li>
+                <li>Charts from day one for net worth, prices, the rate, mood, and the top 1% share, with a log scale.</li>
+                <li>A bot page with temperament, companies, allies, rivals, and the reasons they stored.</li>
+                <li>A news feed, a searchable archive, and lifetime records for the richest fortune, the best day, the worst day, and the largest bankruptcy.</li>
+                <li>Public meters for mood, employment, wages, affordability, availability, approval, and living standard, plus the share held by the richest 1%.</li>
+            </ul>
+            <p><a href="{{ '/capsim/' | relative_url }}" class="cta-link">Play Capsim &rarr;</a></p>
+        </section>
+        </div>

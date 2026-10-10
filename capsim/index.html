@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Capsim</title>
+  <link rel="icon" href="../images/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css?v=1">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <h1>Capsim</h1>
+        <p>You watch. The bots compete. <a href="../labs/">Labs</a> · <a href="plan/">Plan</a></p>
+      </div>
+      <div>
+        <div class="clock" id="clock">Y1 D1 00:00</div>
+        <div class="muted" id="phase">—</div>
+      </div>
+      <div class="row" role="group" aria-label="Speed">
+        <button type="button" id="pause" class="primary">Run</button>
+        <button type="button" data-speed="1">1×</button>
+        <button type="button" data-speed="2">2×</button>
+        <button type="button" data-speed="3">3×</button>
+        <button type="button" data-speed="4" class="active">4×</button>
+      </div>
+      <div class="row">
+        <label for="skip-years">Skip years</label>
+        <input id="skip-years" type="number" min="1" max="20" value="1" style="width:4.5rem">
+        <button type="button" id="skip">Skip</button>
+        <button type="button" id="rewind">Rewind</button>
+      </div>
+    </header>
+
+    <div class="grid">
+      <div>
+        <section class="panel">
+          <h2>New world</h2>
+          <label for="scenario">Scenario</label>
+          <select id="scenario">
+            <option value="boom">Free-market boom</option>
+            <option value="crisis">Banking crisis</option>
+            <option value="inequality">Extreme inequality</option>
+            <option value="tech">Technological revolution</option>
+            <option value="custom">Custom</option>
+          </select>
+          <div id="custom-fields" class="hidden">
+            <label for="custom-rate">Interest rate</label>
+            <input id="custom-rate" type="number" step="0.005" value="0.04">
+            <label for="custom-reg">Regulation 0–100</label>
+            <input id="custom-reg" type="number" min="0" max="100" value="30">
+            <label for="custom-inflation">Inflation</label>
+            <input id="custom-inflation" type="number" step="0.005" value="0.02">
+            <label for="custom-tax">Tax</label>
+            <input id="custom-tax" type="number" step="0.01" value="0.15">
+            <label for="custom-unemployment">Unemployment</label>
+            <input id="custom-unemployment" type="number" step="0.01" value="0.06">
+          </div>
+          <label for="difficulty">Difficulty</label>
+          <select id="difficulty">
+            <option value="stable">Stable</option>
+            <option value="volatile" selected>Volatile</option>
+            <option value="ruthless">Ruthless capitalism</option>
+            <option value="chaos">Financial chaos</option>
+          </select>
+          <label for="bot-count">Bots (1–1000)</label>
+          <input id="bot-count" type="number" min="1" max="1000" value="80">
+          <label for="seed">Seed</label>
+          <input id="seed" type="number" step="1">
+          <label for="flat-wealth">Flat starting wealth $, optional</label>
+          <input id="flat-wealth" type="number" min="0" step="1" placeholder="blank = skewed RNG">
+          <label for="wealth-list">Or one dollar amount per line</label>
+          <textarea id="wealth-list" placeholder="100&#10;2500000"></textarea>
+          <label for="intelligence">Intelligence</label>
+          <select id="intelligence">
+            <option value="rules">Rules</option>
+            <option value="advanced">Advanced rules</option>
+            <option value="api">Local or API model</option>
+          </select>
+          <div id="api-fields" class="hidden">
+            <label for="api-url">API base URL</label>
+            <input id="api-url" type="url" placeholder="http://localhost:11434/v1">
+            <label for="api-model">Model</label>
+            <input id="api-model" type="text" value="llama3.2">
+            <label for="api-key">Key, kept in this browser only</label>
+            <input id="api-key" type="password" autocomplete="off">
+            <label for="api-per-day">Requests per in-game day</label>
+            <input id="api-per-day" type="number" min="0" max="20" value="2">
+            <label for="api-budget">Token budget</label>
+            <input id="api-budget" type="number" min="100" value="8000">
+          </div>
+          <label for="end-when">End condition</label>
+          <select id="end-when">
+            <option value="">Sandbox, no required end</option>
+            <option value="wealth">Stop at a wealth goal</option>
+            <option value="collapse">Stop if the economy collapses</option>
+          </select>
+          <label class="row"><input id="observer" type="checkbox" style="width:auto"> Observer only</label>
+          <label class="row"><input id="fog" type="checkbox" style="width:auto"> Fog of war</label>
+          <button type="button" id="new-game" class="primary">New game</button>
+        </section>
+
+        <section class="panel" id="god-panel">
+          <h2>God tools</h2>
+          <p class="muted" id="god-target">Actions hit the selected bot unless the scope says otherwise.</p>
+          <label for="news-text">News</label>
+          <textarea id="news-text" placeholder="The central bank surprises the market."></textarea>
+          <label for="news-score">Impact 0–100</label>
+          <input id="news-score" type="range" min="0" max="100" value="50">
+          <div class="muted" id="news-score-label">50</div>
+          <label for="news-scope">Scope</label>
+          <select id="news-scope">
+            <option value="economy">Whole economy</option>
+            <option value="industry">Industry</option>
+            <option value="asset">Asset</option>
+            <option value="company">Company</option>
+            <option value="bot">Selected bot</option>
+          </select>
+          <label for="news-target">Target</label>
+          <select id="news-target"></select>
+          <label for="news-duration">Duration</label>
+          <select id="news-duration">
+            <option value="impulse">Short impulse</option>
+            <option value="fade" selected>Fade</option>
+            <option value="persistent">Persistent</option>
+          </select>
+          <button type="button" id="send-news">Inject news</button>
+
+          <label for="money-amount">Create or destroy money ($)</label>
+          <input id="money-amount" type="number" step="1000" value="1000000">
+          <label for="money-mode">Where</label>
+          <select id="money-mode">
+            <option value="target">Selected bot</option>
+            <option value="broad">Broad money supply</option>
+          </select>
+          <div class="row">
+            <button type="button" id="create-money">Create</button>
+            <button type="button" id="destroy-money">Destroy</button>
+          </div>
+
+          <label for="rate">Benchmark rate</label>
+          <input id="rate" type="number" step="0.005" value="0.04">
+          <label for="rate-days">Days</label>
+          <input id="rate-days" type="number" min="1" value="180">
+          <button type="button" id="set-rate">Set rate</button>
+
+          <label for="regulation">Regulation 0 free – 100 strict</label>
+          <input id="regulation" type="range" min="0" max="100" value="20">
+          <button type="button" id="set-reg">Set regulation</button>
+
+          <label for="punish-kind">Reward or punish selected bot</label>
+          <select id="punish-kind">
+            <option value="cash">Cash</option>
+            <option value="forgive">Forgive debt</option>
+            <option value="fine">Fine</option>
+            <option value="seize">Seize assets</option>
+            <option value="reputation">Reputation</option>
+            <option value="bankrupt">Force bankruptcy</option>
+          </select>
+          <label for="punish-amount">Amount $ where it applies</label>
+          <input id="punish-amount" type="number" min="0" step="1000" value="1000000">
+          <div class="row">
+            <button type="button" id="reward">Reward</button>
+            <button type="button" id="punish">Punish</button>
+          </div>
+          <div id="law-box" class="banner hidden"></div>
+        </section>
+
+        <section class="panel">
+          <h2>Timelines</h2>
+          <label for="save-name">Save name</label>
+          <input id="save-name" type="text" value="timeline">
+          <div class="row">
+            <button type="button" id="save">Save</button>
+            <button type="button" id="branch">Branch</button>
+          </div>
+          <label for="save-list">Stored</label>
+          <select id="save-list"></select>
+          <button type="button" id="load">Load</button>
+          <p class="muted" id="status"></p>
+        </section>
+      </div>
+
+      <main>
+        <section class="meters" id="meters" aria-label="Public welfare"></section>
+        <section class="chart-card">
+          <div class="row">
+            <label for="chart-mode">Chart</label>
+            <select id="chart-mode" style="width:auto">
+              <option value="nw">Net worth</option>
+              <option value="asset">Asset price</option>
+              <option value="rate">Interest rate</option>
+              <option value="mood">Public mood</option>
+              <option value="top1">Top 1% share</option>
+            </select>
+            <select id="chart-asset" style="width:auto"></select>
+            <label class="row"><input id="log-scale" type="checkbox" style="width:auto" checked> Log</label>
+          </div>
+          <canvas id="chart" width="800" height="240"></canvas>
+          <p class="muted" id="records"></p>
+        </section>
+        <section class="board-card">
+          <div class="row">
+            <h2 style="margin:0;color:var(--cyan)">Leaderboard</h2>
+            <input id="find-bot" type="search" placeholder="Find a bot" style="width:12rem">
+          </div>
+          <div class="scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Bot</th>
+                  <th>Temperament</th>
+                  <th class="num"><button type="button" data-sort="nw">Net worth</button></th>
+                  <th class="num"><button type="button" data-sort="cash">Cash</button></th>
+                  <th class="num"><button type="button" data-sort="debt">Debt</button></th>
+                  <th class="num"><button type="button" data-sort="assets">Assets</button></th>
+                  <th class="num"><button type="button" data-sort="profit">Lifetime profit</button></th>
+                </tr>
+              </thead>
+              <tbody id="board"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+
+      <div>
+        <section class="panel">
+          <h2>Bot</h2>
+          <div id="dossier" class="dossier">Select a row.</div>
+        </section>
+        <section class="panel">
+          <h2>News</h2>
+          <ul class="feed" id="news"></ul>
+        </section>
+        <section class="panel">
+          <h2>Archive</h2>
+          <input id="archive-q" type="search" placeholder="Search events">
+          <ul class="feed" id="archive"></ul>
+        </section>
+        <section class="panel">
+          <h2>God log</h2>
+          <ul class="log" id="god-log"></ul>
+        </section>
+      </div>
+    </div>
+  </div>
+  <script src="js/model.js?v=1"></script>
+  <script src="js/app.js?v=1"></script>
+</body>
+</html>

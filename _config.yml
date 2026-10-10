@@ -27,6 +27,10 @@ defaults:
       path: "dynamicwar"
     values:
       sitemap: false
+  - scope:
+      path: "capsim"
+    values:
+      sitemap: false
 
 exclude:
   - README.md

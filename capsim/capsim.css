@@ -1,0 +1,101 @@
+.capsim-note {
+    margin: 16px 0;
+    padding: 14px 16px;
+    border-left: 3px solid var(--color-accent);
+    background: rgba(255, 152, 0, 0.08);
+    border-radius: 0 4px 4px 0;
+    font-size: 0.92em;
+}
+
+.capsim-note-lock {
+    border-left-color: var(--color-primary);
+    background: rgba(0, 188, 212, 0.08);
+}
+
+.capsim-toc {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    margin: 14px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.capsim-toc a {
+    color: var(--color-accent);
+    font-size: 0.82em;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.capsim-toc a:hover {
+    text-decoration: underline;
+}
+
+.capsim-toc a:focus-visible {
+    outline: var(--focus-outline);
+    outline-offset: var(--focus-offset);
+    border-radius: 2px;
+}
+
+.capsim .project-header h2 {
+    margin: 0;
+    padding: 0;
+    border-bottom: none;
+}
+
+.capsim h3 {
+    color: var(--color-primary);
+    font-size: 1.02em;
+    margin: 1.4rem 0 0.45rem;
+}
+
+.capsim .table-wrap {
+    overflow-x: auto;
+    margin: 12px 0 6px;
+}
+
+.capsim table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 0.84em;
+}
+
+.capsim th,
+.capsim td {
+    text-align: left;
+    vertical-align: top;
+    padding: 8px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    overflow-wrap: break-word;
+}
+
+.capsim th {
+    color: var(--color-primary);
+    font-weight: 700;
+}
+
+.capsim th:first-child,
+.capsim td:first-child {
+    width: 28%;
+}
+
+.capsim ul {
+    margin: 0.35rem 0 0.8rem;
+    padding-left: 1.2rem;
+    color: #ddd;
+    font-size: 0.9em;
+}
+
+.capsim li {
+    margin-bottom: 0.35rem;
+}
+
+.capsim p {
+    font-size: 0.92em;
+}
+
+.capsim code {
+    color: var(--color-primary);
+}
