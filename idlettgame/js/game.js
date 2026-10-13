@@ -189,15 +189,17 @@
   }
 
   function addBrick(viewer, band, floor) {
+    for (let i = state.bricks.length - 1; i >= 0; i--) {
+      if (state.bricks[i].name === viewer.name) state.bricks.splice(i, 1);
+    }
     state.bricks.push({
       name: viewer.name,
       floor: floor,
       band: band.id,
       label: band.label,
-      side: state.bricks.length % 2,
       born: performance.now(),
     });
-    if (state.bricks.length > 70) state.bricks.splice(0, state.bricks.length - 70);
+    if (state.bricks.length > 8) state.bricks.splice(0, state.bricks.length - 8);
   }
 
   function burst(x, y, color, count) {
@@ -761,28 +763,42 @@
       ctx.globalAlpha = 1;
     }
 
-    const recentBricks = state.bricks.slice(-8);
-    for (let n = 0; n < recentBricks.length; n++) {
-      const brick = recentBricks[recentBricks.length - 1 - n];
-      const col = n % 2;
-      const row = Math.floor(n / 2);
-      const tall = 48;
+    const nameSlots = [];
+    const seenNames = {};
+    for (let i = state.bricks.length - 1; i >= 0 && nameSlots.length < 8; i--) {
+      const brick = state.bricks[i];
+      if (seenNames[brick.name]) continue;
+      seenNames[brick.name] = true;
+      nameSlots.push(brick);
+    }
+    const nameX = [44, 724];
+    const nameY = [512, 600, 688, 776];
+    nameSlots.forEach(function (brick, n) {
+      const x = nameX[n % 2];
+      const y = nameY[Math.floor(n / 2)];
       const wide = 312;
-      const x = col === 0 ? 44 : W - 44 - wide;
-      const y = 520 + row * 62;
+      const tall = 64;
+      ctx.save();
+      roundRect(x, y, wide, tall, 10);
+      ctx.clip();
       ctx.fillStyle = brick.band >= 6 ? "#ffc857" : "#1a1210";
+      ctx.fillRect(x, y, wide, tall);
       ctx.strokeStyle = biome.accent;
       ctx.lineWidth = 2;
-      roundRect(x, y, wide, tall, 10);
-      ctx.fill();
+      roundRect(x + 1, y + 1, wide - 2, tall - 2, 10);
       ctx.stroke();
       ctx.fillStyle = brick.band >= 6 ? "#1a1218" : "#fff6e8";
       ctx.font = "700 22px " + FONT;
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
-      const extra = brick.band >= 4 ? "   " + brick.label : "";
-      ctx.fillText("@" + brick.name + extra, x + 14, y + tall / 2);
-    }
+      ctx.fillText("@" + brick.name, x + 14, y + (brick.band >= 4 ? 24 : 32));
+      if (brick.band >= 4) {
+        ctx.font = "700 16px " + FONT;
+        ctx.fillStyle = brick.band >= 6 ? "#6a4a12" : biome.accent;
+        ctx.fillText(brick.label, x + 14, y + 46);
+      }
+      ctx.restore();
+    });
 
     ctx.fillStyle = biome.shaft;
     roundRect(SHAFT_L, PLAY_TOP + 8, SHAFT_R - SHAFT_L, PLAY_BOT - PLAY_TOP - 16, 28);
