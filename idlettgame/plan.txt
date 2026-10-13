@@ -458,7 +458,7 @@ How 1 coin and 5,000 coins both feel appreciated:
 - rose streaks coalesce: gifts from the same user inside 1.5s become one event with summed coins, then the rung hops release one every 1.2s. Twenty roses read as a ladder of hops, not a single eaten number.
 
 Non-payers keep a reason to stay, and they do not dilute names:
-- follow: a climber for 50s, one ticker line, no hop, no brick
+- follow: once per TikTok account. A basic shoutout, a climber for 50s, and +0.5 gap. A second follow from that account does nothing. A later gift still replaces the shoutout with the paid brick.
 - likes: batch every 15 likes into one anonymous sparkle and +0.15 floors. No sprite, no name.
 - share: one anonymous 2s lava hold
 - comment 1 or 2: counted only while a path choice is open

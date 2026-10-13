@@ -159,6 +159,7 @@
         hop: 0,
         pop: 0,
         cape: false,
+        followed: false,
       };
       state.viewers.set(id, viewer);
     }
@@ -287,11 +288,21 @@
 
   function addFollow(now, name) {
     const viewer = ensureViewer(name || nextName());
-    viewer.until = Math.max(viewer.until, now + 20000);
+    if (viewer.followed) return false;
+    viewer.followed = true;
+    viewer.until = Math.max(viewer.until, now + 50000);
     if (!viewer.band) viewer.band = 0;
-    viewer.pop = Math.max(viewer.pop, 0.6);
+    viewer.pop = Math.max(viewer.pop, 0.7);
+    viewer.hop = Math.max(viewer.hop, 0.85);
     placeInFront(viewer);
-    pushTicker(viewer.name, "started climbing", true);
+    if (state.collapsing) state.collapsing.to += 0.5;
+    else state.floor += 0.5;
+    const alreadyNamed = state.bricks.some(function (brick) { return brick.name === viewer.name; });
+    if (!alreadyNamed) addBrick(viewer, { id: 0, label: "follow" }, viewFloor(now));
+    pushTicker(viewer.name, "followed the climb", true);
+    const y = screenY(viewFloor(now), viewFloor(now));
+    burst(540, y - 20, viewer.color, 6);
+    return true;
   }
 
   function startCollapse(now) {
@@ -438,7 +449,7 @@
 
   function drawClimber(viewer, x, y, now, slip) {
     const band = viewer.band || 0;
-    let scale = band >= 4 ? 1.48 : 1.12;
+    let scale = band >= 4 ? 1.48 : band >= 1 ? 1.12 : 1;
     if (viewer.cape && state.introViewer === viewer && now < state.introUntil) scale = 2.15;
     scale *= 1 + viewer.pop * 0.18;
     const step = Math.sin(now / (now < state.frenzyUntil ? 90 : 180) + x) * 5;
@@ -793,8 +804,8 @@
       ctx.font = "700 22px " + FONT;
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
-      ctx.fillText("@" + brick.name, x + 14, y + (brick.band >= 4 ? 24 : 32));
-      if (brick.band >= 4) {
+      ctx.fillText("@" + brick.name, x + 14, y + (brick.band >= 4 || brick.band === 0 ? 24 : 32));
+      if (brick.band >= 4 || brick.band === 0) {
         ctx.font = "700 16px " + FONT;
         ctx.fillStyle = brick.band >= 6 ? "#6a4a12" : biome.accent;
         ctx.fillText(brick.label, x + 14, y + 46);
@@ -1020,6 +1031,7 @@
 
   function drawPitch() {
     const lines = [
+      "Follow once, name goes up",
       "$1 puts your name up",
       "Any gift shows on screen",
       "Big gifts steal the scene",
@@ -1039,7 +1051,7 @@
     ctx.textBaseline = "middle";
     ctx.font = "700 22px " + FONT;
     lines.forEach(function (line, i) {
-      const ly = y + 46 + i * 62;
+      const ly = y + 36 + i * 52;
       ctx.fillStyle = "#ffc857";
       ctx.beginPath();
       ctx.arc(x + 28, ly, 6, 0, Math.PI * 2);
@@ -1232,6 +1244,11 @@
   window.addEventListener("keydown", function (event) {
     if (event.repeat) return;
     const key = event.key;
+    if (key === "0" || key === "f" || key === "F") {
+      event.preventDefault();
+      addFollow(performance.now());
+      return;
+    }
     const index = BANDS.findIndex(function (band) { return band.key === key; });
     if (index >= 0) {
       event.preventDefault();
@@ -1243,5 +1260,6 @@
   seed();
   canvas.focus();
   window.__spire = state;
+  window.__spireFollow = addFollow;
   requestAnimationFrame(frame);
 })();
