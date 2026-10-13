@@ -409,7 +409,7 @@
         state.side.hp -= state.side.max * (dt / 12);
         state.side.flash = Math.max(0, state.side.flash - dt);
         if (state.side.hp <= 0) {
-          burst(880, 1040, "#ffc857", 12);
+          burst(880, 366, "#ffc857", 12);
           pushTicker("Side boss", "the swarm cracked it", false);
           state.side = null;
         }
@@ -971,7 +971,7 @@
 
     if (state.side) {
       const sx = 880;
-      const sy = 1040;
+      const sy = 366;
       ctx.save();
       ctx.translate(sx, sy);
       ctx.scale(1.2, 1.2);
