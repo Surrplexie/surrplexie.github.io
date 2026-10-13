@@ -1,0 +1,742 @@
+Continuing on, what’s be the core objectives in game a watcher would actually stop to view: (start) How to tt livestreamers get active in game auto actions when a donation happens for a troll or boost and such  
+
+Streamers use stream integration tools and automation bots that connect live events (like donations, bits, subs, or channel points) directly to game inputs, mods, or APIs.
+
+The three main tools used to achieve this include:
+
+Streamer.bot (The Industry Standard for Advanced Automation)
+Streamer.bot is a free, highly powerful desktop application that listens to events from Twitch, YouTube, Kick, and donation platforms (like Ko-fi, Streamlabs, or Pally.gg).
+
+How it works: When a donation happens, Streamer.bot catches the webhook/event data.
+In-game action: It can execute custom C# code, simulate keyboard presses, move the mouse, or send commands via macros to make your character jump, drop items, or turn around. It can also interface with specific game APIs.
+2. Dedicated Game Mods and Middleware (e.g., StreamRoller)
+
+For popular games (like Minecraft, Satisfactory, or Skyrim), creators use specialized streaming middleware and mods.
+
+How it works: Tools like StreamRoller or specific game mods (such as Minecraft's Donation-Alerts-Integrate) link your live streaming dashboard directly to the game server.
+In-game action: When a "troll" donation or bit cheer comes in, the mod reads the payload and automatically triggers an in-game event—such as spawning an enemy, changing the weather, launching a sound effect, or forcing a jump command.
+3. Loupedeck, Stream Deck, or Touch Portal (Macro Triggers)
+
+If a game doesn't have a direct API integration, streamers often bridge the gap using hardware/software macros.
+
+How it works: Alert software (like Streamlabs or Blerp) sends an audio/visual cue or triggers an action on a macro deck via WebSockets.
+In-game action: While some streamers trigger these manually when they see the alert pop up on their screen, advanced setups automate the macro software to press virtual hotkeys the second a specific donation threshold is hit.
+What specific game are you trying to set up auto-actions for?
+
+What is a new game idea (custom made just for donation static) for tt live where players can follow, then the are in the game, donate 1 coin, get a boost, 2 for better, 100 for more better, so on, without to much pay to win vibes, on a tt live while also actually getting interest from the viewers while friendly and semi simple whether a simple 2d game or 2d multi sim for players, while the streamer doesn’t need to be present yapping and begging, and all paid 1 coins to 5000 coins are equally felt appreciated and balanced
+
+To pull off a successful TikTok Live stream where viewers play a game automatically, donations directly control boosts, and you don't have to talk or beg, you need a game concept built around idle/passive progression with spectator chaos.
+
+TikTok viewers have short attention spans; they love watching little characters struggle, race, or build things, and they love tipping to mess with the outcome.  
+
+Reddit
+
+Game Concept: "The Endless Crawler: Colony vs. Chaos"
+
+A simple, vertical 2D multi-sim (think Fallout Shelter meets an automated idle clicker or endless runner) running on your screen while you can walk away or do chores.
+
+How It Works (The Core Loop)
+
+The Setup: A vertical 9:16 screen shows a tiny underground or space colony (or a cute creature climbing an endless tower).
+The Auto-Gameplay: The little characters automatically mine, walk, build, or fight basic obstacles on a loop. No human input is needed to keep the game moving.
+The Viewer Integration: When a viewer follows or sends a TikTok gift (coins), they instantly spawn into the game as a named avatar (e.g., a worker drone, a knight, or a little slime) or they drop a global boost onto the map.
+The Coin Scaling & "Anti-Pay-to-Win" Balance
+
+To avoid toxic pay-to-win dynamics (where one rich whale ruins it for everyone), donations should accelerate collective progress or cause funny chaos, rather than granting permanent overpowered stats that break the game.
+
+Tier 1: The Micro-Donation (1 Coin / Rose / Like-packs)
+In-game action: Spawns a basic helper unit named after the viewer, or gives a tiny 5-second speed boost to a random character.
+Vibe: Cheap, highly accessible, lets everyone get their name on the screen.
+Tier 2: The Medium Boost (10 to 50 Coins)
+In-game action: Drops a resource crate, heals the team, or triggers a "Frenzy Mode" where all workers speed up for 30 seconds.
+Tier 3: The Troll / Mega Boost (100+ Coins / Premium Gifts)
+In-game action: Triggers a fun, semi-disruptive event—like spawning a funny boss monster, changing the weather to a rainstorm that slows everyone down, or dropping a massive treasure chest that benefits all players currently active in the simulation.
+Why This Fits Your Goal Perfectly
+
+Zero Yapping Required: Because it's an automated simulation with dynamic on-screen text (e.g., "UserX just sent a Rose and boosted the Miner!"), the game's visuals and UI do 100% of the talking. You can literally mute your mic, read a book, or play another game.
+High Viewer Retention: People stay on the stream because they want to watch their spawned character survive the next wave or see how high the colony can climb.
+Friendly Community Vibe: By making higher donations trigger shared rewards (like a server-wide buff or a funny event) instead of just making one person invincible, it keeps the chat friendly and cooperative rather than fiercely competitive.
+How to Actually Build/Run This Easily
+
+You don't necessarily have to code this from scratch:
+
+Web-Based Simulators & Frameworks: Tools like Playroom Kit allow developers to build simple 2D multiplayer browser games that natively hook into TikTok Live events (likes, comments, and gifts) with minimal code.  
+Playroom Kit
+
+Existing Middleware: Platforms like TikXander or StreamToEarn feature pre-made vertical 2D mini-games and widget overlays (like physics-based gift jars or crowd-runner games) where gifts instantly trigger actions on screen without you touching a keyboard.  
+www.tikxander.com
+
+about where auto spawning their bot for a follow or small coins, since streamers has one screen say 100+ characters are added how would it be organised 
+
+When 100+ or even thousands of viewers trigger bots, characters, or units to spawn on a single screen, games handle the visual chaos using specific layout and organization patterns so the screen doesn't just turn into an unreadable mess.
+
+Instead of treating every single viewer like a completely independent entity that clutters the board, games organize the chaos through three main architectural styles:
+
+The "Crowd Swarm" (Queue & Merge System)
+Instead of rendering 100 individual characters with separate AI paths (which lags the game and overlaps sprites), the game groups them.
+
+How it works: When 50 people follow or drop small coins back-to-back, they don't spawn 50 separate individual units. Instead, they get merged into a single collective swarm, a marching army, or a stack (like a tower climber or crowd runner).
+Visual Organization: Little name tags float above the cluster or cycle through a rolling list on the side of the 9:16 screen. When a viewer donates a higher coin tier, their specific avatar steps out of the crowd or gets bigger/wears a crown so they still get individual recognition.
+2. The "Active Slots" Rotation (First-Come, First-Served)
+
+If the game relies on individual characters running around on screen (like little workers in a mine or fighters in an arena), the game engine enforces a maximum active limit (e.g., max 20 active bots on screen at once).
+
+How it works: If character slots are full, new followers or small gifters go into a waiting queue list displayed on a side panel (e.g., "Queue: 84 players waiting").
+Visual Organization: As active characters "die," finish a task, or time out, the next users in the queue automatically drop onto the screen. This keeps the action pace steady and prevents visual clutter.
+3. Vertical Zoning (Lane or Grid Partitioning)
+
+Because TikTok Live uses a strict vertical 9:16 aspect ratio, horizontal space is very narrow, but vertical space is tall.
+
+How it works: The screen is split into structured vertical lanes (like a highway or a multi-tier platform tower).
+Visual Organization: Bots or items automatically fall into fixed tracks. Because they move in structured lines or layers rather than random directions, 100+ entities can occupy the screen cleanly without crashing into each other or hiding the main objective. 
+For a live viewer on TikTok, the decision to stop scrolling comes down to instant visual clarity and emotional narrative.
+
+When someone lands on an automated TikTok Live stream, they don't care about the game mechanics at first—they care about what is happening right now, who is winning/losing, and how they can mess with or join it.
+
+Core Objectives That Stop a Viewer’s Scroll
+To turn a random scroller into a long-term viewer, your game's visual design must serve 4 key objectives:
+
++-----------------------------------------------------------------------+
+|                       THE VISUAL HOOK CYCLE                           |
+|                                                                       |
+|   1. Instant Comprehension --->  2. Micro-Drama / High Stakes          |
+|      ("I get what this is")     ("They are about to fail/win!")       |
+|                                                                       |
+|   4. Visible Public Flex  <---  3. Frictionless Agency                |
+|      ("My name is huge!")       ("I can change this for 1 coin!")     |
++-----------------------------------------------------------------------+
+1. Instant Comprehension (The "3-Second Rule")
+The Goal: A viewer scrolling past must understand the game's premise without needing sound, reading a long text box, or hearing a host explain it.
+
+Visual Drivers:
+
+A Single Directional Goal: Upward climbing (Tower/Endless Staircase), forward racing (Plinko/Marble Run), or surviving inward waves (Base Defense).
+
+A Clear Progress Bar: A prominent bar or meter at the top showing "Level 14 / 20" or "Boss HP: 12%".
+
+Obvious Danger: Red lava rising, giant boulders rolling down, or a timer ticking down.
+
+2. Micro-Drama & High-Stakes Friction
+The Goal: Create moments where the game is almost failing or succeeding. TikTok viewers stay when they feel like they arrived right before something big happens.   
+GMG
+
+Visual Drivers:
+
+"Close Calls": Little characters hanging onto a ledge with 1% health, or a tower leaning dangerously to one side.
+
+Tension Waves: Scheduled "Boss Attacks" or "Storm Seasons" every 90 seconds. If nothing is threatening the characters on screen, viewers keep scrolling.
+
+3. Immediate Frictionless Agency
+The Goal: Convince the viewer that a single micro-action (a tap or a 1-coin Rose) will yield instant, visible gratification on screen.
+
+Visual Drivers:
+
+On-Screen Ticker / Feed: An overlay showing: @ViewerName sent Rose 🌹 ➔ Spawned Shield Drone!.
+
+Instant Feedback: The exact moment a gift arrives, a physical object drops onto the map with a loud visual pop or dynamic sound effect.
+
+4. Visual Flexing (Status & Identity)
+The Goal: Tap into human psychology—viewers don't just want to help; they want everyone in chat to see they helped.
+
+Visual Drivers:
+
+Dynamic Scaling: Big spenders (100+ coins) get huge, glowing avatars with crowns, while 1-coin contributors get standard worker sprites.
+
+Leaderboards on Screen: A persistent "Top MVP of the Stream" section on the left or right margin.
+
+Viewer Retention Mechanics: How the Screen Keeps Them
+Objective	Poor Implementation (Scroll-Away)	Great Implementation (Viewer Stays)
+Pacing	Constant static walking with no change in environment.	Biomes change every 5 minutes (e.g., Green Forest → Volcanic Cavern → Cyber City).
+Incentive	Tipping makes a bar go up by 1%.	Tipping drops a giant anvil, triggers a frenzy party mode, or spawns a mini-boss.
+Community	Viewers feel like they are competing against each other toxically.	Viewers feel like they are co-op raiding a giant health pool or trying to survive a shared challenge.
+Call to Action	"Please donate coins to help me."	On-screen graphic: "Can Chat reach Floor 100 before the Lava catches up?"
+A Ideal On-Screen Layout (9:16 Vertical Ratio)
+Because you are streaming in TikTok's native vertical orientation, layout real estate is key to holding attention without causing visual fatigue:
+
++------------------------------------+
+|  [ PROGRESS BAR: FLOOR 42 / 100 ]  | <-- High-Level Goal
+|  [ TOP MVP: @UserX (500 Coins)  ]  | <-- Leaderboard / Flex
++------------------------------------+
+|                                    |
+|          THE GAMEPLAY ZONE         |
+|                                    |
+|   - Vertical Tower / Runway        |
+|   - Swarm of Avatars Climbing      |
+|   - Dynamic Weather / Hazards      |
+|                                    |
++------------------------------------+
+| RECENT ACTION TICKER:              | <-- Live Event Stream
+| - @Alex sent Rose -> Speed Boost!  |
+| - @Sam sent Doughnut -> Dropped Bomb|
++------------------------------------+
+| ON-SCREEN GIFT LEGEND:             | <-- Clear Call-To-Action
+| 🌹 Rose (1) = Helper Bot           |
+| 🍩 Doughnut (30) = Shield Bubble   |
+| 🦁 Lion (29999) = God Mode Raid    |
++------------------------------------+
+Would you like to explore specific game mechanics for a vertical crawler, or look into the best technical setups for integrating these stream tools?
+
+How would tt donations plug automatically into the game without human intervention if left afk and such, on browser (assume game is browser based for streamer)
+
+To run a browser-based game completely AFK while TikTok donations, likes, and follows automatically control the gameplay, the system relies on a headless event listener pipeline.
+
+No human intervention or manual clicking is required because the connection runs through a direct programmatic bridge between TikTok's live servers and your browser engine.
+
+The 3-Step Automated Architecture
+Summary of Popular Stack Options
+Custom Code Stack: A Node.js backend running tiktok-live-connector paired with a vanilla HTML/JS frontend connected via Socket.IO. Fully free, highly customizable, and runs locally or on a cheap cloud VPS.   
+GitHub
+
+Plug-and-Play Frameworks: Playroom Kit (supports native TikTok live event hooks in browser mini-games) or existing streaming game portals that handle the backend listener for you.   
+Playroom Kit
+
+Explain the proposed game mechanics where it can run 6+ hrs without steamer present
+
+To keep a browser game running for 6 to 12+ hours uninterrupted without a host sitting at the desk, the game cannot rely on a linear "start to finish" structure (like a standard campaign or finite level). If the game ends or gets stuck, the stream dies.
+
+Instead, an automated, infinite-running stream game relies on self-healing loops, perpetual friction, and automated wave orchestration.
+
+Here is how the underlying game mechanics are designed to maintain high engagement, prevent soft-locks, and balance continuous progression for multi-hour streams.
+
+1. The Automated Game State Loop
+The entire game operates on a continuous, multi-tiered cycle that guarantees the game never soft-locks or reaches a permanent "Game Over" screen.
+
+       +-----------------------------------------------------+
+       |                  1. ASCENSION PHASE                 |
+       |  - Automated swarm climbs / builds endless tower    |
+       |  - Viewer gifts grant speed, shields, or resources  |
+       +--------------------------+--------------------------+
+                                  |
+                                  v
+       +-----------------------------------------------------+
+       |                 2. THRESHOLD BOSS / EVENT           |
+       |  - Triggers every 50 levels OR every 15 minutes     |
+       |  - Requires X collective DPS or defensive buffs     |
+       +--------------------------+--------------------------+
+                                  |
+               +------------------+------------------+
+               |                                     |
+    (Community Succeeds)                     (Community Fails)
+               |                                     |
+               v                                     v
++------------------------------+     +------------------------------+
+|     3A. CHECKPOINT / BONANZA |     |       3B. COLLAPSE & REBOOT  |
+| - Biome/theme visually shifts|     | - Colony falls to last safe  |
+| - Everyone active gets bonus |     |   checkpoint level (e.g. Lvl |
+| - Difficulty ramps up        |     |   30) + keeps passive PERKS  |
++--------------+---------------+     +--------------+---------------+
+               |                                     |
+               +------------------+------------------+
+                                  |
+                                  v
+       +-----------------------------------------------------+
+       |                 4. REBALANCED LOOP                  |
+       |  - Game resumes automatically without human click   |
+       +-----------------------------------------------------+
+Self-Healing & Automated Reset Mechanics
+No Manual "Play Again" Buttons: When a run fails (e.g., a boss destroys the colony), the screen triggers a dramatic 10-second collapse animation, awards global prestige points, and automatically soft-resets to the nearest checkpoint level.
+
+Prestige Mechanics (Meta-Progression): Every soft-reset makes future runs slightly faster (e.g., base speed +5%). Viewers who contributed in previous runs retain elevated status badges on their spawned avatars for the duration of the entire 6+ hour stream.
+
+Anti-Softlock Degeneracy: If no one donates or chats for 30 minutes, the game's difficulty automatically scales down slightly so the baseline AI can slowly complete levels on its own without completely halting progress.
+
+2. Dynamic Difficulty & Scaling (Anti-Whale & Anti-Boredom)
+If a wealthy viewer drops a large gift early in hour 1, it shouldn't "break" the game or make it trivial for the remaining 5 hours.
+
++-------------------------------------------------------------------------+
+|                      DYNAMIC THREAT ADJUSTMENT (DTA)                    |
+|                                                                         |
+|   [ Heavy Gift Event (e.g. 500 Coins) ] ---> [ Instant Massive Buff ]   |
+|                                                      |                  |
+|                                                      v                  |
+|   [ Game Auto-Detects High Swarm Power ] --> [ Spawns Counter-Hazard ]  |
+|                                              (e.g., Environmental Wind, |
+|                                               Heavy Gravity, Minions)   |
++-------------------------------------------------------------------------+
+Balancing Mechanics
+Diminishing Returns on Single-User Buffs: Tipping 1 Rose provides a full 5-second boost. Tipping 100 Roses at once extends the duration and impact, but with a logarithmic scaling curve (Effect=log 
+2
+​
+ (Coins)) to keep the screen from erupting into game-breaking stats.
+
+Global Co-Op Buffs vs. Individual Flex:
+
+Low Tier (1–10 Coins): Individual action (spawns your personal mini-bot, drops a small health kit).
+
+Mid Tier (10–100 Coins): Environmental modifications (turns low gravity on, spawns a resource crate for all active bots).
+
+High Tier (100–500+ Coins): Trigger Global Frenzy Events (e.g., 60 seconds of 2x coins earned for every viewer on screen) or spawn a giant, funny Raid Boss that everyone's bots must fight together.
+
+3. Crowd & Entity Memory Allocation (6+ Hour Stability)
+Running a browser canvas continuously for 6+ hours with hundreds of user interactions can lead to memory leaks or massive visual lag if entity lifecycle management isn't built into the core game loop.
+
++------------------------------------------------------------------------+
+|                       ENTITY LIFECYCLE MANAGEMENT                      |
+|                                                                        |
+|  [ New Viewer Joined/Donated ] ---> [ Assigned to Active Visual Slot ] |
+|                                                    |                   |
+|                                                    v                   |
+|  [ Inactive > 5 Minutes ] -------> [ Merged into "Swarm Counter" ]    |
+|                                     (Sprite removed, stat retained)    |
+|                                                    |                   |
+|                                                    v                   |
+|  [ Viewer Interacts Again ] -----> [ Instantly Re-rendered on Screen ]|
++------------------------------------------------------------------------+
+Visual & Technical Management
+The Object Pool System:
+
+Instead of constantly creating (instantiate) and destroying (destroy) DOM elements or Canvas objects, the engine reuses a fixed pool of (e.g.) 50 active sprite objects.
+
+When a new viewer arrives, an idle object from the pool is assigned their user name and customization layer.
+
+Crowd Compression:
+
+If 200 people follow within 10 minutes, the game displays 20 active animated characters at the front of the pack, while the remaining 180 are represented as a dynamic background "marching shadow line" or numerical counter (+180 Supporters).
+
+When an inactive viewer sends a new gift, their character pops out of the background line directly into the front row with a visual effect.
+
+Automated Memory Flushing:
+
+Text notifications (e.g., @User sent a Rose!) auto-fade after 4 seconds and are immediately purged from memory.
+
+Particle effects (e.g., sparks, explosions) have hard visual caps (max 30 active particles at once) to ensure the streamer's browser GPU memory stays stable over many hours.
+
+4. Automated Engagement & Idle Events (The "Anti-Silence" Engine)
+During quiet periods where no gifts are coming in, the game must generate its own drama to keep passby scrollers interested.
+
+Time Interval	Automated Event	Purpose
+Every 30 Secs	Environmental Hazards (e.g., falling rocks, gust of wind, rising lava line)	Keeps visual movement constant on the 9:16 vertical feed.
+Every 3 Mins	Community Mini-Poll / Choice Event	An on-screen prompt pops up: "Chat: Type 1 for Left Path (Treasure) or 2 for Right Path (Boss)". Automated chat reader counts inputs.
+Every 15 Mins	Automated Raid Boss Encounter	A 2-minute timer starts. The game announces a mega monster. Even standard baseline bot attacks will damage it, giving non-paying viewers a feeling of shared progress.
+Every 60 Mins	Biome Shift / Season Change	The entire background artwork, enemy color schemes, and soundtrack change (e.g., Ice Cavern → Neon City) to make the stream look completely fresh to returning viewers.
+5. Visual Summary of the Stream System
+┌─────────────────────────────────────────────────────────────────┐
+│                    TIKTOK LIVE STREAM CANVAS                    │
+│                                                                 │
+│  [ PROGRESS Bar ] Level 142 (Biome: Volcanic Spire)             │
+│  [ GLOBAL EVENT ] Boss Spawn in 02:15                           │
+│ ─────────────────────────────────────────────────────────────── │
+│                                                                 │
+│                      /\                                         │
+│                     /  \  <-- Active Swarm Climbing             │
+│                    / [] \     (Top 20 Active Avatars Rendered)  │
+│                   /______\                                      │
+│                  ░░░░░░░░░  <-- Crowd Compression Zone           │
+│                  (+230 Units)   (Shadow marchers / stat stack)  │
+│                                                                 │
+│  [ HAZARD ]  ~~~~~~~~~~~~~~ <-- Rising Lava Hazard Line         │
+│                                                                 │
+│ ─────────────────────────────────────────────────────────────── │
+│  [ AUTOMATED TICKER ]                                           │
+│  • @Alex: Spawns Shield Drone (Rose)                             │
+│  • @Sam: Triggered Freeze Wave (Doughnut)                       │
+│ ─────────────────────────────────────────────────────────────── │
+│  [ CALL TO ACTION ]                                             │
+│  🌹 Rose = Worker Bot | 🍩 Doughnut = Frost Shield              │
+└─────────────────────────────────────────────────────────────────┘
+Locked next slice: one game, one screen, one pipeline. Both the visual layout and the listener are specified below so a build can start without another fork.
+
+LOCKED GAME: "LAVA SPIRE"
+
+One sentence a scroller can read with the sound off: named climbers race up a tower while lava chases them, and a gift puts your name on the tower.
+
+The streamer machine runs two local processes and nothing else. A Node listener joins the TikTok LIVE room. A browser tab draws a 1080x1920 canvas that OBS captures as a browser source. The streamer can mute, walk away, and leave both running. The game never shows a modal, a "play again" button, or a game-over stop.
+
+Why this and not a colony, a race, or a physics jar: a single vertical chase is readable in under three seconds, it has a built-in failure state (lava catches the swarm), and a tall 9:16 frame is the level itself. Side lanes, inventories, and separate bases hide the goal.
+
+THE SCREEN (1080 x 1920, safe margins 48px)
+
++------------------------------------------+
+|  FLOOR 142          gap 9    VOLCANIC    |  y 48-150   goal + biome
+|  LAVA ##############------ chase line    |  the gap is the drama
+|  BOSS in 01:40   or   BOSS HP 62%        |
+|                          MVP @Sam  1.2k  |  one name, session coins
++------------------------------------------+
+|                                          |
+|     tower shaft, camera locked to swarm  |  y 170-1480  gameplay
+|     last ~40 bricks visible, named       |
+|     up to 18 climber sprites on the rungs|
+|     +N shadow count under the pack       |
+|     lava line crossing the shaft         |
+|                                          |
++------------------------------------------+
+|  @Alex  rose     joined the climb        |  y 1500-1680 ticker, 3 lines
+|  @Sam   doughnut  frost, lava held       |
+|  @Kai   lion      banner + world storm   |
++------------------------------------------+
+|  rose 1 name+rung | doughnut 30 hold lava|  y 1700-1860 legend
+|  crown 100 frenzy | lion  big landmark   |  pulses only when chat is quiet
++------------------------------------------+
+
+Camera rule: the swarm anchor stays near 62% down the gameplay zone so there is always tower above them (the future) and lava below them (the threat). Big gifts punch the camera for under a second, then it eases back. The legend hides after 45 seconds of gifts and returns when 90 seconds pass with no gift, so the middle of a hot raid is not covered in instructions.
+
+WHAT MOVES EVERY TICK (10 Hz sim, 30 fps draw is enough for OBS)
+
+State that matters:
+- floor, lavaFloor, checkpointFloor, biomeIndex, prestige
+- boss: none, or { name, hp, maxHp, endsAt }
+- gap = floor - lavaFloor
+- viewers keyed by TikTok user id
+- 18 render slots + a shadow count
+- a brick history for the tower wall
+- a 3-line ticker
+
+Passive rates, before gifts:
+- swarm climbs at 0.10 floors/sec (about 6 floors/min)
+- lava climbs at 0.07 floors/sec
+- gap therefore opens slowly on its own
+
+Tension is manufactured on a clock, not by hoping chat shows up:
+- every 40s a hazard surges lava by +0.35 floors/sec for 6s (about +2 floors): rocks, gust, drip, quake
+- a quiet room still watches the gap shrink, then breathe
+
+Rubber band, so hour 1 and hour 6 feel similar:
+- gap under 3: the next surge is cut in half (mercy, the run continues)
+- gap over 35: the next hazard is named and full-screen ("sidewind", "meteor crack")
+- gap over 60: pull the next boss forward
+- a whale opens the gap; the world answers with a bigger picture, and the run keeps lasting about the same number of minutes
+
+Boss:
+- every 50 floors or 12 minutes, whichever comes first
+- HP is set so passive climbers alone finish it in about 90s
+- recent gift power raises HP and the size of the sprite, and the kill time stays near 90s
+- win: checkpoint saves, a chest burst, biome shimmer
+- during a boss, lava still moves; if lava reaches the swarm, the collapse below fires
+
+Collapse (the only failure, and it is automatic):
+- 8 second fall animation
+- floor drops 20, and never below checkpointFloor
+- prestige += 1, passive climb +2%, hard cap +40% for the session
+- ticker: "Spire slipped to floor N. Climb continues."
+- no click, no countdown the streamer has to dismiss
+
+Anti-silence, layered on the hazard clock:
+- 4 min: a 20s path choice. Chat types 1 or 2. Both paths are the same power and a different skyline, so a vote cannot grief the room.
+- 8 min with zero gifts: a scripted close call drops the gap to 3, then mercy rubber-band recovers it. Passers-by see a near miss.
+- biome every 100 floors: palette, enemy silhouette, hazard name. Forest, cavern, volcanic, ice, neon, storm glass, then the set loops with a new prestige mark.
+- each hour: a 12s recap reel of the five highest session gifters and the last landmark bricks, then the climb resumes under the reel.
+
+GIFTS: SPECTACLE IS GENEROUS, POWER IS LOGARITHMIC
+
+Two different budgets. Mixing them is what makes a rose feel fake or a lion end the stream.
+
+Power budget (changes the climb):
+  instantFloors = 0.35 * log2(1 + coins)
+  1 coin      -> 0.35 floors   (one visible rung)
+  10 coins    -> 1.2
+  100 coins   -> 2.3
+  1,000       -> 3.5
+  5,000       -> 4.3
+  30,000      -> 5.2
+
+A lion is about 15 times a rose on the floor counter, not 30,000 times. The rest of the lion's cost is spent on screen time, size, and a unique event.
+
+Shared speed from gifts refreshes a single swarm buff. It does not multiply per gift.
+- strength caps at +80% climb
+- duration = 4 + 2 * log2(1 + coins) seconds, and a new gift refreshes the timer up to a 25s cap
+- rose spam extends a party; it does not stack into a teleport
+
+Attention budget (what the room sees):
+- every gift gets a ticker line and a brick with that person's name, including 1 coin
+- exclusive visuals are tiered, and only the top tier owns the screen
+
+Coin bands (examples; match whatever the room's gift catalog calls them):
+
+Band        Coins      Personal                         Shared event
+1 micro     1-4        climber joins front for 75s      one rung hop + a small brick
+2 small     5-19       hat on that climber, 90s         hop + swarm buff refresh
+3 mid       20-99      outline, name held longer        supply: lava frozen for 5s
+4 crown     100-499    larger sprite, crown             frenzy 20s, climb x2, palette flash
+5 banner    500-1999   name locked for the whole event  side boss the swarm slaps together
+6 landmark  2000+      2.5s full-width intro            45s world weather + checkpoint forced saved
+
+How 1 coin and 5,000 coins both feel appreciated:
+- a rose always puts a named body on the ladder and a brick in the wall. That is the whole product for a micro gift. It is immediate, and it is still there when the camera scrolls.
+- a landmark does not delete roses. It adds an event roses cannot trigger: intro, weather, a saved checkpoint, a plaque that stays in the hourly reel.
+- MVP tracking uses raw coins, so flex is real and public. The climb math does not use raw coins.
+- the ticker reserves one of its three lines for the latest micro gift whenever a landmark is also on screen, so a rose during a lion is not invisible.
+- rose streaks coalesce: gifts from the same user inside 1.5s become one event with summed coins, then the rung hops release one every 1.2s. Twenty roses read as a ladder of hops, not a single eaten number.
+
+Non-payers keep a reason to stay, and they do not dilute names:
+- follow: a climber for 50s, one ticker line, no hop, no brick
+- likes: batch every 15 likes into one anonymous sparkle and +0.15 floors. No sprite, no name.
+- share: one anonymous 2s lava hold
+- comment 1 or 2: counted only while a path choice is open
+
+CROWD RULES (the 18 slots)
+
+Priority for a slot, highest first:
+1. landmark or banner event owner, until that event ends
+2. anyone who gifted in the last 90s
+3. latest follows
+4. everyone else is a number
+
+When a 19th named person arrives, the lowest-priority slot drops into the shadow count ("+N climbing") and their stat stays in the viewer map. A new gift from them pops that slot back to the front with a 300ms scale-in. Likes never take a slot. Name labels: the six highest-priority climbers keep a name; the other twelve cycle a single floating name every 2s. Brick text uses the gift name, so the wall carries more identities than the sprites do.
+
+Viewer record, per user, for the session:
+- display name, total coins, last gift time, last follow time, bricks painted, prestige badges (how many collapses they were present for)
+- no permanent account, no cross-stream database required for v1
+
+AFK PIPELINE
+
++------------------+     websocket      +---------------------------+
+| TikTok LIVE room | -----------------> | listener.mjs (Node)       |
++------------------+                    | tiktok-live-connector     |
+                                        | reconnect, dedupe, coalesce|
+                                        +-------------+-------------+
+                                                      | Socket.IO localhost:3939
+                                                      v
+                                        +---------------------------+
+                                        | spire.html canvas 1080x1920|
+                                        | OBS browser source         |
+                                        +-------------+-------------+
+                                                      | snapshot every 20s
+                                                      v
+                                        spire-state.json (resume after crash)
+
+Listener duties, and only these:
+- connect with the streamer's uniqueId
+- on disconnect, backoff 2s, 5s, 15s, then 30s, and keep trying
+- emit normalized events: { id, type, userId, name, coins, giftName, at }
+- type is follow | like | share | gift | chat
+- dedupe by TikTok event id
+- coalesce same-user gifts inside 1.5s before emit
+- batch likes and emit every 2s as a count
+- ignore anything the sim does not use (emotes, room stats, viewer-count spam)
+
+Browser duties:
+- render and simulate even if the socket is down; the climb never waits on chat
+- on reconnect, keep going; missed events are missed, and that is acceptable
+- write spire-state.json every 20s: floor, lava, checkpoint, prestige, biome, boss, viewer map, last 40 bricks, ticker
+- on load, resume that file if it is under 12 hours old; otherwise start a fresh spire at floor 1 with gap 12
+- if the animation frame stalls for more than 5s, reload the page; OBS browser sources survive a reload, and the json brings the floor back
+
+Process model for a 6 hour leave:
+- listener and a tiny static file server launched by one start script
+- OBS already open on the scene
+- Windows power settings: prevent sleep on AC
+- a one-line on-screen "LIVE LINK OK / RECONNECTING" dot in the top margin, 16px, so a glance at the phone preview shows the pipe without a host talking
+
+Failure behavior the sim must swallow without a human:
+- duplicate gift event: second id dropped
+- gift with coins 0: treat as a follow-level join, no hop
+- name longer than 18 characters: slice
+- missing display name: "climber"
+- boss timer and hazard timer are timestamps, not frame counters, so a hitch does not skip or double a boss
+- snapshot writes are atomic (write temp, rename)
+
+BUILD ORDER
+
+1. Fake-gift canvas. Floor, lava, gap, 18 slots, ticker, legend, keyboard keys 1-6 fire the six bands. No network. The screen has to read in three seconds before TikTok is involved.
+2. Rubber band, hazards, boss, collapse, prestige. Leave it running two hours on fake input and on zero input.
+3. Node listener plus Socket.IO, still with a local fake emitter, then the real connector against a live room.
+4. Streak coalesce, like batching, shadow count, brick wall, hourly reel.
+5. Biome palettes and the six event animations. Juice after the rates feel fair.
+6. Soak: six hours, socket dropped twice on purpose, page reloaded once, state resumes, memory flat.
+
+V1 DOES NOT INCLUDE
+
+- personal weapons, inventories, or a winner
+- any gift that stuns other viewers or deletes their bricks
+- a second game mode
+- accounts, logins, or a database beyond spire-state.json
+- the streamer clicking, talking, or reading donations aloud
+
+RATES TO TUNE AFTER A REAL ROOM, NOT BEFORE
+
+The log curve, the 18 slot cap, the 40s hazard, and the 50-floor boss are the knobs. First watch a quiet hour and confirm the gap still produces a close call. Then watch a rose flood and confirm hops stay readable. Then watch one landmark and confirm the floor counter barely jumps while the screen clearly belongs to that person for a few seconds.
+
+SPRITE LIST
+
+The stream is watched on a phone, then crushed by TikTok's video encoder. Sprites are big shapes, 2px outlines, and flat color. Fine detail, profile photos, and thin lines disappear, so they are not part of the look.
+
+One character. Every viewer is the same soot-kid body. A person is recognizable by name, a hashed body color, a hat, and a prop. Eighteen different species would turn the shaft into noise.
+
+V1 can draw every sprite in code at the sizes below (rounded rects, circles, triangles). PNG sheets replace those drawings later without moving layout. Same grid either way.
+
+Grid: design at 32px, draw bodies at 2x (64px on the 1080-wide canvas). Nearest-neighbor only. Animation is 2 frames at 4 fps for anything that loops. Bursts are allowed to be 8 frames, then they return to the loop. Particle cap stays 30.
+
+Draw order, back to front: cape, body, hand prop, hat or crown, 2px outline, name plate.
+
+Shared colors that never change with the biome, so danger stays readable in hour 6:
+
+- lava core #ff5a1f, lava highlight #ffd56a, lava deep #9a1c12
+- ink outline #1a1218
+- name plate #1a1210, text #fff6e8
+- gap safe #b6f27a, gap danger #ff3b3b, MVP gold #ffc857
+- outside the shaft #120c14
+
+Body colors, picked once per user from a hash of userId, 8 mid-value fills that survive both a pale ice shaft and a black neon shaft:
+
+#ff6b6b  #ff9f43  #ffd93d  #6bcb77  #4d96ff  #b983ff  #ff7eb3  #f4f1de
+
+SHEET 1 — CLIMBER (the only person)
+
+All frames 32x32. Four frames total.
+
+Id              When it plays
+climber_a       climb loop, left step
+climber_b       climb loop, right step
+climber_hop     one-shot on a gift rung; also the join pop
+climber_slip    gap under 5, and the whole 8s collapse
+
+The lowest slot in the pack uses climber_slip and tilts toward the lava whenever the gap is under 5. That single dangling body is the close call. The other seventeen keep climbing.
+
+Scale by band, applied to that person's sprite only:
+
+Band            Scale on screen     Extra
+follow          1.0   (64px)         no prop
+1 micro         1.0                  prop_bud
+2 small         1.0                  prop_spark + cap
+3 mid           1.0                  prop_crate + code outline pulse
+4 crown         1.35  (~86px)         prop_star + crown, frenzy only
+5 banner        1.35 after a 1.6 pop prop_flag + crown, name locked
+6 landmark      2.2 for the 2.5s intro, then 1.35 forever this session
+                                   prop_comet + cape + crown
+
+The landmark person stays marked with the cape after the intro. They do not stay giant. A shaft full of giants hides the lava.
+
+Accessories, separate sprites, origin on the 32 grid:
+
+Id        Size    Anchor        Notes
+cap       16x10   head (16, 4)  band 2+
+crown     18x12   head          band 4+
+cape      20x24   behind body   band 6, persists for the session
+
+Hand props, 12x12, anchor (22, 18). One prop language for every gift in that band. Famous gift names can swap the picture later (a rose for band 1, a doughnut for band 3). Unknown gifts use these:
+
+Id           Band    Reads as
+prop_bud     1       a small gift joined
+prop_spark   2       a buff
+prop_crate   3       a lava hold
+prop_star    4       frenzy
+prop_flag    5       a side boss
+prop_comet   6       a landmark
+
+Name plates are code, not sprites. Plate sits 4px above the hat. Full name on the six highest-priority climbers. One shared floating plate cycles the other twelve, 2s each. Minimum type size 22px. Names slice at 18 characters.
+
+Font: one bundled heavy rounded woff2, local file, so OBS does not depend on a network font. Ticker at 28px or larger. The gap number jumps to 72px centered on the shaft when the gap is 5 or under.
+
+SHEET 2 — SHAFT AND BRICKS
+
+The climb column is narrow: inner shaft 300px, centered. Two climbers fit across, overlapping, rungs every 48px. Eighteen bodies stack into a pack about 430px tall, sitting on the camera anchor. The wide margins are the brick walls, which is where most names live.
+
+Id               Size on canvas     What it is
+rung             300x8              one ladder step, repeats
+wall_tile        64x64              shaft edge, recolored per biome
+brick_small      220x36             bands 1-3, name + gift word
+brick_plaque     250x56             bands 4-5
+brick_landmark   270x84             band 6, stays in the hourly reel
+
+About 36 small bricks fit beside the visible shaft, close to the "last 40 bricks" rule. New bricks stamp at the swarm line and the column scrolls with the climb. Bricks that pass under the lava dim to 40% and keep their names, so the wall the room built is still visible while it sinks.
+
+A repeat gift still paints a new brick. The owner's older bricks pulse once so regulars flash without a new body.
+
+SHEET 3 — HAZARDS
+
+Six behaviors, six silhouettes, 32x32 drawn at 3x (96px). The sim only knows these six. Biomes recolor them in v1. A later costume set may redraw them (pinecone, icicle, laser) and the behavior ids stay.
+
+Id            Behavior                         Default read
+haz_rock      +lava surge, falls past the pack a dropping rock
+haz_gust      same surge, horizontal           streaks across the shaft
+haz_drip      same surge, from the ceiling     a drop on the lava line
+haz_quake     same surge, shaft shake          a crack at the swarm's feet
+haz_wind      the named surge when gap > 35    full-width sidewind
+haz_meteor    the named surge when gap > 35    one big falling crack
+
+Only one hazard silhouette is active at a time. Named surges may add a full-width dim, still inside the 30 particle cap.
+
+SHEET 4 — BOSSES
+
+One blocker per biome, 64x64 designed, drawn at 4x so it plugs the 300px shaft. Two frames: boss_idle, boss_hit. The swarm "fights" by bumping climber_hop once a second against the body while the HP bar drops. No per-person attack sprites.
+
+Id            Biome         Silhouette
+boss_stag     forest        a thorned head filling the shaft
+boss_crawler  cavern        a low crystal body
+boss_worm     volcanic      a slag jaw
+boss_jaw      ice           a frost mouth
+boss_moth     neon          a wide sign-moth
+boss_kite     storm glass   a shard kite
+
+The band 5 side boss reuses the current biome's boss, drawn at half size in the right margin beside the shaft. The main climb does not stop. It reads as a pinata the pack is slapping, and it uses boss_hit.
+
+Chest on a boss win: one 32x32 chest, eight sparkle particles, then gone.
+
+SHEET 5 — FX AND ICONS
+
+Loops and one-shots, all tiny. Hard cap 30 live particles, lava pixels not counted (lava is one animated strip).
+
+Id            Size     Used for
+fx_spark      8x8      like batches, anonymous
+fx_ring       24x24    the hop at the swarm's feet
+fx_frost      12x12    the 5s lava hold
+fx_pebble     8x8      four of these, offset, under the pack as the shadow mass
+fx_confetti   6x6      frenzy and boss win
+fx_shard      10x16    landmark weather, biome-tinted
+
+The shadow mass is those four pebbles plus the text "+N climbing". It is never N extra climbers.
+
+Legend icons, 32x32, the six props reused at 1x next to the words. The legend does not have its own art.
+
+Lava strip: one 300x48 band, 4 frames of bubbling, shaft-wide, same colors in every biome. Biomes do not recolor lava.
+
+PATH CARDS
+
+Two 300x160 silhouettes shown above the pack during the 20s vote: path_left, path_right. Recolored per biome. Same power either way. The winner's card stamps onto the upcoming shaft and the other fades. No third path, no combat difference.
+
+BIOME PALETTES
+
+Lava, text, outline, and body-color set stay as above. Only the shaft changes. Ice is the light biome, so the 2px ink outline is doing the work there.
+
+Biome         Shaft     Wall      Accent    Sky       Deep
+forest        #1c3a2a   #2f6b45   #d6f25a   #87c8e6   #0e2418
+cavern        #241838   #4a3568   #7ee0ff   #120818   #140c20
+volcanic      #2a1614   #4a2824   #ffb020   #3a1410   #140806
+ice           #d7eef8   #f4fbff   #3d7ea6   #9fd4ea   #1c4d6e
+neon          #120818   #241028   #ff3df2   #07040f   #ffe14a
+storm glass   #1a242c   #8fb4c4   #e8fff8   #6a7c88   #0e1418
+
+Prestige scars: each collapse leaves a 300x6 notch on the shaft at the slip floor, color #fff6e8 at 50%. Code, not a new sheet. After many hours the shaft is striped with survives.
+
+FULL DRAW LIST (so the art pass can be counted)
+
+PNG or code stand-in, once:
+- climber frames x4
+- cap, crown, cape
+- props x6
+- rung, wall_tile, bricks x3
+- hazards x6
+- bosses x6 times 2 frames
+- chest
+- fx x6
+- path cards x2
+
+That is 49 drawings. V1 stand-ins cover all 49 in code. The first real art pass, if one happens, is sheet 1 plus lava plus brick_small, because that is the entire three-second read. Bosses and biomes can stay geometric until the rates feel fair.
+
+IDEAS (parked, the rules above still hold)
+
+These reuse the same sheets. They are optional juice, in the order they help a mute phone stream.
+
+1. Gap numeral. Under gap 5, hide the small HUD number and put a 72px "9" on the shaft. People understand a countdown even when they do not understand the game.
+
+2. Collapse as a tour. During the 8s fall, the camera follows the pack down the brick wall they already painted, slip frame on everyone, then the checkpoint notch stamps. The failure is a replay of the room's names.
+
+3. Landmark intro is bricks, not a new character. For 2.5s, brick_landmark plates stack in the margin spelling the name, the comet prop drops out of the last plate, and the cape settles. Then weather (fx_shard, biome accent) runs 45s.
+
+4. Headbutt boss. One hop frame plus boss_hit is the whole fight. A HP bar in the top HUD is the rest. Easy to read, cheap to run for 90s.
+
+5. Regulars. The third gift in a session adds a 6px gold dot on that name plate, code-only. Whales already have crowns. The dot is for people who came back with roses.
+
+6. Sinking memory. Dim bricks under the lava are the emotional prop. A scroller who arrives during a high floor still sees a column of names disappearing into the glow.
+
+7. Costume hazards later. Keep the six behavior ids. Redraw haz_rock as a pinecone in forest, an icicle in ice, a laser tick in neon. The surge math does not change, the screenshot does, every 100 floors.
+
+8. Prop overrides for gifts the room actually sends. If giftName contains "rose", band 1 draws a rose instead of prop_bud. If it contains "doughnut", band 3 draws a doughnut instead of prop_crate. Everything else stays on the band prop. The catalog can change without a new system.
+
+9. Join wave. A follow plays climber_hop once and gets no brick. The hop is how the room sees a free join. A gift hop is the same frame plus a brick, so the upgrade is obvious.
+
+10. Hourly reel. Twelve seconds of the camera drifting down the landmark plaques only, names at 40px, then a cut back to the live pack. No new art.
+
+Leave parked until the fake-gift canvas has run: profile-photo hats, per-gift species, a second body, climbing animations beyond 4 frames, and any effect that needs more than 30 particles.
+
+Next plan slice: Socket.IO event names and the keyboard fake-gift map for build step 1.

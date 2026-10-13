@@ -31,6 +31,10 @@ defaults:
       path: "capsim"
     values:
       sitemap: false
+  - scope:
+      path: "idlettgame"
+    values:
+      sitemap: false
 
 exclude:
   - README.md
