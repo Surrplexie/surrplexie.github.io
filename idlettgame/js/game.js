@@ -954,6 +954,8 @@
 
     ctx.restore();
 
+    drawPitch();
+
     if (state.side) {
       const sx = 880;
       const sy = 460;
@@ -1001,6 +1003,27 @@
       ctx.arc(x - w / 2 + 12, y, 4, 0, Math.PI * 2);
       ctx.fill();
     }
+  }
+
+  function drawPitch() {
+    const lines = [
+      "$1 puts your name up",
+      "Any gift shows on screen",
+      "Big gifts steal the scene",
+      "Climb before lava hits",
+    ];
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.font = "700 22px " + FONT;
+    lines.forEach(function (line, i) {
+      const y = 236 + i * 54;
+      ctx.fillStyle = "#ffc857";
+      ctx.beginPath();
+      ctx.arc(64, y, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#fff6e8";
+      ctx.fillText(line, 82, y);
+    });
   }
 
   function drawHud(now, view, gap, biome) {
