@@ -737,6 +737,12 @@ These reuse the same sheets. They are optional juice, in the order they help a m
 
 10. Hourly reel. Twelve seconds of the camera drifting down the landmark plaques only, names at 40px, then a cut back to the live pack. No new art.
 
+Demo canvas, on top of the rules above:
+- gap at 5 or under: the small HUD number hides, a 72px numeral sits on the shaft, and the last gift or follow shows "@name / held it" for 8s
+- every gift paints a wall brick that stays. Bricks under the lava stay visible and dim. A new gift does not erase anyone else's brick. One coin still does a body, a side card, a wall brick, a ticker line, and a hop
+- the third gift in a session puts a gold dot on that name
+- once an hour the shaft shows a 12s reel of landmark names, or the top gifters if no landmark has landed
+
 Leave parked until the fake-gift canvas has run: profile-photo hats, per-gift species, a second body, climbing animations beyond 4 frames, and any effect that needs more than 30 particles.
 
 Next plan slice: Socket.IO event names and the keyboard fake-gift map for build step 1.

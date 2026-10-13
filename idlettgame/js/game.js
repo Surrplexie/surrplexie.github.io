@@ -49,6 +49,10 @@
     slots: [],
     shadow: 24,
     bricks: [],
+    wall: [],
+    held: null,
+    reelUntil: 0,
+    reelNext: 0,
     ticker: [],
     fx: [],
     bubbles: [],
@@ -203,6 +207,21 @@
     if (state.bricks.length > 8) state.bricks.splice(0, state.bricks.length - 8);
   }
 
+  function paintWall(viewer, band, floor) {
+    state.wall.push({
+      name: viewer.name,
+      floor: floor,
+      band: band.id,
+      label: band.label,
+      side: state.wall.length % 2,
+    });
+    if (state.wall.length > 40) state.wall.splice(0, state.wall.length - 40);
+  }
+
+  function holdName(name, now) {
+    state.held = { name: name, until: now + 8000 };
+  }
+
   function burst(x, y, color, count) {
     for (let i = 0; i < count; i++) {
       if (state.fx.length >= 30) return;
@@ -265,6 +284,8 @@
     else state.floor += hop;
 
     addBrick(viewer, band, viewFloor(now));
+    paintWall(viewer, band, viewFloor(now));
+    holdName(viewer.name, now);
     pushTicker(viewer.name, band.verb, band.id <= 2);
     state.heat += band.coins;
     state.lastGiftAt = now;
@@ -299,10 +320,20 @@
     else state.floor += 0.5;
     const alreadyNamed = state.bricks.some(function (brick) { return brick.name === viewer.name; });
     if (!alreadyNamed) addBrick(viewer, { id: 0, label: "follow" }, viewFloor(now));
+    holdName(viewer.name, now);
     pushTicker(viewer.name, "followed the climb", true);
     const y = screenY(viewFloor(now), viewFloor(now));
     burst(540, y - 20, viewer.color, 6);
     return true;
+  }
+
+  function addCrew(now) {
+    const viewer = ensureViewer(nextName());
+    if (viewer.followed || viewer.coins > 0) return;
+    viewer.until = Math.max(viewer.until, now + 20000);
+    if (!viewer.band) viewer.band = 0;
+    viewer.pop = Math.max(viewer.pop, 0.4);
+    placeInFront(viewer);
   }
 
   function startCollapse(now) {
@@ -427,11 +458,17 @@
       }
 
       if (now >= state.safeUntil && state.lava >= state.floor - 0.2) startCollapse(now);
+
+      if (!state.reelNext) state.reelNext = now + 3600000;
+      if (now >= state.reelNext) {
+        state.reelUntil = now + 12000;
+        state.reelNext = now + 3600000;
+      }
     }
 
     state.crewTimer = (state.crewTimer || 0) - dt;
     if (state.slots.length < 8 && state.crewTimer <= 0) {
-      addFollow(now);
+      addCrew(now);
       state.crewTimer = 2.4;
     }
 
@@ -810,6 +847,13 @@
         ctx.fillStyle = brick.band >= 6 ? "#6a4a12" : biome.accent;
         ctx.fillText(brick.label, x + 14, y + 46);
       }
+      const owner = state.viewers.get(brick.name.toLowerCase());
+      if (owner && owner.gifts >= 3) {
+        ctx.fillStyle = "#ffc857";
+        ctx.beginPath();
+        ctx.arc(x + wide - 22, y + 20, 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
       ctx.restore();
     });
 
@@ -835,6 +879,8 @@
         ctx.fillRect(SHAFT_L + 18, y - 2, SHAFT_R - SHAFT_L - 36, 8);
       }
     }
+
+    drawWall(view, state.lava, false);
 
     const lavaY = screenY(view - visualGap(gap), view);
     const shownLava = lavaY;
@@ -878,6 +924,8 @@
       }
       ctx.restore();
     }
+
+    drawWall(view, state.lava, true);
 
     if (now < state.frenzyUntil) {
       ctx.fillStyle = "rgba(255, 196, 64, 0.14)";
@@ -965,15 +1013,24 @@
     }
 
     if (gap <= 5) {
-      const gy = Math.min(shownLava - 78, PLAY_BOT - 120);
-      ctx.fillStyle = "rgba(26,18,16,0.72)";
-      roundRect(430, gy - 50, 220, 100, 18);
+      const named = state.held && now < state.held.until;
+      const gy = state.boss ? ANCHOR_Y - 130 : PLAY_TOP + 270;
+      ctx.fillStyle = "rgba(26,18,16,0.78)";
+      roundRect(400, gy - 64, 280, named ? 168 : 112, 18);
       ctx.fill();
       ctx.fillStyle = "#ff3b3b";
-      ctx.font = "700 64px " + FONT;
+      ctx.font = "700 72px " + FONT;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(Math.max(0, gap).toFixed(1), 540, gy);
+      if (named) {
+        ctx.fillStyle = "#fff6e8";
+        ctx.font = "700 28px " + FONT;
+        ctx.fillText("@" + state.held.name, 540, gy + 52);
+        ctx.fillStyle = "#ffc857";
+        ctx.font = "700 18px " + FONT;
+        ctx.fillText("held it", 540, gy + 80);
+      }
     }
 
     ctx.restore();
@@ -994,6 +1051,7 @@
     drawHud(now, view, gap, biome);
     drawTicker();
     drawLegend(now);
+    drawReel(now);
 
     if (state.introViewer && now < state.introUntil) {
       ctx.fillStyle = "rgba(7,6,10,0.82)";
@@ -1010,6 +1068,72 @@
     }
   }
 
+  function drawWall(view, lava, sunkOnly) {
+    state.wall.forEach(function (brick) {
+      const sunk = brick.floor < lava - 0.15;
+      if (sunk !== sunkOnly) return;
+      const y = screenY(brick.floor, view);
+      if (y < PLAY_TOP + 24 || y > PLAY_BOT - 16) return;
+      const text = "@" + brick.name;
+      ctx.save();
+      ctx.font = "700 16px " + FONT;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      const w = ctx.measureText(text).width + 14;
+      const x = brick.side ? SHAFT_R - 18 - w : SHAFT_L + 18;
+      ctx.globalAlpha = sunk ? 0.42 : 0.92;
+      if (!sunk) {
+        ctx.fillStyle = "rgba(12,8,14,0.62)";
+        roundRect(x, y - 13, w, 26, 7);
+        ctx.fill();
+      }
+      ctx.fillStyle = brick.band >= 6 ? "#ffc857" : "#fff6e8";
+      ctx.fillText(text, x + 7, y);
+      ctx.restore();
+    });
+  }
+
+  function reelNames() {
+    const marks = [];
+    const seen = {};
+    for (let i = state.wall.length - 1; i >= 0 && marks.length < 5; i--) {
+      const brick = state.wall[i];
+      if (brick.band < 6 || seen[brick.name]) continue;
+      seen[brick.name] = true;
+      marks.push(brick.name);
+    }
+    if (marks.length) return marks;
+    const ranked = [];
+    state.viewers.forEach(function (viewer) {
+      if (viewer.gifts > 0) ranked.push(viewer);
+    });
+    ranked.sort(function (a, b) { return b.coins - a.coins; });
+    return ranked.slice(0, 5).map(function (viewer) { return viewer.name; });
+  }
+
+  function drawReel(now) {
+    if (!state.reelUntil || now >= state.reelUntil) return;
+    const names = reelNames();
+    if (!names.length) return;
+    const t = Math.max(0, Math.min(1, (now - (state.reelUntil - 12000)) / 12000));
+    ctx.save();
+    ctx.fillStyle = "rgba(7,6,10,0.9)";
+    roundRect(SHAFT_L, PLAY_TOP + 8, SHAFT_R - SHAFT_L, PLAY_BOT - PLAY_TOP - 16, 28);
+    ctx.fill();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#ffc857";
+    ctx.font = "700 22px " + FONT;
+    ctx.fillText("THIS HOUR", 540, PLAY_TOP + 78);
+    names.forEach(function (name, i) {
+      const y = PLAY_TOP + 200 + i * 96 - t * 70;
+      ctx.fillStyle = "#fff6e8";
+      ctx.font = "700 40px " + FONT;
+      ctx.fillText("@" + name, 540, y);
+    });
+    ctx.restore();
+  }
+
   function drawPlate(viewer, x, y) {
     const text = "@" + viewer.name;
     ctx.font = "700 22px " + FONT;
@@ -1024,7 +1148,7 @@
     if (viewer.gifts >= 3) {
       ctx.fillStyle = "#ffc857";
       ctx.beginPath();
-      ctx.arc(x - w / 2 + 12, y, 4, 0, Math.PI * 2);
+      ctx.arc(x - w / 2 + 14, y, 6, 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -1068,8 +1192,8 @@
     ctx.font = "700 48px " + FONT;
     ctx.fillText("FLOOR " + Math.floor(view), 44, 78);
     ctx.font = "700 28px " + FONT;
-    ctx.fillStyle = gap < 5 ? "#ff3b3b" : "#b6f27a";
-    ctx.fillText("GAP " + Math.max(0, gap).toFixed(1), 48, 122);
+    ctx.fillStyle = gap <= 5 ? "#ff3b3b" : "#b6f27a";
+    if (gap > 5) ctx.fillText("GAP " + Math.max(0, gap).toFixed(1), 48, 122);
     ctx.fillStyle = "rgba(255,246,232,0.8)";
     ctx.font = "700 22px " + FONT;
     let crowd = "+" + state.shadow + " CLIMBING";
@@ -1215,6 +1339,21 @@
       });
     });
     state.nameCursor = cast.length;
+    state.bricks.forEach(function (brick) {
+      if (brick.band > 0) {
+        state.wall.push({
+          name: brick.name,
+          floor: brick.floor,
+          band: brick.band,
+          label: brick.label,
+          side: state.wall.length % 2,
+        });
+      }
+    });
+    const regular = ensureViewer("Gem");
+    regular.gifts = 3;
+    regular.coins = 3;
+    regular.band = 1;
     pushTicker("Spire", "the climb is on", false);
     pushTicker("Noor", "landed a landmark", false);
     pushTicker("Ren", "joined the climb", true);
