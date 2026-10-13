@@ -103,6 +103,11 @@
     return ANCHOR_Y - (worldFloor - view) * PX + state.punch;
   }
 
+  function visualGap(gap) {
+    if (gap <= 6.5) return gap;
+    return 6.5 + 1.2 * (1 - Math.exp(-(gap - 6.5) / 12));
+  }
+
   function viewFloor(now) {
     const c = state.collapsing;
     if (!c) return state.floor;
@@ -354,14 +359,18 @@
       if (now - state.collapsing.start >= state.collapsing.dur) finishCollapse(now);
     } else {
       let climb = 0.1 * R * (1 + Math.min(0.4, state.prestige * 0.02));
-      if (now < state.frenzyUntil) climb *= 2;
-      if (now < state.buffUntil) climb *= 1 + state.buffStrength;
+      let boost = 1;
+      if (now < state.buffUntil) boost = 1 + state.buffStrength;
+      if (now < state.frenzyUntil) boost = Math.max(boost, 2);
+      climb *= boost;
       state.floor += climb * dt;
 
       const gap = state.floor - state.lava;
       let lavaRate = now < state.holdUntil ? 0 : 0.07 * R;
       if (gap < 3) lavaRate *= 0.5;
-      if (gap > 40 && now >= state.holdUntil) lavaRate += 0.03 * R;
+      if (gap > 9 && now >= state.holdUntil) {
+        lavaRate += Math.min(0.22, (gap - 9) * 0.018) * R;
+      }
 
       if (now >= state.nextHazard) {
         const kinds = gap > 35 ? ["wind", "meteor"] : ["rock", "gust", "drip", "quake"];
@@ -550,6 +559,62 @@
     ctx.restore();
   }
 
+  function drawShaftBoss(biome, boss) {
+    const x = SHAFT_L + 16;
+    const y = ANCHOR_Y - 355;
+    const w = SHAFT_R - SHAFT_L - 32;
+    const h = 188;
+    ctx.fillStyle = boss.flash > 0 ? "#fff6e8" : "#120e14";
+    ctx.strokeStyle = biome.accent;
+    ctx.lineWidth = 8;
+    roundRect(x, y, w, h, 24);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = biome.accent;
+    if (biome.name === "Forest") {
+      ctx.beginPath();
+      ctx.moveTo(x + 30, y + 8);
+      ctx.lineTo(x + 70, y - 48);
+      ctx.lineTo(x + 110, y + 8);
+      ctx.lineTo(x + 150, y - 58);
+      ctx.lineTo(x + 190, y + 8);
+      ctx.lineTo(x + 230, y - 44);
+      ctx.lineTo(x + w - 24, y + 8);
+      ctx.fill();
+    } else if (biome.name === "Cavern" || biome.name === "Ice") {
+      for (let i = 0; i < 4; i++) {
+        const cx = x + 28 + i * 58;
+        ctx.beginPath();
+        ctx.moveTo(cx, y + 6);
+        ctx.lineTo(cx + 18, y - 42);
+        ctx.lineTo(cx + 36, y + 6);
+        ctx.fill();
+      }
+    } else if (biome.name === "Neon") {
+      ctx.fillRect(x + 18, y - 28, w - 36, 22);
+    } else {
+      ctx.beginPath();
+      ctx.ellipse(x + w / 2, y + 4, 70, 28, 0, Math.PI, 0);
+      ctx.fill();
+    }
+    ctx.fillStyle = "#fff6e8";
+    ctx.beginPath();
+    ctx.arc(x + w * 0.34, y + h * 0.58, 16, 0, Math.PI * 2);
+    ctx.arc(x + w * 0.66, y + h * 0.58, 16, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#1a1218";
+    ctx.beginPath();
+    ctx.arc(x + w * 0.34, y + h * 0.58, 7, 0, Math.PI * 2);
+    ctx.arc(x + w * 0.66, y + h * 0.58, 7, 0, Math.PI * 2);
+    ctx.fill();
+    bar(x + 8, y - 26, w - 16, 16, boss.hp / boss.max, "#ff5a1f", "#1a1210");
+    ctx.fillStyle = "#fff6e8";
+    ctx.font = "700 24px " + FONT;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "alphabetic";
+    ctx.fillText(boss.name, x + w / 2, y - 36);
+  }
+
   function drawBossBody(biomeName, flash) {
     ctx.fillStyle = flash > 0 ? "#fff6e8" : "#1a1218";
     ctx.strokeStyle = "#1a1218";
@@ -657,7 +722,7 @@
       const y = screenY(f, view);
       if (y < PLAY_TOP + 24 || y > ANCHOR_Y - 70) continue;
       if (f % 5 !== 0) continue;
-      if (state.boss && y > 360 && y < 600) continue;
+      if (state.boss && y > 300 && y < 680) continue;
       ctx.fillStyle = f === gate ? "#ff5a1f" : "rgba(255,246,232,0.75)";
       ctx.fillText(f === gate ? f + " BOSS" : String(f), 540, y - 8);
     }
@@ -696,31 +761,33 @@
       ctx.globalAlpha = 1;
     }
 
-    state.bricks.forEach(function (brick) {
-      const y = screenY(brick.floor, view);
-      if (y < PLAY_TOP + 24 || y > PLAY_BOT - 48) return;
-      const wide = brick.band >= 6 ? 300 : brick.band >= 4 ? 270 : 230;
-      const tall = brick.band >= 6 ? 72 : brick.band >= 4 ? 54 : 40;
-      const x = brick.side ? 1024 - wide : 56;
-      const sunk = brick.floor < lava;
-      ctx.globalAlpha = sunk ? 0.4 : 1;
+    const recentBricks = state.bricks.slice(-12);
+    for (let n = 0; n < recentBricks.length; n++) {
+      const brick = recentBricks[recentBricks.length - 1 - n];
+      const col = n % 2;
+      const row = Math.floor(n / 2);
+      const tall = brick.band >= 6 ? 64 : brick.band >= 4 ? 50 : 40;
+      const wide = 312;
+      const x = col === 0 ? 44 : W - 44 - wide;
+      const y = ANCHOR_Y - 6 + row * (tall + 10) + state.punch;
+      if (y < PLAY_TOP + 24 || y > PLAY_BOT - 36) continue;
+      ctx.globalAlpha = row >= 4 ? 0.45 : 1;
       ctx.fillStyle = brick.band >= 6 ? "#ffc857" : "#1a1210";
       ctx.strokeStyle = biome.accent;
       ctx.lineWidth = 2;
       roundRect(x, y - tall / 2, wide, tall, 10);
       ctx.fill();
       ctx.stroke();
-      ctx.globalAlpha = sunk ? 0.45 : 1;
       ctx.fillStyle = brick.band >= 6 ? "#1a1218" : "#fff6e8";
-      ctx.font = "700 " + (brick.band >= 6 ? 26 : 20) + "px " + FONT;
+      ctx.font = "700 " + (brick.band >= 6 ? 24 : 20) + "px " + FONT;
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
-      ctx.fillText("@" + brick.name, x + 12, y - (brick.band >= 4 ? 8 : 0));
+      ctx.fillText("@" + brick.name, x + 14, y - (brick.band >= 4 ? 8 : 0));
       ctx.font = "700 16px " + FONT;
       ctx.fillStyle = brick.band >= 6 ? "#6a4a12" : biome.accent;
-      if (brick.band >= 4) ctx.fillText(brick.label, x + 12, y + 16);
+      if (brick.band >= 4) ctx.fillText(brick.label, x + 14, y + 14);
       ctx.globalAlpha = 1;
-    });
+    }
 
     ctx.fillStyle = biome.shaft;
     roundRect(SHAFT_L, PLAY_TOP + 8, SHAFT_R - SHAFT_L, PLAY_BOT - PLAY_TOP - 16, 28);
@@ -745,8 +812,8 @@
       }
     }
 
-    const lavaY = screenY(lava, view);
-    const shownLava = lavaY > PLAY_BOT - 16 ? PLAY_BOT - 28 : lavaY;
+    const lavaY = screenY(view - visualGap(gap), view);
+    const shownLava = lavaY;
     if (shownLava < PLAY_BOT) {
       const g = ctx.createLinearGradient(0, shownLava - 20, 0, PLAY_BOT);
       g.addColorStop(0, "rgba(255,213,106,0)");
@@ -770,8 +837,36 @@
     }
 
     if (now < state.holdUntil) {
-      ctx.fillStyle = "rgba(126,224,255,0.16)";
-      ctx.fillRect(SHAFT_L, shownLava - 8, SHAFT_R - SHAFT_L, 16);
+      ctx.save();
+      roundRect(SHAFT_L + 10, shownLava - 4, SHAFT_R - SHAFT_L - 20, PLAY_BOT - shownLava, 16);
+      ctx.clip();
+      ctx.fillStyle = "rgba(90, 210, 255, 0.72)";
+      ctx.fillRect(SHAFT_L, shownLava, SHAFT_R - SHAFT_L, PLAY_BOT - shownLava);
+      ctx.fillStyle = "#f7fdff";
+      ctx.fillRect(SHAFT_L + 16, shownLava - 6, SHAFT_R - SHAFT_L - 32, 18);
+      for (let i = 0; i < 6; i++) {
+        const ix = SHAFT_L + 36 + i * 40;
+        ctx.beginPath();
+        ctx.moveTo(ix, shownLava);
+        ctx.lineTo(ix + 8, shownLava - 22);
+        ctx.lineTo(ix + 16, shownLava);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    if (now < state.frenzyUntil) {
+      ctx.fillStyle = "rgba(255, 196, 64, 0.14)";
+      ctx.fillRect(SHAFT_L + 12, PLAY_TOP + 16, SHAFT_R - SHAFT_L - 24, PLAY_BOT - PLAY_TOP - 32);
+      ctx.strokeStyle = "rgba(255, 214, 120, 0.55)";
+      ctx.lineWidth = 3;
+      for (let i = 0; i < 5; i++) {
+        const y = ANCHOR_Y - 80 + ((now / 4 + i * 36) % 160);
+        ctx.beginPath();
+        ctx.moveTo(SHAFT_L + 24, y);
+        ctx.lineTo(SHAFT_R - 24, y - 18);
+        ctx.stroke();
+      }
     }
 
     if (state.hazard && state.hazard.type === "meteor") {
@@ -802,16 +897,7 @@
     }
 
     if (state.boss) {
-      ctx.save();
-      ctx.translate(540, 470);
-      drawBossBody(biome.name, state.boss.flash);
-      ctx.restore();
-      bar(430, 390, 220, 16, state.boss.hp / state.boss.max, "#ff5a1f", "#1a1210");
-      ctx.fillStyle = "#fff6e8";
-      ctx.font = "700 22px " + FONT;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "alphabetic";
-      ctx.fillText(state.boss.name, 540, 378);
+      drawShaftBoss(biome, state.boss);
     }
 
     ctx.fillStyle = "rgba(255,246,232,0.35)";
@@ -855,25 +941,28 @@
     }
 
     if (gap <= 5) {
+      const gy = Math.min(shownLava - 78, PLAY_BOT - 120);
       ctx.fillStyle = "rgba(26,18,16,0.72)";
-      roundRect(430, 560, 220, 120, 18);
+      roundRect(430, gy - 50, 220, 100, 18);
       ctx.fill();
       ctx.fillStyle = "#ff3b3b";
-      ctx.font = "700 78px " + FONT;
+      ctx.font = "700 64px " + FONT;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(Math.max(0, gap).toFixed(1), 540, 620);
+      ctx.fillText(Math.max(0, gap).toFixed(1), 540, gy);
     }
 
     ctx.restore();
 
     if (state.side) {
+      const sx = 880;
+      const sy = 460;
       ctx.save();
-      ctx.translate(860, 760);
-      ctx.scale(0.62, 0.62);
+      ctx.translate(sx, sy);
+      ctx.scale(1.2, 1.2);
       drawBossBody(biome.name, state.side.flash);
       ctx.restore();
-      bar(760, 690, 200, 12, state.side.hp / state.side.max, "#ffc857", "#1a1210");
+      bar(sx - 80, sy - 90, 160, 14, state.side.hp / state.side.max, "#ffc857", "#1a1210");
     }
 
     drawHud(now, view, gap, biome);
@@ -881,19 +970,17 @@
     drawLegend(now);
 
     if (state.introViewer && now < state.introUntil) {
-      const veil = ctx.createLinearGradient(0, 180, 0, 700);
-      veil.addColorStop(0, "rgba(7,6,10,0.05)");
-      veil.addColorStop(0.45, "rgba(7,6,10,0.62)");
-      veil.addColorStop(1, "rgba(7,6,10,0)");
-      ctx.fillStyle = veil;
-      ctx.fillRect(0, 180, W, 540);
+      ctx.fillStyle = "rgba(7,6,10,0.82)";
+      roundRect(SHAFT_L + 10, 188, SHAFT_R - SHAFT_L - 20, 84, 14);
+      ctx.fill();
       ctx.fillStyle = "#ffc857";
       ctx.textAlign = "center";
-      ctx.font = "700 72px " + FONT;
-      ctx.fillText("@" + state.introViewer.name, 540, 390);
+      ctx.textBaseline = "alphabetic";
+      ctx.font = "700 40px " + FONT;
+      ctx.fillText("@" + state.introViewer.name, 540, 238);
       ctx.fillStyle = "#fff6e8";
-      ctx.font = "700 32px " + FONT;
-      ctx.fillText("landmark on the spire", 540, 450);
+      ctx.font = "700 18px " + FONT;
+      ctx.fillText("landmark on the spire", 540, 258);
     }
   }
 
@@ -960,8 +1047,8 @@
 
     const chips = [];
     if (now < state.frenzyUntil) chips.push("FRENZY");
+    else if (now < state.buffUntil) chips.push("SWARM +" + Math.round(state.buffStrength * 100) + "%");
     if (now < state.holdUntil) chips.push("LAVA HELD");
-    if (now < state.buffUntil) chips.push("SWARM +" + Math.round(state.buffStrength * 100) + "%");
     if (state.prestige > 0) chips.push("PRESTIGE " + state.prestige);
     if (chips.length) {
       ctx.font = "700 20px " + FONT;
