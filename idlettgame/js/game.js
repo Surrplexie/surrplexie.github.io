@@ -761,32 +761,27 @@
       ctx.globalAlpha = 1;
     }
 
-    const recentBricks = state.bricks.slice(-12);
+    const recentBricks = state.bricks.slice(-8);
     for (let n = 0; n < recentBricks.length; n++) {
       const brick = recentBricks[recentBricks.length - 1 - n];
       const col = n % 2;
       const row = Math.floor(n / 2);
-      const tall = brick.band >= 6 ? 64 : brick.band >= 4 ? 50 : 40;
+      const tall = 48;
       const wide = 312;
       const x = col === 0 ? 44 : W - 44 - wide;
-      const y = ANCHOR_Y - 6 + row * (tall + 10) + state.punch;
-      if (y < PLAY_TOP + 24 || y > PLAY_BOT - 36) continue;
-      ctx.globalAlpha = row >= 4 ? 0.45 : 1;
+      const y = 520 + row * 62;
       ctx.fillStyle = brick.band >= 6 ? "#ffc857" : "#1a1210";
       ctx.strokeStyle = biome.accent;
       ctx.lineWidth = 2;
-      roundRect(x, y - tall / 2, wide, tall, 10);
+      roundRect(x, y, wide, tall, 10);
       ctx.fill();
       ctx.stroke();
       ctx.fillStyle = brick.band >= 6 ? "#1a1218" : "#fff6e8";
-      ctx.font = "700 " + (brick.band >= 6 ? 24 : 20) + "px " + FONT;
+      ctx.font = "700 22px " + FONT;
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
-      ctx.fillText("@" + brick.name, x + 14, y - (brick.band >= 4 ? 8 : 0));
-      ctx.font = "700 16px " + FONT;
-      ctx.fillStyle = brick.band >= 6 ? "#6a4a12" : biome.accent;
-      if (brick.band >= 4) ctx.fillText(brick.label, x + 14, y + 14);
-      ctx.globalAlpha = 1;
+      const extra = brick.band >= 4 ? "   " + brick.label : "";
+      ctx.fillText("@" + brick.name + extra, x + 14, y + tall / 2);
     }
 
     ctx.fillStyle = biome.shaft;
@@ -1012,17 +1007,27 @@
       "Big gifts steal the scene",
       "Climb before lava hits",
     ];
+    const x = 40;
+    const y = 196;
+    const w = 328;
+    const h = 292;
+    ctx.fillStyle = "rgba(12, 8, 14, 0.92)";
+    ctx.strokeStyle = "#ffc857";
+    ctx.lineWidth = 3;
+    roundRect(x, y, w, h, 16);
+    ctx.fill();
+    ctx.stroke();
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
     ctx.font = "700 22px " + FONT;
     lines.forEach(function (line, i) {
-      const y = 236 + i * 54;
+      const ly = y + 46 + i * 62;
       ctx.fillStyle = "#ffc857";
       ctx.beginPath();
-      ctx.arc(64, y, 5, 0, Math.PI * 2);
+      ctx.arc(x + 28, ly, 6, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = "#fff6e8";
-      ctx.fillText(line, 82, y);
+      ctx.fillText(line, x + 48, ly);
     });
   }
 
