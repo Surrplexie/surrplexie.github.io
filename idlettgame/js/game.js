@@ -409,7 +409,7 @@
         state.side.hp -= state.side.max * (dt / 12);
         state.side.flash = Math.max(0, state.side.flash - dt);
         if (state.side.hp <= 0) {
-          burst(860, 760, "#ffc857", 12);
+          burst(880, 1040, "#ffc857", 12);
           pushTicker("Side boss", "the swarm cracked it", false);
           state.side = null;
         }
@@ -774,11 +774,13 @@
     const nameX = [44, 724];
     const nameY = [512, 600, 688, 776];
     nameSlots.forEach(function (brick, n) {
+      const row = Math.floor(n / 2);
       const x = nameX[n % 2];
-      const y = nameY[Math.floor(n / 2)];
+      const y = nameY[row];
       const wide = 312;
       const tall = 64;
       ctx.save();
+      ctx.globalAlpha = [1, 0.78, 0.52, 0.32][row];
       roundRect(x, y, wide, tall, 10);
       ctx.clip();
       ctx.fillStyle = brick.band >= 6 ? "#ffc857" : "#1a1210";
@@ -969,7 +971,7 @@
 
     if (state.side) {
       const sx = 880;
-      const sy = 460;
+      const sy = 1040;
       ctx.save();
       ctx.translate(sx, sy);
       ctx.scale(1.2, 1.2);
