@@ -1417,7 +1417,15 @@
     for (let r = 0; r < m.rows; r++) {
       for (let c = 0; c < m.cols; c++) {
         if (!m.filled[r][c]) continue;
-        walls.push({ x: m.x0 + c * m.cube, y: m.y0 + r * m.cube, w: m.cube, h: m.cube });
+        walls.push({
+          x: m.x0 + c * m.cube,
+          y: m.y0 + r * m.cube,
+          w: m.cube,
+          h: m.cube,
+          wall: true,
+          mazeR: r,
+          mazeC: c,
+        });
       }
     }
     state.walls = walls.concat(state.extraWalls || []);
@@ -1902,7 +1910,7 @@
 
   function addSiegeWall(x, y, w, h) {
     if (w < 8 || h < 8) return;
-    state.walls.push({ x, y, w, h });
+    state.walls.push({ x, y, w, h, wall: true });
   }
 
   function addSiegeHWall(x0, x1, y, thick, gateX, gateW) {
@@ -3781,29 +3789,35 @@
   }
 
   function devEntityCenter(entity) {
-    if (state.walls.includes(entity)) return { x: entity.x + entity.w * 0.5, y: entity.y + entity.h * 0.5 };
+    if (entity && entity.wall) return { x: entity.x + entity.w * 0.5, y: entity.y + entity.h * 0.5 };
     return { x: Number(entity.x) || 0, y: Number(entity.y) || 0 };
   }
 
   function releaseMazeWall(wall) {
     const m = state.maze;
-    if (!m || !wall) return;
+    if (!m || !wall || wall.devLoose) return;
     if (!state.extraWalls) state.extraWalls = [];
-    if (wall.devLoose || state.extraWalls.includes(wall)) {
+    if (state.extraWalls.includes(wall)) {
       wall.devLoose = true;
+      wall.wall = true;
       return;
     }
-    const col = Math.round((wall.x - m.x0) / m.cube);
-    const row = Math.round((wall.y - m.y0) / m.cube);
+    const tagged = Number.isInteger(wall.mazeR) && Number.isInteger(wall.mazeC);
+    const row = tagged ? wall.mazeR : Math.round((wall.y - m.y0) / m.cube);
+    const col = tagged ? wall.mazeC : Math.round((wall.x - m.x0) / m.cube);
     if (row >= 0 && col >= 0 && row < m.rows && col < m.cols && m.filled[row][col]) {
       const gx = m.x0 + col * m.cube;
       const gy = m.y0 + row * m.cube;
-      if (Math.abs(wall.x - gx) <= 1 && Math.abs(wall.y - gy) <= 1
-        && Math.abs(wall.w - m.cube) <= 1 && Math.abs(wall.h - m.cube) <= 1) {
-        m.filled[row][col] = false;
-      }
+      const aligned = tagged || (
+        Math.abs(wall.x - gx) <= 1 && Math.abs(wall.y - gy) <= 1
+        && Math.abs(wall.w - m.cube) <= 1 && Math.abs(wall.h - m.cube) <= 1
+      );
+      if (aligned) m.filled[row][col] = false;
     }
+    wall.mazeR = undefined;
+    wall.mazeC = undefined;
     wall.devLoose = true;
+    wall.wall = true;
     state.extraWalls.push(wall);
     for (const tank of state.tanks) {
       tank.aiPath = null;
@@ -3812,7 +3826,7 @@
   }
 
   function moveDevEntity(entity, x, y) {
-    if (state.walls.includes(entity)) {
+    if (entity && entity.wall) {
       releaseMazeWall(entity);
       entity.x = clamp(x - entity.w * 0.5, 0, WORLD.w - entity.w);
       entity.y = clamp(y - entity.h * 0.5, 0, WORLD.h - entity.h);
@@ -4055,6 +4069,7 @@
     const world = screenToWorld(mouse.x, mouse.y);
     const entity = pickDevEntityAt(world.x, world.y);
     if (!entity) return false;
+    if (!entity.wall && state.walls.includes(entity)) entity.wall = true;
     const center = devEntityCenter(entity);
     devDrag = { entity, dx: world.x - center.x, dy: world.y - center.y };
     moveDevEntity(entity, center.x, center.y);
@@ -4064,7 +4079,7 @@
   function updateDevDrag() {
     if (!devDrag || !devMoveEnabled) return;
     const entity = devDrag.entity;
-    if ((entity.alive === false) || (!devMovableEntities().includes(entity))) {
+    if (entity.alive === false || (!entity.wall && !devMovableEntities().includes(entity))) {
       devDrag = null;
       return;
     }
