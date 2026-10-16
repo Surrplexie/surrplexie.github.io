@@ -3785,8 +3785,35 @@
     return { x: Number(entity.x) || 0, y: Number(entity.y) || 0 };
   }
 
+  function releaseMazeWall(wall) {
+    const m = state.maze;
+    if (!m || !wall) return;
+    if (!state.extraWalls) state.extraWalls = [];
+    if (wall.devLoose || state.extraWalls.includes(wall)) {
+      wall.devLoose = true;
+      return;
+    }
+    const col = Math.round((wall.x - m.x0) / m.cube);
+    const row = Math.round((wall.y - m.y0) / m.cube);
+    if (row >= 0 && col >= 0 && row < m.rows && col < m.cols && m.filled[row][col]) {
+      const gx = m.x0 + col * m.cube;
+      const gy = m.y0 + row * m.cube;
+      if (Math.abs(wall.x - gx) <= 1 && Math.abs(wall.y - gy) <= 1
+        && Math.abs(wall.w - m.cube) <= 1 && Math.abs(wall.h - m.cube) <= 1) {
+        m.filled[row][col] = false;
+      }
+    }
+    wall.devLoose = true;
+    state.extraWalls.push(wall);
+    for (const tank of state.tanks) {
+      tank.aiPath = null;
+      tank.aiPathUntil = 0;
+    }
+  }
+
   function moveDevEntity(entity, x, y) {
     if (state.walls.includes(entity)) {
+      releaseMazeWall(entity);
       entity.x = clamp(x - entity.w * 0.5, 0, WORLD.w - entity.w);
       entity.y = clamp(y - entity.h * 0.5, 0, WORLD.h - entity.h);
       return;
@@ -4028,7 +4055,6 @@
     const world = screenToWorld(mouse.x, mouse.y);
     const entity = pickDevEntityAt(world.x, world.y);
     if (!entity) return false;
-    if (state.walls.includes(entity) && state.maze) state.maze = null;
     const center = devEntityCenter(entity);
     devDrag = { entity, dx: world.x - center.x, dy: world.y - center.y };
     moveDevEntity(entity, center.x, center.y);
