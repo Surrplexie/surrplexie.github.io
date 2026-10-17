@@ -244,6 +244,8 @@
     mazeVariant: false,
     growthVariant: false,
     armsRace: false,
+    oneHp: false,
+    zeroScore: false,
     botCount: 20,
     paused: false,
     playOpts: null,
@@ -503,7 +505,13 @@
 
   function isZeroFfa(mode) {
     const m = mode == null ? state.mode : mode;
-    return m === "ffazero";
+    if (m === "ffazero") return true;
+    if (mode == null || mode === state.mode) return !!state.zeroScore;
+    return false;
+  }
+
+  function isOneHp() {
+    return state.mode === "onehp" || !!state.oneHp;
   }
 
   function startScore() {
@@ -638,7 +646,7 @@
       const tier = tank.sancTier || 1;
       out.maxHealth = Math.max(out.maxHealth, 5200 + tier * 900);
     }
-    if (state.mode === "onehp" && tank && !tank.closer && !tank.mothership && !tank.dominator) {
+    if (isOneHp() && tank && !tank.closer && !tank.mothership && !tank.dominator) {
       out.maxHealth = 1;
       out.regen = 0;
       out.maxShield = 0;
@@ -1544,7 +1552,7 @@
       const s = irand(8000, 9000);
       WORLD.w = s;
       WORLD.h = s;
-    } else if (mode === "onehp" || isRoyale(mode)) {
+    } else if (mode === "onehp" || isRoyale(mode) || state.oneHp) {
       WORLD.w = 8200;
       WORLD.h = 8200;
     } else {
@@ -2362,7 +2370,13 @@
     };
     const base = names[m] || "FFA";
     if (m === "sandbox") return base;
-    return base + (mz ? " Maze" : "") + (gr ? " Growth" : "") + (ar ? " AR" : "");
+    let label = base + (mz ? " Maze" : "") + (gr ? " Growth" : "") + (ar ? " AR" : "");
+    const live = mode == null || mode === state.mode;
+    const bits = [];
+    if (live && m !== "onehp" && state.oneHp) bits.push("1 HP");
+    if (live && m !== "ffazero" && state.zeroScore) bits.push("0 Score");
+    if (bits.length) label += ", " + bits.join(", ");
+    return label;
   }
 
   function isArmsMode() {
@@ -2752,8 +2766,8 @@
   function autoUpgradeBot(bot, preserveClass = false) {
     applyLevel(bot);
     const rammerIds = new Set(["smasher", "landmine", "spike", "autosmasher", "bonker", "auto_bonker", "auto_smasher"]);
-    const dead = state.mode === "onehp" ? ["maxHealth", "regen", "shieldCap", "shieldRegen"] : [];
-    const focus = state.mode === "onehp"
+    const dead = isOneHp() ? ["maxHealth", "regen", "shieldCap", "shieldRegen"] : [];
+    const focus = isOneHp()
       ? ["reload", "bulletDamage", "bulletSpeed", "bulletPen", "moveSpeed", "bodyDamage"]
       : bot.aiFocus === "ram"
       ? ["maxHealth", "bodyDamage", "moveSpeed", "regen", "bulletDamage"]
@@ -2932,12 +2946,17 @@
     state.mazeVariant = opts.sandbox ? false : parsed.maze;
     state.growthVariant = opts.sandbox ? false : parsed.growth;
     state.armsRace = opts.sandbox ? true : parsed.arms;
+    const addonOk = !opts.sandbox && state.mode !== "sandbox" && state.mode !== "onehp" && state.mode !== "ffazero";
+    state.oneHp = addonOk && !!opts.oneHp;
+    state.zeroScore = addonOk && !!opts.zeroScore;
     state.playOpts = {
       ...opts,
       mode: state.mode,
       mazeVariant: state.mazeVariant,
       growthVariant: state.growthVariant,
       armsRace: state.armsRace,
+      oneHp: state.oneHp,
+      zeroScore: state.zeroScore,
     };
     state.botCount = clampBotCount(opts.botCount != null ? opts.botCount : menuBotCount);
     applyWorldSize(state.mode);
@@ -3048,7 +3067,7 @@
       welcomeSpawnNotes();
       note("Everyone starts at 45. Grow past 45. Level cap is 1000. [N] skips to 45.");
     }
-    if (state.mode === "onehp") {
+    if (isOneHp()) {
       welcomeSpawnNotes();
       note("Everyone has 1 HP. Health and shield stats do nothing.");
     }
@@ -3063,7 +3082,7 @@
       note("You have 1 minute to farm and upgrade before the storm closes in.");
       note("After that, there are no respawns. Last tank standing wins.");
     }
-    if (state.armsRace && state.mode !== "sandbox" && !isGrowthVariant() && state.mode !== "onehp" && !isRoyale() && state.mode !== "assault" && state.mode !== "siege" && !isTeamHunt()) {
+    if (state.armsRace && state.mode !== "sandbox" && !isGrowthVariant() && !isOneHp() && !isRoyale() && state.mode !== "assault" && state.mode !== "siege" && !isTeamHunt()) {
       welcomeSpawnNotes();
     }
     armsWelcome();
@@ -3571,7 +3590,7 @@
     if (els.spectateBar) els.spectateBar.classList.add("hidden");
     if (state.mode === "assault") welcomeSpawnNotes();
     if (state.mode === "siege" || isGrowthVariant()) welcomeSpawnNotes();
-    if (state.mode === "onehp") {
+    if (isOneHp()) {
       welcomeSpawnNotes();
       note("Everyone has 1 HP. Health and shield stats do nothing.");
     }
@@ -3579,7 +3598,7 @@
       welcomeSpawnNotes();
       note("Prep is still going. The storm has not started yet.");
     }
-    if (state.armsRace && state.mode !== "sandbox" && state.mode !== "onehp" && state.mode !== "assault" && state.mode !== "siege" && !isGrowthVariant() && !(isRoyale() && !force)) {
+    if (state.armsRace && state.mode !== "sandbox" && !isOneHp() && state.mode !== "assault" && state.mode !== "siege" && !isGrowthVariant() && !(isRoyale() && !force)) {
       welcomeSpawnNotes();
     }
     armsWelcome();
@@ -5578,6 +5597,8 @@
       mazeVariant: state.mazeVariant,
       growthVariant: state.growthVariant,
       armsRace: state.armsRace,
+      oneHp: state.oneHp,
+      zeroScore: state.zeroScore,
       botCount: state.botCount,
       sandbox: state.mode === "sandbox",
     };
@@ -7036,7 +7057,7 @@
         const gp = g ? Math.round((g.health / Math.max(1, g.maxHealth)) * 100) : 0;
         const rp = r ? Math.round((r.health / Math.max(1, r.maxHealth)) * 100) : 0;
         const piloting = state.player && state.player.mothership;
-        els.arenaMode.textContent = `${modeLabel()} · G ${gp}%  R ${rp}%${piloting ? " · [H] leave" : " · [H] control"} · [N] lv45`;
+        els.arenaMode.textContent = `${modeLabel()} · G ${gp}%  R ${rp}%${piloting ? " · [H] leave" : " · [H] control"}${isZeroFfa() ? "" : " · [N] lv45"}`;
       }
     }
     if (els.arenaMode && state.mode === "domination") {
@@ -7065,7 +7086,7 @@
       && state.mode !== "domination" && state.mode !== "assault" && state.mode !== "siege" && !isRoyale()) {
       els.arenaMode.textContent = state.closing
         ? "Fresh server"
-        : `${modeLabel()} · cap 1000 · [N] lv45`;
+        : `${modeLabel()} · cap 1000${isZeroFfa() ? "" : " · [N] lv45"}`;
     }
     if (els.arenaMode && isRoyale()) {
       const alive = royaleContestants().length;
@@ -8069,6 +8090,7 @@
   let menuMode = "ffa";
   let menuTeam = "blue";
   const menuVariants = { maze: false, growth: false, arms: false };
+  const menuAddons = { onehp: false, zero: false };
   const MODE_HINT = {
     ffa: "Everyone for themselves · start at 45 · kills pay 80–90% · respawn 15–20% · fresh server after 4 hours",
     ffazero: "Everyone for themselves · start at 0 · score can drop below 45 · kills pay 80–90% · respawn 15–20% · fresh server after 4 hours",
@@ -8111,11 +8133,14 @@
       startGame(name, { sandbox: true, classId: "basic", botCount: bots });
       return;
     }
+    const addonsOn = !addonsLocked();
     startGame(name, {
       mode: menuMode,
       mazeVariant: menuVariants.maze,
       growthVariant: menuVariants.growth,
       armsRace: menuVariants.arms,
+      oneHp: addonsOn && menuAddons.onehp,
+      zeroScore: addonsOn && menuAddons.zero,
       botCount: bots,
     });
   }
@@ -8130,6 +8155,7 @@
     const row = document.getElementById("team-row");
     if (row) row.classList.add("hidden");
     syncVariantToggles();
+    syncRuleAddons();
     updateModeHint();
   }
 
@@ -8141,7 +8167,67 @@
     if (menuMode !== "sandbox" && menuVariants.maze) extras.push("open maze layout");
     if (menuMode !== "sandbox" && menuVariants.growth) extras.push("grow to level 1000");
     if (menuMode !== "sandbox" && menuVariants.arms) extras.push("Arms Race class tree");
+    if (!addonsLocked() && menuAddons.zero) {
+      base = base
+        .replace(/everyone starts at 45/gi, "everyone starts at 0")
+        .replace(/start at 45/gi, "start at 0")
+        .replace(/never below 45/gi, "score can drop below 45")
+        .replace(/ · \[N\] skip to 45/g, "")
+        .replace(/ · \[N\] skips to 45/g, "")
+        .replace(/ · \[N\] skip/g, "");
+      if (!/start at 0/i.test(base)) extras.push("start at 0");
+      if (!/drop below 45/i.test(base)) extras.push("score can drop below 45");
+    }
+    if (!addonsLocked() && menuAddons.onehp) {
+      const mapNote = menuMode === "assault" || menuMode === "siege" ? "" : " · medium map";
+      extras.push("1 HP · no shields · health stats do nothing" + mapNote);
+    }
     hint.textContent = [base, ...extras].filter(Boolean).join(" · ");
+  }
+
+  function addonsLocked() {
+    return menuMode === "sandbox" || menuMode === "onehp" || menuMode === "ffazero";
+  }
+
+  function ruleButtonLabel() {
+    if (addonsLocked()) return "Addons ▾";
+    const bits = [];
+    if (menuAddons.onehp) bits.push("1 HP");
+    if (menuAddons.zero) bits.push("0 Score");
+    return (bits.length ? bits.join(", ") : "Addons") + " ▾";
+  }
+
+  function setRuleMenu(open) {
+    const menu = document.getElementById("rule-drop-menu");
+    const btn = document.getElementById("rule-drop-btn");
+    if (!menu || !btn) return;
+    const show = !!open && !addonsLocked() && !btn.disabled;
+    menu.classList.toggle("hidden", !show);
+    btn.setAttribute("aria-expanded", show ? "true" : "false");
+  }
+
+  function syncRuleAddons() {
+    const locked = addonsLocked();
+    const btn = document.getElementById("rule-drop-btn");
+    if (btn) {
+      btn.disabled = locked;
+      btn.textContent = ruleButtonLabel();
+      btn.classList.toggle("active", !locked && (menuAddons.onehp || menuAddons.zero));
+    }
+    document.querySelectorAll(".rule-opt").forEach((button) => {
+      const active = !locked && !!menuAddons[button.dataset.addon];
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+      button.disabled = locked;
+    });
+    if (locked) setRuleMenu(false);
+  }
+
+  function toggleMenuAddon(addon) {
+    if (addonsLocked() || !(addon in menuAddons)) return;
+    menuAddons[addon] = !menuAddons[addon];
+    syncRuleAddons();
+    updateModeHint();
   }
 
   function syncVariantToggles() {
@@ -8176,6 +8262,7 @@
 
   if (els.start) {
     els.start.addEventListener("click", (e) => {
+      if (!e.target.closest("#rule-drop")) setRuleMenu(false);
       const btn = e.target.closest("button");
       if (!btn) return;
       if (btn.id === "play-btn") playSelected();
@@ -8183,6 +8270,11 @@
       else if (btn.id === "options-btn") {
         const panel = document.getElementById("options-panel");
         if (panel) panel.classList.toggle("hidden");
+      } else if (btn.id === "rule-drop-btn") {
+        const menu = document.getElementById("rule-drop-menu");
+        setRuleMenu(menu && menu.classList.contains("hidden"));
+      } else if (btn.classList.contains("rule-opt")) {
+        toggleMenuAddon(btn.dataset.addon);
       } else if (btn.classList.contains("server-row")) {
         setMenuMode(btn.dataset.mode);
       } else if (btn.classList.contains("server-filter")) {
@@ -8231,6 +8323,7 @@
     });
   }
 
+  syncRuleAddons();
   bindDevChart();
 
   window.TankfieldGame = {

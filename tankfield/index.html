@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <meta name="robots" content="noindex, nofollow" />
   <title>Tankfield</title>
-  <link rel="stylesheet" href="css/style.css?v=118" />
+  <link rel="stylesheet" href="css/style.css?v=119" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet" />
@@ -123,6 +123,13 @@
         <button type="button" class="variant-toggle" data-variant="maze" aria-pressed="false">Maze</button>
         <button type="button" class="variant-toggle" data-variant="growth" aria-pressed="false">Growth</button>
         <button type="button" class="variant-toggle" data-variant="arms" aria-pressed="false">Arms Race</button>
+      </div>
+      <div id="rule-drop" class="rule-drop">
+        <button type="button" id="rule-drop-btn" class="rule-drop-btn" aria-expanded="false" aria-haspopup="true" aria-controls="rule-drop-menu">Addons ▾</button>
+        <div id="rule-drop-menu" class="rule-drop-menu hidden" role="group" aria-label="Rule addons">
+          <button type="button" class="rule-opt" data-addon="onehp" aria-pressed="false">1 HP</button>
+          <button type="button" class="rule-opt" data-addon="zero" aria-pressed="false">0 Score</button>
+        </div>
       </div>
       <div id="team-row" class="team-row hidden">
         <button type="button" class="team-chip selected" data-team="blue" id="chip-blue">Blue</button>
@@ -354,7 +361,7 @@
   </div>
 
   <script src="js/defs.js?v=111"></script>
-  <script src="js/game.js?v=134"></script>
+  <script src="js/game.js?v=135"></script>
   <script src="js/editor.js?v=111"></script>
 </body>
 </html>
