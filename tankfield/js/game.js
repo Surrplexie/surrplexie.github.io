@@ -904,8 +904,7 @@
 
   function isRammer(tank) {
     const def = getDef(tank);
-    if (def && def.smasher) return true;
-    return !!(tank && tank.aiFocus === "ram");
+    return !!(def && def.smasher);
   }
 
   function leadPoint(from, target, st) {
