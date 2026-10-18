@@ -88,6 +88,27 @@
     return COLORS[(h >>> 0) % COLORS.length];
   }
 
+  function hexLum(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    const r = (n >> 16) & 255;
+    const g = (n >> 8) & 255;
+    const b = n & 255;
+    return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  }
+
+  function fitText(text, maxWidth) {
+    const raw = String(text);
+    if (ctx.measureText(raw).width <= maxWidth) return raw;
+    let cut = raw;
+    while (cut.length > 1 && ctx.measureText(cut + "…").width > maxWidth) cut = cut.slice(0, -1);
+    return cut + "…";
+  }
+
+  function clipName(name) {
+    const clean = String(name || "climber").replace(/\s+/g, " ").trim();
+    return (clean || "climber").slice(0, 18);
+  }
+
   function biomeAt(floor) {
     return BIOMES[Math.abs(Math.floor(floor / 100)) % BIOMES.length];
   }
@@ -108,8 +129,10 @@
   }
 
   function visualGap(gap) {
-    if (gap <= 6.5) return gap;
-    return 6.5 + 1.2 * (1 - Math.exp(-(gap - 6.5) / 12));
+    const room = (PLAY_BOT - ANCHOR_Y - 36) / PX;
+    const g = Math.max(0, gap);
+    if (g <= room) return g;
+    return room;
   }
 
   function viewFloor(now) {
@@ -149,12 +172,13 @@
   }
 
   function ensureViewer(name) {
-    const id = name.toLowerCase();
+    const shown = clipName(name);
+    const id = shown.toLowerCase();
     let viewer = state.viewers.get(id);
     if (!viewer) {
       viewer = {
         id: id,
-        name: name,
+        name: shown,
         color: hashColor(id),
         coins: 0,
         gifts: 0,
@@ -183,14 +207,25 @@
           break;
         }
       }
-      const dropped = state.slots.splice(worst, 1)[0];
-      if (dropped !== viewer) state.shadow += 1;
+      state.slots.splice(worst, 1);
     }
   }
 
-  function pushTicker(name, verb, micro) {
-    state.ticker.unshift({ name: name, verb: verb, micro: micro, at: performance.now() });
+  function pushTicker(name, verb, micro, system) {
+    const now = performance.now();
+    const top = state.ticker[0];
+    if (top && top.name === name && top.verb === verb && now - top.at < 2000) return;
+    state.ticker.unshift({ name: name, verb: verb, micro: !!micro, system: !!system, at: now });
     if (state.ticker.length > 8) state.ticker.length = 8;
+  }
+
+  function refreshCrowd() {
+    let named = 0;
+    state.viewers.forEach(function (viewer) {
+      if (state.slots.indexOf(viewer) !== -1) return;
+      if (viewer.coins > 0 || viewer.followed) named += 1;
+    });
+    state.shadow = 24 + named;
   }
 
   function addBrick(viewer, band, floor) {
@@ -258,7 +293,7 @@
     const scale = 1 + 0.35 * Math.log2(1 + state.heat);
     const max = 100 * scale;
     state.boss = { name: biome.boss, hp: max, max: max, flash: 0, biome: biome.name };
-    pushTicker("Boss", biome.boss + " blocks the shaft", false);
+    pushTicker("Boss", biome.boss + " blocks the shaft", false, true);
   }
 
   function spawnSide(now, biome) {
@@ -299,7 +334,6 @@
       state.introViewer = viewer;
       state.weatherUntil = now + 12000;
       state.checkpoint = Math.floor(viewFloor(now));
-      if (!state.scars.includes(state.checkpoint)) state.scars.push(state.checkpoint);
     }
     if (band.id >= 4) state.punch = -36;
 
@@ -351,7 +385,7 @@
     state.boss = null;
     state.side = null;
     if (!state.scars.includes(Math.floor(from))) state.scars.push(Math.floor(from));
-    pushTicker("Spire", "slipped to floor " + Math.floor(to), false);
+    pushTicker("Spire", "slipped to floor " + Math.floor(to), false, true);
   }
 
   function finishCollapse(now) {
@@ -373,7 +407,7 @@
     state.boss = null;
     state.nextBossFloor = Math.floor(state.floor) + 50;
     state.nextBossAt = now + 70000;
-    pushTicker("Checkpoint", name + " fell", false);
+    pushTicker("Checkpoint", name + " fell at " + Math.floor(state.floor), false, true);
     burst(540, 430, "#ffd56a", 16);
   }
 
@@ -391,13 +425,9 @@
       viewer.pop = Math.max(0, viewer.pop - dt / 0.3);
     }
 
-    const expired = [];
     state.slots = state.slots.filter(function (viewer) {
-      if (viewer.until > now) return true;
-      expired.push(viewer);
-      return false;
+      return viewer.until > now;
     });
-    state.shadow += expired.length;
 
     if (state.collapsing) {
       if (now - state.collapsing.start >= state.collapsing.dur) finishCollapse(now);
@@ -452,7 +482,7 @@
         state.side.flash = Math.max(0, state.side.flash - dt);
         if (state.side.hp <= 0) {
           burst(880, 366, "#ffc857", 12);
-          pushTicker("Side boss", "the swarm cracked it", false);
+          pushTicker("Side boss", "the swarm cracked it", false, true);
           state.side = null;
         }
       }
@@ -482,6 +512,7 @@
     }
 
     state.cycle += dt;
+    refreshCrowd();
   }
 
   function drawClimber(viewer, x, y, now, slip) {
@@ -592,6 +623,19 @@
       roundRect(-7, -6, 14, 12, 2);
       ctx.fill();
       ctx.stroke();
+    } else if (band === 4) {
+      ctx.beginPath();
+      ctx.moveTo(0, -9);
+      ctx.lineTo(3, -2);
+      ctx.lineTo(9, 0);
+      ctx.lineTo(3, 2);
+      ctx.lineTo(0, 9);
+      ctx.lineTo(-3, 2);
+      ctx.lineTo(-9, 0);
+      ctx.lineTo(-3, -2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
     } else if (band === 5) {
       ctx.fillRect(-2, -8, 3, 18);
       ctx.beginPath();
@@ -602,9 +646,14 @@
       ctx.stroke();
     } else {
       ctx.beginPath();
-      ctx.arc(0, 0, 7, 0, Math.PI * 2);
+      ctx.arc(4, 1, 6, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-8, 6);
+      ctx.lineTo(2, 2);
+      ctx.lineTo(-2, 8);
+      ctx.fill();
     }
     ctx.restore();
   }
@@ -657,12 +706,12 @@
     ctx.arc(x + w * 0.34, y + h * 0.58, 7, 0, Math.PI * 2);
     ctx.arc(x + w * 0.66, y + h * 0.58, 7, 0, Math.PI * 2);
     ctx.fill();
-    bar(x + 8, y - 26, w - 16, 16, boss.hp / boss.max, "#ff5a1f", "#1a1210");
+    bar(x + 8, y - 78, w - 16, 16, boss.hp / boss.max, "#ff5a1f", "#1a1210");
     ctx.fillStyle = "#fff6e8";
-    ctx.font = "700 24px " + FONT;
+    ctx.font = "700 22px " + FONT;
     ctx.textAlign = "center";
     ctx.textBaseline = "alphabetic";
-    ctx.fillText(boss.name, x + w / 2, y - 36);
+    ctx.fillText(fitText(boss.name, w - 28), x + w / 2, y + h - 22);
   }
 
   function drawBossBody(biomeName, flash) {
@@ -746,7 +795,7 @@
     return lines;
   }
 
-  function drawAhead(biome, view, now) {
+  function drawAhead(biome, view, now, pale) {
     ctx.save();
     ctx.beginPath();
     ctx.rect(SHAFT_L + 12, PLAY_TOP + 16, SHAFT_R - SHAFT_L - 24, ANCHOR_Y - PLAY_TOP - 160);
@@ -773,10 +822,35 @@
       if (y < PLAY_TOP + 24 || y > ANCHOR_Y - 70) continue;
       if (f % 5 !== 0) continue;
       if (state.boss && y > 300 && y < 680) continue;
-      ctx.fillStyle = f === gate ? "#ff5a1f" : "rgba(255,246,232,0.75)";
+      ctx.fillStyle = f === gate ? "#ff5a1f" : (pale ? "rgba(26,18,24,0.82)" : "rgba(255,246,232,0.75)");
       ctx.fillText(f === gate ? f + " BOSS" : String(f), 540, y - 8);
     }
     ctx.restore();
+  }
+
+  function packLayout(view, lavaScreen, gap) {
+    const n = state.slots.length;
+    const rows = Math.max(1, Math.ceil(n / 2));
+    const topY = screenY(view, view);
+    const foot = 36;
+    const ceiling = lavaScreen - (gap < 5 ? 10 : foot);
+    let spacing = 1.28 * PX;
+    if (rows > 1) {
+      const fit = Math.max(8, ceiling - topY);
+      if ((rows - 1) * spacing > fit) spacing = fit / (rows - 1);
+    }
+    const spots = [];
+    let lowest = topY;
+    for (let i = 0; i < n; i++) {
+      const row = Math.floor(i / 2);
+      const col = i % 2;
+      let y = topY + row * spacing;
+      const slip = !!state.collapsing || (gap < 5 && i === n - 1);
+      if (y > lavaScreen - foot) y = slip ? lavaScreen - 6 : lavaScreen - foot;
+      if (y > lowest) lowest = y;
+      spots.push({ x: 540 + (col ? 82 : -82), y: y, slip: slip });
+    }
+    return { spots: spots, top: topY - 96, bot: lowest + foot };
   }
 
   function draw(now) {
@@ -784,6 +858,9 @@
     const lava = viewLava(now);
     const gap = view - lava;
     const biome = biomeAt(view);
+    const pale = hexLum(biome.shaft) > 0.62;
+    const shownLava = screenY(view - visualGap(gap), view);
+    const pack = packLayout(view, shownLava, gap);
     const shake = state.hazard && state.hazard.type === "quake" ? Math.sin(now / 28) * 7 : 0;
 
     ctx.clearRect(0, 0, W, H);
@@ -828,7 +905,7 @@
       const wide = 312;
       const tall = 64;
       ctx.save();
-      ctx.globalAlpha = [1, 0.78, 0.52, 0.32][row];
+      ctx.globalAlpha = [1, 0.92, 0.84, 0.76][row];
       roundRect(x, y, wide, tall, 10);
       ctx.clip();
       ctx.fillStyle = brick.band >= 6 ? "#ffc857" : "#1a1210";
@@ -841,7 +918,7 @@
       ctx.font = "700 22px " + FONT;
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
-      ctx.fillText("@" + brick.name, x + 14, y + (brick.band >= 4 || brick.band === 0 ? 24 : 32));
+      ctx.fillText(fitText("@" + brick.name, wide - 48), x + 14, y + (brick.band >= 4 || brick.band === 0 ? 24 : 32));
       if (brick.band >= 4 || brick.band === 0) {
         ctx.font = "700 16px " + FONT;
         ctx.fillStyle = brick.band >= 6 ? "#6a4a12" : biome.accent;
@@ -866,24 +943,22 @@
     ctx.strokeStyle = biome.accent;
     ctx.lineWidth = 3;
     ctx.stroke();
-    drawAhead(biome, view, now);
+    drawAhead(biome, view, now, pale);
 
     const topFloor = view + (ANCHOR_Y - PLAY_TOP) / PX + 2;
     const botFloor = view - (PLAY_BOT - ANCHOR_Y) / PX - 2;
     for (let f = Math.floor(botFloor); f <= Math.ceil(topFloor); f++) {
       const y = screenY(f, view);
-      ctx.fillStyle = "rgba(255,246,232,0.16)";
+      ctx.fillStyle = pale ? "rgba(26,18,24,0.22)" : "rgba(255,246,232,0.16)";
       ctx.fillRect(SHAFT_L + 28, y, SHAFT_R - SHAFT_L - 56, 5);
       if (state.scars.indexOf(f) !== -1) {
-        ctx.fillStyle = "rgba(255,246,232,0.55)";
+        ctx.fillStyle = pale ? "rgba(26,18,24,0.5)" : "rgba(255,246,232,0.55)";
         ctx.fillRect(SHAFT_L + 18, y - 2, SHAFT_R - SHAFT_L - 36, 8);
       }
     }
 
-    drawWall(view, state.lava, false);
+    drawWall(view, shownLava, false, pack.top, pack.bot);
 
-    const lavaY = screenY(view - visualGap(gap), view);
-    const shownLava = lavaY;
     if (shownLava < PLAY_BOT) {
       const g = ctx.createLinearGradient(0, shownLava - 20, 0, PLAY_BOT);
       g.addColorStop(0, "rgba(255,213,106,0)");
@@ -925,7 +1000,7 @@
       ctx.restore();
     }
 
-    drawWall(view, state.lava, true);
+    drawWall(view, shownLava, true, pack.top, pack.bot);
 
     if (now < state.frenzyUntil) {
       ctx.fillStyle = "rgba(255, 196, 64, 0.14)";
@@ -975,22 +1050,18 @@
     ctx.fillStyle = "rgba(255,246,232,0.35)";
     for (let i = 0; i < 5; i++) {
       ctx.beginPath();
-      ctx.arc(SHAFT_L + 48 + i * 46, Math.min(PLAY_BOT - 36, screenY(lava, view) - 28), 7, 0, Math.PI * 2);
+      ctx.arc(SHAFT_L + 48 + i * 46, Math.min(PLAY_BOT - 36, shownLava - 28), 7, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    const named = Math.min(2, state.slots.length);
-    for (let i = state.slots.length - 1; i >= 0; i--) {
+    const named = Math.min(2, pack.spots.length);
+    for (let i = pack.spots.length - 1; i >= 0; i--) {
+      const spot = pack.spots[i];
       const viewer = state.slots[i];
-      const row = Math.floor(i / 2);
-      const col = i % 2;
-      const x = 540 + (col ? 82 : -82);
-      const y = screenY(view - row * 1.28, view);
-      const slip = gap < 5 && i === state.slots.length - 1;
-      drawClimber(viewer, x, y, now, slip);
+      drawClimber(viewer, spot.x, spot.y, now, spot.slip);
       if (i < named) {
-        const lift = (viewer.band >= 4 ? 108 : 78) + (slip ? 8 : 0);
-        drawPlate(viewer, x, y - lift);
+        const lift = (viewer.band >= 4 ? 108 : 78) + (spot.slip ? 8 : 0);
+        drawPlate(viewer, spot.x, spot.y - lift);
       }
     }
 
@@ -1014,15 +1085,18 @@
 
     if (gap <= 5) {
       const named = state.held && now < state.held.until;
-      const gy = state.boss ? ANCHOR_Y - 130 : PLAY_TOP + 270;
+      const gy = state.boss ? Math.min(PLAY_BOT - 150, shownLava + 120) : PLAY_TOP + 270;
       ctx.fillStyle = "rgba(26,18,16,0.78)";
       roundRect(400, gy - 64, 280, named ? 168 : 112, 18);
       ctx.fill();
-      ctx.fillStyle = "#ff3b3b";
-      ctx.font = "700 72px " + FONT;
+      ctx.fillStyle = "#fff6e8";
+      ctx.font = "700 18px " + FONT;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(Math.max(0, gap).toFixed(1), 540, gy);
+      ctx.fillText("GAP", 540, gy - 36);
+      ctx.fillStyle = "#ff3b3b";
+      ctx.font = "700 64px " + FONT;
+      ctx.fillText(Math.max(0, gap).toFixed(1), 540, gy + 10);
       if (named) {
         ctx.fillStyle = "#fff6e8";
         ctx.font = "700 28px " + FONT;
@@ -1068,27 +1142,35 @@
     }
   }
 
-  function drawWall(view, lava, sunkOnly) {
+  function drawWall(view, shownLava, sunkOnly, packTop, packBot) {
+    const placed = [null, null];
     state.wall.forEach(function (brick) {
-      const sunk = brick.floor < lava - 0.15;
+      let y = screenY(brick.floor, view);
+      const sunk = y > shownLava - 2;
       if (sunk !== sunkOnly) return;
-      const y = screenY(brick.floor, view);
-      if (y < PLAY_TOP + 24 || y > PLAY_BOT - 16) return;
-      const text = "@" + brick.name;
+      if (y < PLAY_TOP + 28 || y > PLAY_BOT - 20) return;
+      if (!sunk && y > packTop && y < packBot) return;
+      const side = brick.side ? 1 : 0;
+      if (placed[side] !== null && Math.abs(y - placed[side]) < 32) {
+        const next = placed[side] + 32;
+        if (sunk && next < PLAY_BOT - 20) y = next;
+        else if (!sunk && next < shownLava - 4) y = next;
+        else return;
+      }
+      placed[side] = y;
       ctx.save();
-      ctx.font = "700 16px " + FONT;
+      ctx.font = "700 20px " + FONT;
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
-      const w = ctx.measureText(text).width + 14;
-      const x = brick.side ? SHAFT_R - 18 - w : SHAFT_L + 18;
-      ctx.globalAlpha = sunk ? 0.42 : 0.92;
-      if (!sunk) {
-        ctx.fillStyle = "rgba(12,8,14,0.62)";
-        roundRect(x, y - 13, w, 26, 7);
-        ctx.fill();
-      }
+      const text = fitText("@" + brick.name, 118);
+      const w = ctx.measureText(text).width + 16;
+      const x = side ? SHAFT_R - 16 - w : SHAFT_L + 16;
+      ctx.globalAlpha = sunk ? 0.86 : 0.94;
+      ctx.fillStyle = "rgba(12,8,14,0.82)";
+      roundRect(x, y - 14, w, 28, 7);
+      ctx.fill();
       ctx.fillStyle = brick.band >= 6 ? "#ffc857" : "#fff6e8";
-      ctx.fillText(text, x + 7, y);
+      ctx.fillText(text, x + 8, y);
       ctx.restore();
     });
   }
@@ -1171,9 +1253,19 @@
     roundRect(x, y, w, h, 16);
     ctx.fill();
     ctx.stroke();
+    const maxW = w - 72;
+    let size = 22;
+    while (size > 15) {
+      ctx.font = "700 " + size + "px " + FONT;
+      if (!lines.some(function (line) { return ctx.measureText(line).width > maxW; })) break;
+      size -= 1;
+    }
+    ctx.save();
+    roundRect(x + 8, y + 8, w - 16, h - 16, 12);
+    ctx.clip();
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
-    ctx.font = "700 22px " + FONT;
+    ctx.font = "700 " + size + "px " + FONT;
     lines.forEach(function (line, i) {
       const ly = y + 36 + i * 52;
       ctx.fillStyle = "#ffc857";
@@ -1181,8 +1273,9 @@
       ctx.arc(x + 28, ly, 6, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = "#fff6e8";
-      ctx.fillText(line, x + 48, ly);
+      ctx.fillText(fitText(line, maxW), x + 48, ly);
     });
+    ctx.restore();
   }
 
   function drawHud(now, view, gap, biome) {
@@ -1201,7 +1294,7 @@
       const shown = state.slots[6 + (Math.floor(state.cycle / 2) % (state.slots.length - 6))];
       crowd += "  ·  @" + shown.name;
     }
-    ctx.fillText(crowd, 48, 158);
+    ctx.fillText(fitText(crowd, 400), 48, 158);
 
     ctx.textAlign = "right";
     ctx.fillStyle = biome.accent;
@@ -1210,7 +1303,7 @@
     const mvp = topViewer();
     ctx.fillStyle = "#ffc857";
     ctx.font = "700 24px " + FONT;
-    ctx.fillText(mvp ? "MVP @" + mvp.name + "  " + mvp.coins : "MVP —", 1036, 112);
+    ctx.fillText(fitText(mvp ? "MVP @" + mvp.name + "  " + mvp.coins : "MVP —", 460), 1036, 112);
 
     ctx.textAlign = "center";
     ctx.fillStyle = "#fff6e8";
@@ -1260,10 +1353,13 @@
       ctx.fill();
       const line = lines[i];
       if (!line) continue;
+      const label = (line.system ? "" : "@") + line.name;
       ctx.fillStyle = line.micro ? "#fff6e8" : "#ffc857";
-      ctx.fillText("@" + line.name, 60, y);
+      const shown = fitText(label, 300);
+      ctx.fillText(shown, 60, y);
+      const verbX = 60 + ctx.measureText(shown).width + 28;
       ctx.fillStyle = "#fff6e8";
-      ctx.fillText(line.verb, 280, y);
+      ctx.fillText(fitText(line.verb, 1000 - verbX), verbX, y);
     }
   }
 
@@ -1282,7 +1378,7 @@
       ctx.font = "700 22px " + FONT;
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
-      ctx.fillText(band.key + "   " + band.label + "   " + band.verb, item.x + 16, item.y + item.h / 2);
+      ctx.fillText(fitText(band.key + "   " + band.label + "   " + band.verb, item.w - 32), item.x + 16, item.y + item.h / 2);
     });
     ctx.globalAlpha = 1;
   }
@@ -1354,7 +1450,7 @@
     regular.gifts = 3;
     regular.coins = 3;
     regular.band = 1;
-    pushTicker("Spire", "the climb is on", false);
+    pushTicker("Spire", "the climb is on", false, true);
     pushTicker("Noor", "landed a landmark", false);
     pushTicker("Ren", "joined the climb", true);
   }
