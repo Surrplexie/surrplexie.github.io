@@ -477,6 +477,13 @@
   }
 
   function zoneAt(x, y) {
+    if (state.mode === "soccer") {
+      const f = soccerField();
+      const g = soccerGoalDepth();
+      if (x <= f.x0 + g) return "blue";
+      if (x >= f.x1 - g) return "green";
+      return null;
+    }
     if (state.mode === "assault") return inAssaultSpawnRing(x, y) ? "blue" : null;
     if (state.mode === "siege") return inSiegeRed(x, y) ? "boss" : null;
     if (state.mode === "tdm") {
@@ -6625,6 +6632,13 @@
         const steered = steerAround(tank, s.x, s.y);
         tx = steered.x;
         ty = steered.y;
+      } else if (state.mode === "soccer") {
+        const f = soccerField();
+        const g = soccerGoalDepth();
+        const hx = tank.team === "blue" ? f.x0 + g * 0.45 : f.x1 - g * 0.45;
+        const steered = steerAround(tank, hx, (f.y0 + f.y1) * 0.5);
+        tx = steered.x;
+        ty = steered.y;
       } else {
         const home = baseCenter(tank.team);
         const steered = steerAround(tank, home.x, home.y);
@@ -6655,7 +6669,13 @@
         tx = enemy.x;
         ty = enemy.y;
       } else if (ez && ez === enemy.team) {
-        if (state.mode === "assault") {
+        if (state.mode === "soccer") {
+          const f = soccerField();
+          const g = soccerGoalDepth();
+          const margin = (tank.r || 22) + 30;
+          tx = ez === "blue" ? f.x0 + g + margin : f.x1 - g - margin;
+          ty = clamp(enemy.y, f.y0 + margin, f.y1 - margin);
+        } else if (state.mode === "assault") {
           const inset = ASSAULT_ZONE + 90;
           tx = clamp(enemy.x, inset, WORLD.w - inset);
           ty = clamp(enemy.y, inset, WORLD.h - inset);
@@ -6779,10 +6799,16 @@
       ty = steered.y;
       if (!tank.aiTarget) tank.angle = Math.atan2(ty - tank.y, tx - tank.x);
     }
-    if ((state.mode === "tdm" || isFourTeamMode() || state.mode === "assault") && tank.team && tank.aiState !== "home") {
+    if ((state.mode === "tdm" || isFourTeamMode() || state.mode === "assault" || state.mode === "soccer") && tank.team && tank.aiState !== "home") {
       const destZone = zoneAt(tx, ty);
       if (destZone && destZone !== tank.team) {
-        if (state.mode === "assault") {
+        if (state.mode === "soccer") {
+          const f = soccerField();
+          const g = soccerGoalDepth();
+          const margin = (tank.r || 22) + 24;
+          tx = destZone === "blue" ? f.x0 + g + margin : f.x1 - g - margin;
+          ty = tank.y;
+        } else if (state.mode === "assault") {
           const inset = ASSAULT_ZONE + (tank.r || 22) + 30;
           tx = clamp(tank.x, inset, WORLD.w - inset);
           ty = clamp(tank.y, inset, WORLD.h - inset);
@@ -7297,7 +7323,7 @@
           if (burn > 0) tank.health -= burn;
           tank.bodyHitT = 0.08;
           if (tank === state.player) shake = Math.max(shake, inStorm ? 3 : 4);
-          if (tank.health <= 0) killTank(tank, null, inStorm ? "the storm" : (state.mode === "siege" ? "the red zone" : `the ${zoneAt(tank.x, tank.y)} base`));
+          if (tank.health <= 0) killTank(tank, null, inStorm ? "the storm" : (state.mode === "siege" ? "the red zone" : state.mode === "soccer" ? `the ${zoneAt(tank.x, tank.y)} goal` : `the ${zoneAt(tank.x, tank.y)} base`));
         }
       } else {
         tank.health = Math.min(tank.maxHealth, tank.health + st.regen * dt);
