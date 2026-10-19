@@ -74,6 +74,7 @@ flat in vec4 vP;
 out vec4 o;
 float sdCircle(vec2 p, float r) { return length(p) - r; }
 float sdRegular(vec2 p, float n, float r) {
+  if (dot(p, p) < 1e-6) return -r;
   p.y = -p.y;
   float an = 3.141592653589793 / n;
   vec2 acs = vec2(cos(an), sin(an));

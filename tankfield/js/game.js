@@ -118,7 +118,7 @@
 
   const canvas = document.getElementById("game");
   const labelCanvas = document.getElementById("labels");
-  const glOn = !!(window.TankfieldGL && TankfieldGL.attach(canvas));
+  let glOn = !!(window.TankfieldGL && TankfieldGL.attach(canvas));
   const ctx = glOn ? null : canvas.getContext("2d");
   const lctx = labelCanvas ? labelCanvas.getContext("2d") : null;
   const mini = document.getElementById("minimap");
@@ -187,6 +187,12 @@
 
   const keys = new Set();
   const mouse = { x: 0, y: 0, down: false, right: false };
+  const aimIds = new Set();
+  let movePointer = null;
+  let stickOx = 0;
+  let stickOy = 0;
+  let stickX = 0;
+  let stickY = 0;
   const devChordKeys = new Set();
   const devHistory = [];
   let devHistoryIndex = 0;
@@ -225,10 +231,12 @@
   let dpr = 1;
   let width = 0;
   let height = 0;
+  let viewScale = 1;
   let leaderPaintAt = -1;
   let leaderSig = "";
   let miniWalls = null;
   let miniWallKey = "";
+  let miniWallRev = 0;
   let pageZ = 1;
   let last = 0;
   let running = false;
@@ -319,16 +327,23 @@
   const WHITE = new Float32Array([1, 1, 1]);
   const NEST_COL = new Float32Array([118 / 255, 141 / 255, 252 / 255]);
 
+  function hexChannels(color) {
+    let s = String(color).trim();
+    if (s.charAt(0) === "#") s = s.slice(1);
+    if (s.length === 3 || s.length === 4) s = s.replace(/./g, (ch) => ch + ch);
+    if (s.length < 6 || /[^0-9a-f]/i.test(s.slice(0, 6))) return null;
+    const n = parseInt(s.slice(0, 6), 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+
   function darken(hex, amt = 0.28) {
     const key = hex + "|" + amt;
     const hit = tintCache.get(key);
     if (hit) return hit;
-    const n = parseInt(String(hex).replace("#", ""), 16);
-    const r = (n >> 16) & 255;
-    const g = (n >> 8) & 255;
-    const b = n & 255;
+    const ch = hexChannels(hex);
+    if (!ch) return hex;
     const f = 1 - amt;
-    const out = `rgb(${(r * f) | 0},${(g * f) | 0},${(b * f) | 0})`;
+    const out = `rgb(${(ch[0] * f) | 0},${(ch[1] * f) | 0},${(ch[2] * f) | 0})`;
     tintCache.set(key, out);
     return out;
   }
@@ -337,11 +352,9 @@
     const key = "o|" + hex;
     const hit = tintCache.get(key);
     if (hit) return hit;
-    const n = parseInt(String(hex).replace("#", ""), 16);
-    const r = (n >> 16) & 255;
-    const g = (n >> 8) & 255;
-    const b = n & 255;
-    const lum = r * 0.3 + g * 0.59 + b * 0.11;
+    const ch = hexChannels(hex);
+    if (!ch) return "#555555";
+    const lum = ch[0] * 0.3 + ch[1] * 0.59 + ch[2] * 0.11;
     const out = lum < 48 ? "#8a8a8a" : lum > 230 ? "#6a6a6a" : darken(hex);
     tintCache.set(key, out);
     return out;
@@ -354,11 +367,11 @@
     let r = 255;
     let g = 255;
     let b = 255;
-    if (typeof color === "string" && color.charAt(0) === "#") {
-      const n = parseInt(color.slice(1), 16);
-      r = (n >> 16) & 255;
-      g = (n >> 8) & 255;
-      b = n & 255;
+    const ch = typeof color === "string" && color.charAt(0) === "#" ? hexChannels(color) : null;
+    if (ch) {
+      r = ch[0];
+      g = ch[1];
+      b = ch[2];
     } else {
       const m = String(color).match(/[\d.]+/g);
       if (m && m.length >= 3) {
@@ -816,6 +829,12 @@
     document.documentElement.style.setProperty("--app-w", `${width}px`);
     document.documentElement.style.setProperty("--app-h", `${height}px`);
   }
+
+  canvas.addEventListener("webglcontextlost", (e) => e.preventDefault());
+  canvas.addEventListener("webglcontextrestored", () => {
+    glOn = !!(window.TankfieldGL && TankfieldGL.attach(canvas));
+    resize();
+  });
 
   function randomInWorld(margin = 80) {
     for (let i = 0; i < 40; i++) {
@@ -1977,6 +1996,7 @@
   function addSiegeWall(x, y, w, h) {
     if (w < 8 || h < 8) return;
     state.walls.push({ x, y, w, h, wall: true });
+    miniWallRev += 1;
   }
 
   function addSiegeHWall(x0, x1, y, thick, gateX, gateW) {
@@ -3748,7 +3768,7 @@
 
   function updateGhost(dt) {
     if (!state.spectating || !state.ghost) return;
-    const moving = keys.has("w") || keys.has("arrowup") || keys.has("s") || keys.has("arrowdown")
+    const moving = stickX || stickY || keys.has("w") || keys.has("arrowup") || keys.has("s") || keys.has("arrowdown")
       || keys.has("a") || keys.has("arrowleft") || keys.has("d") || keys.has("arrowright");
     if (state.spectateTarget && state.spectateTarget.alive) {
       if (moving) enterFreeCam(state.spectateTarget);
@@ -3760,6 +3780,8 @@
     if (keys.has("s") || keys.has("arrowdown")) my += 1;
     if (keys.has("a") || keys.has("arrowleft")) mx -= 1;
     if (keys.has("d") || keys.has("arrowright")) mx += 1;
+    mx += stickX;
+    my += stickY;
     if (!mx && !my) return;
     const m = Math.hypot(mx, my) || 1;
     const speed = 560;
@@ -3907,6 +3929,7 @@
       releaseMazeWall(entity);
       entity.x = clamp(x - entity.w * 0.5, 0, WORLD.w - entity.w);
       entity.y = clamp(y - entity.h * 0.5, 0, WORLD.h - entity.h);
+      miniWallRev += 1;
       return;
     }
     const r = Math.max(0, Number(entity.r) || 0);
@@ -6441,6 +6464,8 @@
     if (keys.has("s") || keys.has("arrowdown")) my += 1;
     if (keys.has("a") || keys.has("arrowleft")) mx -= 1;
     if (keys.has("d") || keys.has("arrowright")) mx += 1;
+    mx += stickX;
+    my += stickY;
     if (mx || my) {
       const m = Math.hypot(mx, my) || 1;
       p.vx += (mx / m) * st.moveSpeed * 62 * dt;
@@ -7597,14 +7622,15 @@
     const hpFull = !repairing && ent.maxHealth > 0 && ent.health >= ent.maxHealth * 0.995;
     const shFull = maxSh <= 0.5 || sh >= maxSh * 0.995;
     if (hpFull && shFull) return;
+    const z = Math.max(0.35, viewScale || 1);
     const w = ent.r * 2.2;
-    const h = 5;
+    const h = 5 / z;
     const x = ent.x - w / 2;
-    const y = ent.y + (yOff || ent.r + 8);
+    const y = ent.y + (yOff || ent.r + 8 / z);
     const hpPct = repairing ? clamp(ent.repair, 0, 1) : (ent.maxHealth > 0 ? clamp(ent.health / ent.maxHealth, 0, 1) : 1);
     if (maxSh > 0.5) {
       drawBar(c, x, y, w, h, sh / maxSh, "#1f4f7a", "#4ea4ff");
-      drawBar(c, x, y + 7, w, h, hpPct, repairing ? "#6a5a18" : "#3a7a32", repairing ? "#f2e863" : "#9dff5a");
+      drawBar(c, x, y + h + 2 / z, w, h, hpPct, repairing ? "#6a5a18" : "#3a7a32", repairing ? "#f2e863" : "#9dff5a");
     } else {
       drawBar(c, x, y, w, h, hpPct, repairing ? "#6a5a18" : "#3a7a32", repairing ? "#f2e863" : (hpPct < 0.3 ? "#e85d5d" : "#9dff5a"));
     }
@@ -7822,10 +7848,11 @@
     const hpFull = !repairing && ent.maxHealth > 0 && ent.health >= ent.maxHealth * 0.995;
     const shFull = maxSh <= 0.5 || sh >= maxSh * 0.995;
     if (hpFull && shFull) return;
+    const z = Math.max(0.35, viewScale || 1);
     const w = ent.r * 2.2;
-    const h = 5;
+    const h = 5 / z;
     const x = ent.x - w / 2;
-    const y = ent.y + (yOff || ent.r + 8);
+    const y = ent.y + (yOff || ent.r + 8 / z);
     const hpPct = repairing ? clamp(ent.repair, 0, 1) : (ent.maxHealth > 0 ? clamp(ent.health / ent.maxHealth, 0, 1) : 1);
     const frame = rgbOf("#333333");
     const drawH = (bx, by, pct, track, fill) => {
@@ -7835,7 +7862,7 @@
     };
     if (maxSh > 0.5) {
       drawH(x, y, sh / maxSh, rgbOf("#1f4f7a"), rgbOf("#4ea4ff"));
-      drawH(x, y + 7, hpPct, rgbOf(repairing ? "#6a5a18" : "#3a7a32"), rgbOf(repairing ? "#f2e863" : "#9dff5a"));
+      drawH(x, y + h + 2 / z, hpPct, rgbOf(repairing ? "#6a5a18" : "#3a7a32"), rgbOf(repairing ? "#f2e863" : "#9dff5a"));
     } else {
       drawH(x, y, hpPct, rgbOf(repairing ? "#6a5a18" : "#3a7a32"), rgbOf(repairing ? "#f2e863" : (hpPct < 0.3 ? "#e85d5d" : "#9dff5a")));
     }
@@ -7914,32 +7941,40 @@
     if (!lctx) return;
     lctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     lctx.clearRect(0, 0, width, height);
+    const toScreen = (x, y) => ({
+      x: (x - cam.x) * zoom + width / 2 + sx,
+      y: (y - cam.y) * zoom + height / 2 + sy,
+    });
+    for (const t of state.tanks) {
+      if (!t.alive || !overlaps(t.x, t.y, t.r + 36, left, top, viewW, viewH)) continue;
+      const p = toScreen(t.x, t.y);
+      const lift = t.r * zoom;
+      if (t.dominator) {
+        const label = t.destroyed ? (t.mainBase ? "Healer wreck" : "Dominator wreck") : t.name;
+        drawOutlinedText(lctx, label, p.x, p.y - lift - 8, "bold 13px Ubuntu, Segoe UI, sans-serif", "#fff", 3.6);
+      } else {
+        const label = t === state.hunted ? t.name + "  HUNTED" : t.name;
+        const baseY = p.y - lift - 6;
+        drawOutlinedText(lctx, formatScore(t.score || 0), p.x, baseY, "bold 10px Ubuntu, Segoe UI, sans-serif", "#fff", 3.2);
+        drawOutlinedText(lctx, label, p.x, baseY - 14, "bold 13px Ubuntu, Segoe UI, sans-serif", "#fff", 3.6);
+      }
+    }
+    lctx.fillStyle = "#333";
+    lctx.font = "bold 14px Segoe UI, sans-serif";
+    lctx.textAlign = "center";
+    lctx.textBaseline = "middle";
+    for (const f of state.floaters) {
+      if (!overlaps(f.x, f.y, 20, left, top, viewW, viewH)) continue;
+      const p = toScreen(f.x, f.y);
+      lctx.globalAlpha = clamp(f.life / 0.4, 0, 1);
+      lctx.fillText(f.text, p.x, p.y);
+      lctx.globalAlpha = 1;
+    }
     lctx.save();
     lctx.translate(width / 2 + sx, height / 2 + sy);
     lctx.scale(zoom, zoom);
     lctx.translate(-cam.x, -cam.y);
-    for (const t of state.tanks) {
-      if (!t.alive || !overlaps(t.x, t.y, t.r + 36, left, top, viewW, viewH)) continue;
-      if (t.dominator) {
-        const label = t.destroyed ? (t.mainBase ? "Healer wreck" : "Dominator wreck") : t.name;
-        drawOutlinedText(lctx, label, t.x, t.y - t.r - 8, "bold 13px Ubuntu, Segoe UI, sans-serif", "#fff", 3.6);
-      } else {
-        const label = t === state.hunted ? t.name + "  HUNTED" : t.name;
-        const baseY = t.y - t.r - 5;
-        drawOutlinedText(lctx, formatScore(t.score || 0), t.x, baseY, "bold 10px Ubuntu, Segoe UI, sans-serif", "#fff", 3.2);
-        drawOutlinedText(lctx, label, t.x, baseY - 12, "bold 13px Ubuntu, Segoe UI, sans-serif", "#fff", 3.6);
-      }
-    }
     if (spectateFree()) drawGhost(lctx, state.ghost);
-    lctx.fillStyle = "#333";
-    lctx.font = "bold 14px Segoe UI, sans-serif";
-    lctx.textAlign = "center";
-    for (const f of state.floaters) {
-      if (!overlaps(f.x, f.y, 20, left, top, viewW, viewH)) continue;
-      lctx.globalAlpha = clamp(f.life / 0.4, 0, 1);
-      lctx.fillText(f.text, f.x, f.y);
-      lctx.globalAlpha = 1;
-    }
     for (const d of state.doms) {
       if (!(d.progress > 0) || !(d.progress < 1)) continue;
       lctx.beginPath();
@@ -7949,6 +7984,17 @@
       lctx.stroke();
     }
     lctx.restore();
+    if (movePointer != null) {
+      lctx.beginPath();
+      lctx.arc(stickOx, stickOy, 54, 0, TAU);
+      lctx.strokeStyle = "rgba(255,255,255,0.55)";
+      lctx.lineWidth = 2;
+      lctx.stroke();
+      lctx.beginPath();
+      lctx.arc(stickOx + stickX * 54, stickOy + stickY * 54, 18, 0, TAU);
+      lctx.fillStyle = "rgba(255,255,255,0.3)";
+      lctx.fill();
+    }
   }
 
   function renderGL(cam, zoom, sx, sy) {
@@ -8070,6 +8116,7 @@
   function render() {
     const cam = state.camera;
     const zoom = cam.zoom / viewFov();
+    viewScale = zoom;
     const sx = (Math.random() - 0.5) * shake;
     const sy = (Math.random() - 0.5) * shake;
     if (glOn) {
@@ -8335,7 +8382,7 @@
     mctx.fillRect(0, 0, s, s);
     const mapX = (x) => (x / WORLD.w) * s;
     const mapY = (y) => (y / WORLD.h) * s;
-    const wallKey = WORLD.w + "x" + WORLD.h;
+    const wallKey = WORLD.w + "x" + WORLD.h + ":" + state.walls.length + ":" + miniWallRev;
     if (miniWalls !== state.walls || miniWallKey !== wallKey) {
       miniWalls = state.walls;
       miniWallKey = wallKey;
@@ -8577,17 +8624,11 @@
       state.autoSpin = !state.autoSpin;
       note(state.autoSpin ? "Autospin enabled." : "Autospin disabled.");
     }
-    const skippedLevel = k === "n" && running && !state.paused && (state.mode === "protect" || isGrowthVariant() || state.armsRace) && skipToLevelCap(menuTank());
-    if (k === "h" && running && !state.paused && state.mode === "protect") {
-      toggleMothershipControl();
-    } else if (!skippedLevel) {
-      const classIdx = CLASS_KEYS.indexOf(k);
-      if (running && !state.paused && classIdx >= 0 && state.classOptions[classIdx] && !state.classDismissed) {
-        pickClass(state.classOptions[classIdx]);
-      } else if (k === "h" && running && !state.paused) {
-        toggleMothershipControl();
-      }
-    }
+    const classIdx = CLASS_KEYS.indexOf(k);
+    const classReady = running && classIdx >= 0 && state.classOptions[classIdx] && !state.classDismissed;
+    if (classReady) pickClass(state.classOptions[classIdx]);
+    else if (k === "n" && running && (state.mode === "protect" || isGrowthVariant() || state.armsRace)) skipToLevelCap(menuTank());
+    else if (k === "h" && running) toggleMothershipControl();
     const n = parseInt(e.key, 10);
     if (running && !state.paused && n >= 1 && n <= 9) tryUpgrade(STATS[n - 1].key, keys.has("m"));
     if (running && !state.paused && e.key === "0") tryUpgrade(STATS[9].key, keys.has("m"));
@@ -8603,28 +8644,81 @@
     devChordLatched = false;
     devChartLatched = false;
     devDrag = null;
+    mouse.down = false;
+    mouse.right = false;
+    aimIds.clear();
+    movePointer = null;
+    stickX = 0;
+    stickY = 0;
   });
+  function uiBlocks(e) {
+    const t = e.target;
+    if (!t || !t.closest) return false;
+    return !!t.closest("button, input, textarea, select, a, label, #stats-wrap, #class-panel, #spectate-bar, #minimap-wrap, #dev-chart, #dev-cli, #workshop, #death, #pause, #start");
+  }
+  function clearStick() {
+    movePointer = null;
+    stickX = 0;
+    stickY = 0;
+  }
+  function applyStick(x, y) {
+    const dx = x - stickOx;
+    const dy = y - stickOy;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 8) {
+      stickX = 0;
+      stickY = 0;
+      return;
+    }
+    const mag = Math.min(1, (dist - 8) / 54);
+    stickX = (dx / dist) * mag;
+    stickY = (dy / dist) * mag;
+  }
+  function endPointer(e) {
+    if (e.pointerId === movePointer) clearStick();
+    if (e.pointerType === "mouse" && e.button === 2) {
+      mouse.right = false;
+      return;
+    }
+    if (e.pointerType === "mouse" && e.button === 0) devDrag = null;
+    aimIds.delete(e.pointerId);
+    mouse.down = aimIds.size > 0;
+  }
   window.addEventListener("pointermove", (e) => {
+    if (uiBlocks(e) && e.pointerId !== movePointer && !aimIds.has(e.pointerId) && !devDrag) return;
     pointerToGame(e);
+    if (e.pointerId === movePointer) applyStick(mouse.x, mouse.y);
     updateDevDrag();
   });
-  window.addEventListener("mousedown", (e) => {
-    if (e.target && e.target.closest && (e.target.closest("#dev-cli-input") || e.target.closest("#dev-chart"))) return;
+  window.addEventListener("pointerdown", (e) => {
+    if (uiBlocks(e)) return;
     pointerToGame(e);
-    if (!running || state.paused || state.spectating) return;
-    if (e.button === 0 && beginDevDrag()) {
+    if (!running || state.paused) return;
+    const touch = e.pointerType === "touch";
+    if (touch && movePointer == null && mouse.x < width * 0.46) {
+      movePointer = e.pointerId;
+      stickOx = mouse.x;
+      stickOy = mouse.y;
+      stickX = 0;
+      stickY = 0;
+      try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+      return;
+    }
+    if (state.spectating) return;
+    if (!touch && e.button === 0 && beginDevDrag()) {
       e.preventDefault();
       mouse.down = false;
       return;
     }
-    if (e.button === 0) mouse.down = true;
+    if (touch || e.button === 0) {
+      aimIds.add(e.pointerId);
+      mouse.down = true;
+    }
     if (e.button === 2) mouse.right = true;
+    try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
   });
-  window.addEventListener("mouseup", (e) => {
-    if (e.button === 0) devDrag = null;
-    if (e.button === 0) mouse.down = false;
-    if (e.button === 2) mouse.right = false;
-  });
+  window.addEventListener("pointerup", endPointer);
+  window.addEventListener("pointercancel", endPointer);
   window.addEventListener("contextmenu", (e) => {
     if (running && !state.paused && !state.spectating) e.preventDefault();
   });

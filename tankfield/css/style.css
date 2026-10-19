@@ -17,6 +17,11 @@ html, body {
   font-family: "Segoe UI", Tahoma, sans-serif;
   color: #222;
   user-select: none;
+  touch-action: none;
+}
+
+button, input, textarea, select, a {
+  touch-action: manipulation;
 }
 
 #game, #labels {
@@ -918,6 +923,16 @@ kbd {
   width: min(460px, calc(var(--app-w) * 0.62));
   z-index: 5;
   text-align: center;
+}
+
+@media (max-width: 860px) {
+  #status-wrap {
+    left: 12px;
+    right: auto;
+    bottom: 252px;
+    transform: none;
+    width: min(420px, calc(var(--app-w) - 196px));
+  }
 }
 
 #player-name {
