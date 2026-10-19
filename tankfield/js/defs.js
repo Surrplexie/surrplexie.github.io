@@ -251,7 +251,7 @@
       type: "drone",
       layers: [g.drone, ...more],
       calculator: "drone",
-      shape: extra.shape || 3,
+      shape: extra.shape == null ? 3 : extra.shape,
       necro: !!extra.necro,
     })],
     swarm: (y, ang = 0, delay = 0, more = []) => [gun(7, 6.5, 0.6, 7, y, ang, delay, { type: "swarm", layers: [g.swarm, ...more], calculator: "swarm" })],
@@ -281,7 +281,7 @@
     guns: [
       gun(5, 11, 1.3, 8, 0, 0, 0, { type: "drone", calculator: "drone", shoot: { reload: 36, recoil: 0.25, shudder: 0.1, size: 0.6, health: 1, damage: 1, pen: 1, speed: 1.5, maxSpeed: 1, range: 1, density: 1, spray: 0.1, resist: 1 } })
     ],
-    upgrades: ["overseer", "cruiser", "underseer", "spawner", "manager", "bigcheese"],
+    upgrades: ["overseer", "cruiser", "underseer", "spawner", "manager", "bigcheese", "tempest"],
     needLevel: 15,
     fov: 1.1,
     maxDrones: 6
@@ -651,6 +651,60 @@
     upgrades: [],
     needLevel: 30,
     fov: 1.225
+  });
+
+  function droneRing(n) {
+    const guns = [];
+    for (let i = 0; i < n; i++) guns.push(G.director((360 / n) * i, [], { shape: 0 })[0]);
+    return guns;
+  }
+
+  def("tempest", {
+    name: "Tempest",
+    desc: "Triangle body with a ring of drones",
+    body: 3,
+    guns: droneRing(3),
+    upgrades: ["tornado"],
+    needLevel: 15,
+    fov: 1.1,
+    speed: 0.9,
+    maxDrones: 3
+  });
+
+  def("tornado", {
+    name: "Tornado",
+    desc: "Triangle body with six drones",
+    body: 3,
+    guns: droneRing(6),
+    upgrades: ["whirlwind", "hurricane"],
+    needLevel: 30,
+    fov: 1.12,
+    speed: 0.88,
+    maxDrones: 6
+  });
+
+  def("whirlwind", {
+    name: "Whirlwind",
+    desc: "Square body with four drones",
+    body: 4,
+    guns: droneRing(4),
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.12,
+    speed: 0.86,
+    maxDrones: 4
+  });
+
+  def("hurricane", {
+    name: "Hurricane",
+    desc: "Hex body with six drones",
+    body: 6,
+    guns: droneRing(6),
+    upgrades: [],
+    needLevel: 45,
+    fov: 1.14,
+    speed: 0.84,
+    maxDrones: 6
   });
 
   def("overseer", {
