@@ -553,6 +553,7 @@
     const f = soccerField();
     state.ball = {
       type: "ball",
+      name: "Ball",
       x: (f.x0 + f.x1) / 2,
       y: (f.y0 + f.y1) / 2,
       vx: 0,
@@ -584,6 +585,11 @@
   function stepSoccerBall(dt) {
     const b = state.ball;
     if (!b || state.mode !== "soccer" || state.closing) return;
+    if (devDrag && devDrag.entity === b) {
+      b.vx = 0;
+      b.vy = 0;
+      return;
+    }
     const damp = Math.pow(0.14, dt);
     b.vx *= damp;
     b.vy *= damp;
@@ -4081,10 +4087,12 @@
   }
 
   function devMovableEntities() {
+    const ball = state.mode === "soccer" && state.ball && state.ball.alive !== false ? [state.ball] : [];
     return [
       ...liveDevTanks(),
       ...state.shapes.filter((s) => s && s.alive),
       ...state.bullets.filter((b) => b && b.alive),
+      ...ball,
       ...state.doms,
       ...state.walls,
     ];
@@ -4099,6 +4107,9 @@
 
   function resolveDevEntities(selector) {
     const key = String(selector || "").trim().toLowerCase();
+    if (key === "ball" || key === "@ball") {
+      return state.mode === "soccer" && state.ball ? [state.ball] : [];
+    }
     if (key === "@e") return devMovableEntities();
     if (key === "@a") return liveDevTanks();
     if (key === "@s") return state.player && state.player.alive ? [state.player] : [];
@@ -4369,6 +4380,7 @@
       ...liveDevTanks(),
       ...state.shapes.filter((s) => s && s.alive),
       ...state.bullets.filter((b) => b && b.alive),
+      ...(state.mode === "soccer" && state.ball ? [state.ball] : []),
       ...state.doms,
     ];
     for (const entity of circles) {
@@ -6714,21 +6726,32 @@
     } else tank.stuckT = 0;
     if (state.mode === "soccer" && state.ball && tank.team && tank.aiState !== "flee") {
       const ball = state.ball;
+      const foe = tank.aiTarget && tank.aiTarget.type === "tank" && tank.aiTarget.alive && isEnemyTank(tank, tank.aiTarget)
+        ? tank.aiTarget
+        : null;
+      const fighting = foe && dist2(tank, foe) < 540 * 540;
       const f = soccerField();
       const depth = soccerGoalDepth();
       const goalX = tank.team === "blue" ? f.x1 - depth * 0.35 : f.x0 + depth * 0.35;
       const dx = goalX - ball.x;
       const dy = (f.y0 + f.y1) * 0.5 - ball.y;
       const len = Math.hypot(dx, dy) || 1;
-      const behindX = ball.x - (dx / len) * 200;
-      const behindY = ball.y - (dy / len) * 200;
-      tank.angle = Math.atan2(ball.y - tank.y, ball.x - tank.x);
-      tank.aiTarget = ball;
-      tank.aiState = "attack";
-      if ((tank.x - behindX) ** 2 + (tank.y - behindY) ** 2 > 80 * 80) {
+      const behindX = ball.x - (dx / len) * 88;
+      const behindY = ball.y - (dy / len) * 88;
+      const far = (tank.x - behindX) ** 2 + (tank.y - behindY) ** 2;
+      if (!fighting) {
+        tank.angle = Math.atan2(ball.y - tank.y, ball.x - tank.x);
+        tank.aiTarget = ball;
+        tank.aiState = "attack";
+        if (far > 36 * 36) {
+          const ang = Math.atan2(behindY - tank.y, behindX - tank.x);
+          tank.vx += Math.cos(ang) * pace * 86 * dt;
+          tank.vy += Math.sin(ang) * pace * 86 * dt;
+        }
+      } else if (far > 420 * 420) {
         const ang = Math.atan2(behindY - tank.y, behindX - tank.x);
-        tank.vx += Math.cos(ang) * pace * 54 * dt;
-        tank.vy += Math.sin(ang) * pace * 54 * dt;
+        tank.vx += Math.cos(ang) * pace * 28 * dt;
+        tank.vy += Math.sin(ang) * pace * 28 * dt;
       }
     }
     updateTurrets(tank, dt);
