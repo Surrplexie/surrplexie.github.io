@@ -201,13 +201,14 @@ void main() {
   }
 
   function attach(canvas) {
+    // Stay on the normal swap chain. A desynchronized or high-performance
+    // context presents a blank frame for a fraction of a second on Windows
+    // whenever the GPU stalls or switches adapters.
     gl = canvas.getContext("webgl2", {
       alpha: false,
       antialias: false,
       depth: false,
       stencil: false,
-      desynchronized: true,
-      powerPreference: "high-performance",
     });
     if (!gl) return false;
     prog = link(VERT, FRAG);

@@ -238,6 +238,7 @@
   let miniWallKey = "";
   let miniWallRev = 0;
   let pageZ = 1;
+  let zoomFix = null;
   let last = 0;
   let running = false;
   let shake = 0;
@@ -935,26 +936,21 @@
   }
 
   function applyAntiZoom() {
-    const root = document.documentElement;
     const body = document.body;
     if (!body) return;
     const menuUp = !running && els.start && !els.start.classList.contains("hidden");
-    if (menuUp) {
-      pageZ = 1;
-      clearZoomFix(root);
+    let next = menuUp ? 1 : detectBrowserZoom();
+    if (Math.abs(next - 1) < 0.02) next = 1;
+    pageZ = next;
+    if (zoomFix === pageZ) return;
+    zoomFix = pageZ;
+    clearZoomFix(document.documentElement);
+    if (pageZ === 1) {
       clearZoomFix(body);
       return;
     }
-    pageZ = detectBrowserZoom();
-    clearZoomFix(root);
-    if (Math.abs(pageZ - 1) < 0.02) {
-      pageZ = 1;
-      clearZoomFix(body);
-      return;
-    }
-    const inv = 1 / pageZ;
     body.style.transformOrigin = "0 0";
-    body.style.transform = `scale(${inv})`;
+    body.style.transform = `scale(${1 / pageZ})`;
     body.style.width = `${100 * pageZ}%`;
     body.style.height = `${100 * pageZ}%`;
   }
@@ -973,16 +969,26 @@
     dpr = Math.min(Math.max(nativeDpr, 1), 2);
     width = window.innerWidth * pageZ;
     height = window.innerHeight * pageZ;
-    canvas.width = Math.floor(width * dpr);
-    canvas.height = Math.floor(height * dpr);
-    if (labelCanvas) {
-      labelCanvas.width = canvas.width;
-      labelCanvas.height = canvas.height;
+    const pw = Math.max(1, Math.floor(width * dpr));
+    const ph = Math.max(1, Math.floor(height * dpr));
+    // Assigning canvas width clears the bitmap even when the value is unchanged,
+    // which flashes the whole arena blank until the next frame.
+    const changed = canvas.width !== pw || canvas.height !== ph;
+    if (changed) {
+      canvas.width = pw;
+      canvas.height = ph;
+      if (labelCanvas) {
+        labelCanvas.width = pw;
+        labelCanvas.height = ph;
+      }
+      document.documentElement.style.setProperty("--app-w", `${width}px`);
+      document.documentElement.style.setProperty("--app-h", `${height}px`);
     }
     if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (glOn) TankfieldGL.resize(width, height, dpr);
-    document.documentElement.style.setProperty("--app-w", `${width}px`);
-    document.documentElement.style.setProperty("--app-h", `${height}px`);
+    if (changed && running) {
+      try { render(); } catch (err) { console.error(err); }
+    }
   }
 
   canvas.addEventListener("webglcontextlost", (e) => e.preventDefault());
