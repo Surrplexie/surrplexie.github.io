@@ -4819,6 +4819,7 @@
     if (state.mode === "assault") return ["blue", "green"];
     if (state.mode === "tag" || state.mode === "protect") return ["green", "red"];
     if (state.mode === "siege") return ["blue"];
+    if (state.mode === "soccer") return ["blue", "green"];
     if (isTeamHunt()) return [HUNTER_TEAM, HUNTED_TEAM];
     return ["blue", "red"];
   }
