@@ -524,9 +524,15 @@
     return { x0: 0, y0: insetY, x1: WORLD.w, y1: WORLD.h - insetY };
   }
 
-  function soccerGoalDepth() {
+  function soccerClearDepth() {
     const f = soccerField();
     return (f.x1 - f.x0) * 0.16;
+  }
+
+  function soccerGoalDepth() {
+    const full = soccerClearDepth();
+    if (isMazeVariant()) return Math.max(480, full - 210);
+    return full;
   }
 
   function soccerZoneAt(x, rad) {
@@ -626,7 +632,7 @@
     const m = state.maze;
     if (!m) return;
     const f = soccerField();
-    const g = soccerGoalDepth();
+    const g = soccerClearDepth();
     const x0 = f.x0 + g;
     const x1 = f.x1 - g;
     const cx = (f.x0 + f.x1) / 2;
@@ -704,6 +710,60 @@
     return ball;
   }
 
+  function bounceSoccerBall(b) {
+    const f = soccerField();
+    const r = b.r || 36;
+    let nx = 0;
+    let ny = 0;
+    const bump = (x, y) => { nx += x; ny += y; };
+    if (b.x < f.x0 + r) { b.x = f.x0 + r; bump(1, 0); }
+    if (b.x > f.x1 - r) { b.x = f.x1 - r; bump(-1, 0); }
+    if (b.y < f.y0 + r) { b.y = f.y0 + r; bump(0, 1); }
+    if (b.y > f.y1 - r) { b.y = f.y1 - r; bump(0, -1); }
+    eachNearbyWall(b.x, b.y, r + 2, (w) => {
+      const cx = clamp(b.x, w.x, w.x + w.w);
+      const cy = clamp(b.y, w.y, w.y + w.h);
+      let dx = b.x - cx;
+      let dy = b.y - cy;
+      const d2 = dx * dx + dy * dy;
+      if (d2 >= r * r) return;
+      if (d2 < 1e-6) {
+        const left = b.x - w.x;
+        const right = w.x + w.w - b.x;
+        const top = b.y - w.y;
+        const bot = w.y + w.h - b.y;
+        const side = Math.min(left, right, top, bot);
+        if (side === left) { b.x = w.x - r; bump(-1, 0); }
+        else if (side === right) { b.x = w.x + w.w + r; bump(1, 0); }
+        else if (side === top) { b.y = w.y - r; bump(0, -1); }
+        else { b.y = w.y + w.h + r; bump(0, 1); }
+        return;
+      }
+      const d = Math.sqrt(d2);
+      dx /= d;
+      dy /= d;
+      b.x += dx * (r - d + 0.5);
+      b.y += dy * (r - d + 0.5);
+      bump(dx, dy);
+    });
+    const len = Math.hypot(nx, ny);
+    if (len < 0.2) return;
+    const ux = nx / len;
+    const uy = ny / len;
+    const vn = b.vx * ux + b.vy * uy;
+    if (vn < 0) {
+      b.vx -= vn * ux;
+      b.vy -= vn * uy;
+    }
+    if (state.time < (b.wallBounceT || 0)) return;
+    const kick = 56 * rand(0.05, 1);
+    b.x += ux * kick;
+    b.y += uy * kick;
+    b.vx += ux * kick * 4;
+    b.vy += uy * kick * 4;
+    b.wallBounceT = state.time + 0.16;
+  }
+
   function stepSoccerBall(dt) {
     const b = state.ball;
     if (!b || state.mode !== "soccer" || state.closing) return;
@@ -717,13 +777,7 @@
     b.vy *= damp;
     b.x += b.vx * dt;
     b.y += b.vy * dt;
-    const f = soccerField();
-    const r = b.r;
-    if (b.x < f.x0 + r) { b.x = f.x0 + r; b.vx = Math.abs(b.vx) * 0.62; }
-    if (b.x > f.x1 - r) { b.x = f.x1 - r; b.vx = -Math.abs(b.vx) * 0.62; }
-    if (b.y < f.y0 + r) { b.y = f.y0 + r; b.vy = Math.abs(b.vy) * 0.62; }
-    if (b.y > f.y1 - r) { b.y = f.y1 - r; b.vy = -Math.abs(b.vy) * 0.62; }
-    pushOutWalls(b);
+    bounceSoccerBall(b);
     const zone = soccerZoneAt(b.x, b.r);
     if (zone) scoreSoccer(zone);
   }
