@@ -520,9 +520,8 @@
   }
 
   function soccerField() {
-    const insetX = 780;
     const insetY = 1680;
-    return { x0: insetX, y0: insetY, x1: WORLD.w - insetX, y1: WORLD.h - insetY };
+    return { x0: 0, y0: insetY, x1: WORLD.w, y1: WORLD.h - insetY };
   }
 
   function soccerGoalDepth() {
@@ -609,14 +608,42 @@
     return { x: p.x, y: p.y, shoot: false };
   }
 
-  function buildSoccerWalls() {
+  function soccerBorderWalls() {
     const f = soccerField();
-    state.walls = [
+    return [
       { x: 0, y: 0, w: WORLD.w, h: f.y0, wall: true },
       { x: 0, y: f.y1, w: WORLD.w, h: WORLD.h - f.y1, wall: true },
-      { x: 0, y: f.y0, w: f.x0, h: f.y1 - f.y0, wall: true },
-      { x: f.x1, y: f.y0, w: WORLD.w - f.x1, h: f.y1 - f.y0, wall: true },
     ];
+  }
+
+  function buildSoccerWalls() {
+    state.extraWalls = soccerBorderWalls();
+    state.walls = state.extraWalls.slice();
+    miniWallRev++;
+  }
+
+  function clipSoccerMaze() {
+    const m = state.maze;
+    if (!m) return;
+    const f = soccerField();
+    const g = soccerGoalDepth();
+    const x0 = f.x0 + g;
+    const x1 = f.x1 - g;
+    const cx = (f.x0 + f.x1) / 2;
+    const cy = (f.y0 + f.y1) / 2;
+    const clear = 720;
+    for (let r = 0; r < m.rows; r++) {
+      for (let c = 0; c < m.cols; c++) {
+        if (!m.filled[r][c]) continue;
+        const x = m.x0 + c * m.cube;
+        const y = m.y0 + r * m.cube;
+        const inside = x >= x0 && x + m.cube <= x1 && y >= f.y0 && y + m.cube <= f.y1;
+        const mx = x + m.cube * 0.5;
+        const my = y + m.cube * 0.5;
+        if (!inside || (mx - cx) * (mx - cx) + (my - cy) * (my - cy) <= clear * clear) m.filled[r][c] = false;
+      }
+    }
+    rebuildMazeWalls();
     miniWallRev++;
   }
 
@@ -696,6 +723,7 @@
     if (b.x > f.x1 - r) { b.x = f.x1 - r; b.vx = -Math.abs(b.vx) * 0.62; }
     if (b.y < f.y0 + r) { b.y = f.y0 + r; b.vy = Math.abs(b.vy) * 0.62; }
     if (b.y > f.y1 - r) { b.y = f.y1 - r; b.vy = -Math.abs(b.vy) * 0.62; }
+    pushOutWalls(b);
     const zone = soccerZoneAt(b.x, b.r);
     if (zone) scoreSoccer(zone);
   }
@@ -3401,6 +3429,10 @@
     if (state.mode === "domination") spawnDoms();
     if (state.mode === "soccer") {
       buildSoccerWalls();
+      if (isMazeVariant()) {
+        buildOpenBlocks();
+        clipSoccerMaze();
+      }
       resetSoccerBall();
     }
     populateWorld();
@@ -9242,7 +9274,7 @@
     protect: "Two motherships roam · random team · start at 45 · [N] skip to 45 · [H] to take control · win or 4 hours starts a fresh server",
     maze: "FFA · open L / Y / zig wall clusters · start at 45 · fresh server after 4 hours",
     domination: "Shoot the 4 dominators · last 30 seconds of damage decides the team · both teams turns it yellow · all 4 owned by one team wins · or 4 hours starts a fresh server",
-    soccer: "Green vs blue · shoot the ball into the other goal · most goals after 90 minutes wins · ball hurts tanks that touch it · then a fresh server",
+    soccer: "Green vs blue · shoot the ball into the other goal · most goals after 90 minutes wins · ball hurts tanks that touch it · goals reach the side edges · optional maze in the open field · then a fresh server",
     assault: "Blue attacks Green · Blue spawns across a 360-wide perimeter ring · smaller maze · capture zones · start at 45 · Green wins in 10:00 if they hold 3/4 · win or 4 hours starts a fresh server",
     siege: "One team · four bases · bosses spawn behind the red ring and push in · yellow bases do not shoot · shoot them to restore · endless until all four bases fall",
     growth: "FFA · grow past 45 to 1000 · everyone starts at 45 · never below 45 · [N] skip to 45 · fresh server after 4 hours",
