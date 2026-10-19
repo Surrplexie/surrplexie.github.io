@@ -2464,10 +2464,10 @@
   }
 
   const BOSS = {
-    elite: { health: 160, speed: 0.18, fov: 1.22, bodyDamage: 3.4, mods: { size: 2.35, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 } },
-    mystic: { health: 180, speed: 0.12, fov: 1.15, bodyDamage: 2.8, mods: { size: 2.45, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 } },
-    nester: { health: 220, speed: 0.14, fov: 1.2, bodyDamage: 3.1, mods: { size: 2.55, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 } },
-    rogue: { health: 260, speed: 0.08, fov: 1.28, bodyDamage: 3.6, mods: { size: 2.7, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 } },
+    elite: { health: 160, speed: 0.18, fov: 1.22, bodyDamage: 3.4, mods: { size: 4.6, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 } },
+    mystic: { health: 180, speed: 0.12, fov: 1.15, bodyDamage: 2.8, mods: { size: 5.1, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 } },
+    nester: { health: 220, speed: 0.14, fov: 1.2, bodyDamage: 3.1, mods: { size: 5.4, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 } },
+    rogue: { health: 260, speed: 0.08, fov: 1.28, bodyDamage: 3.6, mods: { size: 5.8, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 } },
   };
 
   def("elite_destroyer", {
@@ -2479,7 +2479,7 @@
     bodyDamage: 3.6,
     upgrades: [],
     needLevel: 45,
-    mods: { size: 2.35, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 },
+    mods: { size: 4.6, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 },
   });
 
   def("elite_gunner", {
@@ -2494,7 +2494,7 @@
     bodyDamage: 3.2,
     upgrades: [],
     needLevel: 45,
-    mods: { size: 2.3, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 },
+    mods: { size: 4.5, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 },
   });
 
   def("elite_sprayer", {
@@ -2508,7 +2508,7 @@
     bodyDamage: 3.3,
     upgrades: [],
     needLevel: 45,
-    mods: { size: 2.32, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 },
+    mods: { size: 4.5, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 },
   });
 
   def("elite_battleship", {
@@ -2578,7 +2578,7 @@
     bodyDamage: 3.2,
     upgrades: [],
     needLevel: 45,
-    mods: { ...BOSS.elite.mods, size: 2.38 },
+    mods: { ...BOSS.elite.mods, size: 4.7 },
   });
 
   def("elite_skimmer", {
@@ -2607,7 +2607,7 @@
     bodyDamage: 2.2,
     upgrades: [],
     needLevel: 45,
-    mods: { ...BOSS.mystic.mods, size: 2.2 },
+    mods: { ...BOSS.mystic.mods, size: 4.8 },
   });
 
   def("summoner", {
@@ -2652,7 +2652,7 @@
     bodyDamage: 3.6,
     upgrades: [],
     needLevel: 45,
-    mods: { ...BOSS.mystic.mods, size: 2.55 },
+    mods: { ...BOSS.mystic.mods, size: 5.2 },
   });
 
   def("shaman", {
@@ -2667,7 +2667,7 @@
     bodyDamage: 4,
     upgrades: [],
     needLevel: 45,
-    mods: { ...BOSS.mystic.mods, size: 2.6 },
+    mods: { ...BOSS.mystic.mods, size: 5.3 },
   });
 
   def("witch", {
@@ -2762,7 +2762,7 @@
     bodyDamage: 3.5,
     upgrades: [],
     needLevel: 45,
-    mods: { ...BOSS.rogue.mods, size: 2.62 },
+    mods: { ...BOSS.rogue.mods, size: 6.2 },
   });
 
   def("terrestrial", {
@@ -2783,7 +2783,7 @@
     bodyDamage: 4.2,
     upgrades: [],
     needLevel: 45,
-    mods: { size: 3.15, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 },
+    mods: { size: 6.6, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 },
   });
 
   def("celestial", {
@@ -2803,7 +2803,7 @@
     bodyDamage: 4.8,
     upgrades: [],
     needLevel: 45,
-    mods: { size: 3.55, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 },
+    mods: { size: 7.6, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 },
   });
 
   def("eternal", {
@@ -2821,7 +2821,7 @@
     bodyDamage: 6.2,
     upgrades: [],
     needLevel: 45,
-    mods: { size: 4.1, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 },
+    mods: { size: 8.8, health: 1, damage: 1, reload: 1, speed: 1, fov: 1 },
   });
 
   def("sentry_gun", {
