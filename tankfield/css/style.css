@@ -19,11 +19,22 @@ html, body {
   user-select: none;
 }
 
-#game {
+#game, #labels {
+  position: fixed;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
+}
+
+#game {
+  z-index: 0;
   cursor: crosshair;
+}
+
+#labels {
+  z-index: 1;
+  pointer-events: none;
 }
 
 body.dev-move #game,

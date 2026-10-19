@@ -117,7 +117,10 @@
   ];
 
   const canvas = document.getElementById("game");
-  const ctx = canvas.getContext("2d");
+  const labelCanvas = document.getElementById("labels");
+  const glOn = !!(window.TankfieldGL && TankfieldGL.attach(canvas));
+  const ctx = glOn ? null : canvas.getContext("2d");
+  const lctx = labelCanvas ? labelCanvas.getContext("2d") : null;
   const mini = document.getElementById("minimap");
   const mctx = mini.getContext("2d");
 
@@ -222,6 +225,10 @@
   let dpr = 1;
   let width = 0;
   let height = 0;
+  let leaderPaintAt = -1;
+  let leaderSig = "";
+  let miniWalls = null;
+  let miniWallKey = "";
   let pageZ = 1;
   let last = 0;
   let running = false;
@@ -307,24 +314,62 @@
     const dy = a.y - b.y;
     return dx * dx + dy * dy;
   }
+  const tintCache = new Map();
+  const rgbCache = new Map();
+  const WHITE = new Float32Array([1, 1, 1]);
+  const NEST_COL = new Float32Array([118 / 255, 141 / 255, 252 / 255]);
+
   function darken(hex, amt = 0.28) {
+    const key = hex + "|" + amt;
+    const hit = tintCache.get(key);
+    if (hit) return hit;
     const n = parseInt(String(hex).replace("#", ""), 16);
     const r = (n >> 16) & 255;
     const g = (n >> 8) & 255;
     const b = n & 255;
     const f = 1 - amt;
-    return `rgb(${(r * f) | 0},${(g * f) | 0},${(b * f) | 0})`;
+    const out = `rgb(${(r * f) | 0},${(g * f) | 0},${(b * f) | 0})`;
+    tintCache.set(key, out);
+    return out;
   }
 
   function outlineFor(hex) {
+    const key = "o|" + hex;
+    const hit = tintCache.get(key);
+    if (hit) return hit;
     const n = parseInt(String(hex).replace("#", ""), 16);
     const r = (n >> 16) & 255;
     const g = (n >> 8) & 255;
     const b = n & 255;
     const lum = r * 0.3 + g * 0.59 + b * 0.11;
-    if (lum < 48) return "#8a8a8a";
-    if (lum > 230) return "#6a6a6a";
-    return darken(hex);
+    const out = lum < 48 ? "#8a8a8a" : lum > 230 ? "#6a6a6a" : darken(hex);
+    tintCache.set(key, out);
+    return out;
+  }
+
+  function rgbOf(color) {
+    if (!color) return WHITE;
+    const hit = rgbCache.get(color);
+    if (hit) return hit;
+    let r = 255;
+    let g = 255;
+    let b = 255;
+    if (typeof color === "string" && color.charAt(0) === "#") {
+      const n = parseInt(color.slice(1), 16);
+      r = (n >> 16) & 255;
+      g = (n >> 8) & 255;
+      b = n & 255;
+    } else {
+      const m = String(color).match(/[\d.]+/g);
+      if (m && m.length >= 3) {
+        r = +m[0];
+        g = +m[1];
+        b = +m[2];
+      }
+    }
+    const out = new Float32Array([r / 255, g / 255, b / 255]);
+    rgbCache.set(color, out);
+    return out;
   }
 
   function siegeLayout() {
@@ -554,42 +599,44 @@
     return x < 0 ? 1 / (1 - x * f) : f * x + 1;
   }
 
+  const skillScratch = {};
+  const statsScratch = {};
+  const CLOSER_STATS = {
+    maxHealth: 1000000,
+    regen: 8000,
+    bodyDamage: 25000,
+    bulletSpeed: 9.4,
+    bulletPen: 1000000,
+    bulletDamage: 50000,
+    reload: 2.4,
+    moveSpeed: BASE_MOVE * 1.48,
+    fov: 1.35,
+    bulletSize: 3.4,
+    maxDrones: 0,
+    maxShield: 0,
+    shieldRegen: 0,
+  };
+
   function skillOf(tank) {
     const s = (tank && tank.stats) || {};
+    const sk = tank ? (tank._sk || (tank._sk = {})) : skillScratch;
     const c = (key) => skillCurve(s[key] || 0);
-    return {
-      rld: Math.pow(0.5, c("reload")),
-      pen: applyFactor(2.5, c("bulletPen")),
-      str: applyFactor(2, c("bulletPen")),
-      dam: applyFactor(3, c("bulletDamage")),
-      spd: 0.5 + applyFactor(1.5, c("bulletSpeed")),
-      shi: applyFactor(2, c("shieldCap")),
-      atk: applyFactor(0.021, c("bodyDamage")),
-      hlt: applyFactor(1, c("maxHealth")),
-      rgn: applyFactor(25, c("regen")),
-      shieldRgn: applyFactor(25, c("shieldRegen")),
-      mob: applyFactor(0.8, c("moveSpeed")),
-    };
+    sk.rld = Math.pow(0.5, c("reload"));
+    sk.pen = applyFactor(2.5, c("bulletPen"));
+    sk.str = applyFactor(2, c("bulletPen"));
+    sk.dam = applyFactor(3, c("bulletDamage"));
+    sk.spd = 0.5 + applyFactor(1.5, c("bulletSpeed"));
+    sk.shi = applyFactor(2, c("shieldCap"));
+    sk.atk = applyFactor(0.021, c("bodyDamage"));
+    sk.hlt = applyFactor(1, c("maxHealth"));
+    sk.rgn = applyFactor(25, c("regen"));
+    sk.shieldRgn = applyFactor(25, c("shieldRegen"));
+    sk.mob = applyFactor(0.8, c("moveSpeed"));
+    return sk;
   }
 
   function tankStats(tank) {
-    if (tank && tank.closer) {
-      return {
-        maxHealth: 1000000,
-        regen: 8000,
-        bodyDamage: 25000,
-        bulletSpeed: 9.4,
-        bulletPen: 1000000,
-        bulletDamage: 50000,
-        reload: 2.4,
-        moveSpeed: BASE_MOVE * 1.48,
-        fov: 1.35,
-        bulletSize: 3.4,
-        maxDrones: 0,
-        maxShield: 0,
-        shieldRegen: 0,
-      };
-    }
+    if (tank && tank.closer) return CLOSER_STATS;
     const def = getDef(tank);
     const m = modsOf(def);
     const sk = skillOf(tank);
@@ -600,21 +647,20 @@
     const bodyDamage = ARRAS_BASE.DAMAGE * (def.bodyDamage || 1);
     const sizeRatio = Math.max(1, (tank.r || 22) / 22);
     const speedReduce = Math.min(growthTank ? 4 : 2, sizeRatio);
-    const out = {
-      maxHealth: ((withLevel ? 2 * lvl : 0) + bodyHealth) * sk.hlt,
-      regen: ((withLevel ? 0.006 * lvl : 0) + 1) * ARRAS_BASE.REGEN * 55 * sk.rgn,
-      bodyDamage: bodyDamage * sk.atk * 2.4,
-      bulletSpeed: sk.spd * 4,
-      bulletPen: sk.pen,
-      bulletDamage: 0.75 * sk.dam * 6,
-      reload: 10.5 * sk.rld / ARRAS_TICK,
-      moveSpeed: BASE_MOVE * (def.speed || 1) * (m.speed || 1) * sk.mob / speedReduce,
-      fov: (def.fov || 1) * (m.fov || 1) * ARRAS_BASE.FOV,
-      bulletSize: (def.bulletSize || 1) * (m.size || 1),
-      maxDrones: def.maxDrones || 0,
-      maxShield: 0,
-      shieldRegen: 0,
-    };
+    const out = tank ? (tank._st || (tank._st = {})) : statsScratch;
+    out.maxHealth = ((withLevel ? 2 * lvl : 0) + bodyHealth) * sk.hlt;
+    out.regen = ((withLevel ? 0.006 * lvl : 0) + 1) * ARRAS_BASE.REGEN * 55 * sk.rgn;
+    out.bodyDamage = bodyDamage * sk.atk * 2.4;
+    out.bulletSpeed = sk.spd * 4;
+    out.bulletPen = sk.pen;
+    out.bulletDamage = 0.75 * sk.dam * 6;
+    out.reload = 10.5 * sk.rld / ARRAS_TICK;
+    out.moveSpeed = BASE_MOVE * (def.speed || 1) * (m.speed || 1) * sk.mob / speedReduce;
+    out.fov = (def.fov || 1) * (m.fov || 1) * ARRAS_BASE.FOV;
+    out.bulletSize = (def.bulletSize || 1) * (m.size || 1);
+    out.maxDrones = def.maxDrones || 0;
+    out.maxShield = 0;
+    out.shieldRegen = 0;
     if (!(tank && (tank.closer || tank.mothership || tank.dominator))) {
       out.maxShield = ((withLevel ? 0.6 * lvl : 0) + ARRAS_BASE.SHIELD) * sk.shi;
       out.shieldRegen = ((withLevel ? 0.006 * lvl : 0) + 1) * ARRAS_BASE.REGEN * 40 * sk.shieldRgn;
@@ -761,7 +807,12 @@
     height = window.innerHeight * pageZ;
     canvas.width = Math.floor(width * dpr);
     canvas.height = Math.floor(height * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (labelCanvas) {
+      labelCanvas.width = canvas.width;
+      labelCanvas.height = canvas.height;
+    }
+    if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (glOn) TankfieldGL.resize(width, height, dpr);
     document.documentElement.style.setProperty("--app-w", `${width}px`);
     document.documentElement.style.setProperty("--app-h", `${height}px`);
   }
@@ -899,7 +950,9 @@
   }
 
   function nearestSeen(from, list, maxDist, pred) {
-    return nearest(from, list, maxDist, (o) => (!pred || pred(o)) && canSee(from, o));
+    const gate = (o) => (!pred || pred(o)) && canSee(from, o);
+    if (list == null) return nearestBody(from, maxDist, gate);
+    return nearest(from, list, maxDist, gate);
   }
 
   function isRammer(tank) {
@@ -1112,13 +1165,13 @@
     const extended2 = (seeRange * 1.35) * (seeRange * 1.35);
     const selfHp = healthFraction(tank);
     const onPlayer = player && player.alive ? aggroOn(player) : 99;
-    for (const t of state.tanks) {
-      if (!isEnemyTank(tank, t)) continue;
+    const scoreEnemy = (t) => {
+      if (!isEnemyTank(tank, t)) return;
       const d2 = dist2(tank, t);
       const special = (hurtValid && t === hurt) || (lockValid && t === lock);
-      if (d2 > see2 && (!special || d2 > extended2)) continue;
+      if (d2 > see2 && (!special || d2 > extended2)) return;
       const seen = canSee(tank, t);
-      if (!seen && d2 > (state.maze && special ? (seeRange * 1.25) ** 2 : 480 * 480)) continue;
+      if (!seen && d2 > (state.maze && special ? (seeRange * 1.25) ** 2 : 480 * 480)) return;
       const d = Math.sqrt(d2) || 1;
       const targetHp = healthFraction(t);
       let s = 1400 / (d + 70);
@@ -1140,7 +1193,9 @@
         bestS = s;
         best = t;
       }
-    }
+    };
+    if (tankHash.on) tankHash.query(tank.x, tank.y, seeRange * 1.35, scoreEnemy);
+    else for (const t of state.tanks) scoreEnemy(t);
     return best;
   }
 
@@ -1154,21 +1209,23 @@
     const necro = !!(getDef(tank) && getDef(tank).necro);
     let x = tx;
     let y = ty;
-    for (const s of state.shapes) {
-      if (!s.alive) continue;
-      if (necro && s.kind === "square") continue;
+    const visitShape = (s) => {
+      if (!s.alive) return;
+      if (necro && s.kind === "square") return;
       const minD = tank.r + s.r + (s.kind === "alpha" ? 40 : s.kind === "pentagon" ? 22 : 16);
       const dx = tank.x - s.x;
       const dy = tank.y - s.y;
       const dist = Math.hypot(dx, dy) || 1;
-      if (dist > minD + 90) continue;
+      if (dist > minD + 90) return;
       const toward = (x - tank.x) * (s.x - tank.x) + (y - tank.y) * (s.y - tank.y) > 0;
       if (dist < minD || (toward && dist < minD + 42)) {
         const push = Math.max(36, minD + 28 - dist);
         x += (dx / dist) * push;
         y += (dy / dist) * push;
       }
-    }
+    };
+    if (shapeHash.on) shapeHash.query(tank.x, tank.y, (tank.r || 22) + 210, visitShape);
+    else for (const s of state.shapes) visitShape(s);
     return { x, y };
   }
 
@@ -1176,12 +1233,12 @@
     let best = null;
     let bestV = -1;
     const maxD2 = maxDist * maxDist;
-    for (const s of state.shapes) {
-      if (!s.alive) continue;
-      if (s.kind === "alpha" && from.level < 20) continue;
+    const visitFarm = (s) => {
+      if (!s.alive) return;
+      if (s.kind === "alpha" && from.level < 20) return;
       const d2 = dist2(from, s);
-      if (d2 > maxD2) continue;
-      if (!canSee(from, s)) continue;
+      if (d2 > maxD2) return;
+      if (!canSee(from, s)) return;
       const d = Math.sqrt(d2) || 1;
       const worth = s.kind === "alpha" ? 3000 : s.kind === "pentagon" ? 130 : s.kind === "triangle" ? 25 : s.kind === "crasher" ? 15 : 10;
       const v = worth / d;
@@ -1189,7 +1246,9 @@
         bestV = v;
         best = s;
       }
-    }
+    };
+    if (shapeHash.on) shapeHash.query(from.x, from.y, maxDist, visitFarm);
+    else for (const s of state.shapes) visitFarm(s);
     return best;
   }
 
@@ -5333,7 +5392,7 @@
     b.gunCd = (b.gunCd || 0) - dt;
     const owner = b.owner;
     const reach = b.kind === "pillbox" ? 420 : 380;
-    const prey = nearestSeen(b, state.tanks.concat(state.shapes), reach, (o) => {
+    const prey = nearestSeen(b, null, reach, (o) => {
       if (!o.alive || o === owner) return false;
       if (o.type === "tank") return isEnemyTank(owner, o);
       return o.type === "shape";
@@ -5471,7 +5530,7 @@
       const autoGun = gun.type === "auto";
       if (tank.spawnProtect > 0 && autoGun) continue;
       if (!autoGun && !fire) continue;
-      if (autoGun && !nearestSeen(tank, [...state.tanks, ...state.shapes], 520, (o) => o !== tank && o.alive && (o.type !== "tank" || isEnemyTank(tank, o)))) continue;
+      if (autoGun && !nearestSeen(tank, null, 520, (o) => o !== tank && o.alive && (o.type !== "tank" || isEnemyTank(tank, o)))) continue;
       if (tank.gunCd[i] > 0) continue;
       const cap = capKind(gun.type);
       if (cap) {
@@ -5490,7 +5549,7 @@
 
   function updateTurrets(tank, dt) {
     const guns = getDef(tank).guns || [];
-    const target = nearestSeen(tank, state.tanks.concat(state.shapes), 640, (o) => o !== tank && o.alive && (o.type !== "tank" || isEnemyTank(tank, o)));
+    const target = nearestSeen(tank, null, 640, (o) => o !== tank && o.alive && (o.type !== "tank" || isEnemyTank(tank, o)));
     if (!tank.turretAim) tank.turretAim = [];
     for (let i = 0; i < guns.length; i++) {
       const gun = guns[i];
@@ -5558,6 +5617,14 @@
   }
 
   function nearest(from, list, maxDist, pred) {
+    if (from && maxDist < 8000) {
+      if (list === state.tanks && tankHash.on) {
+        return tankHash.nearest(from.x, from.y, maxDist, (o) => o !== from && (!pred || pred(o)));
+      }
+      if (list === state.shapes && shapeHash.on) {
+        return shapeHash.nearest(from.x, from.y, maxDist, (o) => o !== from && (!pred || pred(o)));
+      }
+    }
     let best = null;
     let bestD = maxDist * maxDist;
     for (const o of list) {
@@ -5566,6 +5633,24 @@
       const d = dist2(from, o);
       if (d < bestD) { bestD = d; best = o; }
     }
+    return best;
+  }
+
+  function nearestBody(from, maxDist, pred) {
+    if (!from) return null;
+    if (!tankHash.on && !shapeHash.on) {
+      return nearest(from, state.tanks.concat(state.shapes), maxDist, pred);
+    }
+    let best = null;
+    let bestD = maxDist * maxDist;
+    const consider = (o) => {
+      if (!o || o === from) return;
+      if (pred && !pred(o)) return;
+      const d = dist2(from, o);
+      if (d < bestD) { bestD = d; best = o; }
+    };
+    if (tankHash.on) tankHash.query(from.x, from.y, maxDist, consider);
+    if (shapeHash.on) shapeHash.query(from.x, from.y, maxDist, consider);
     return best;
   }
 
@@ -6369,10 +6454,13 @@
     shoot(p, dt);
   }
 
+  const worldPt = { x: 0, y: 0 };
   function screenToWorld(sx, sy) {
     const cam = state.camera;
     const zoom = cam.zoom / viewFov();
-    return { x: cam.x + (sx - width / 2) / zoom, y: cam.y + (sy - height / 2) / zoom };
+    worldPt.x = cam.x + (sx - width / 2) / zoom;
+    worldPt.y = cam.y + (sy - height / 2) / zoom;
+    return worldPt;
   }
 
   function massOf(ent) {
@@ -6383,6 +6471,102 @@
     if (ent.kind === "square") return 70;
     if (ent.dominator) return 80000;
     return ent.r * ent.r;
+  }
+
+  function makeHash(cell) {
+    const cols = Math.ceil(14000 / cell);
+    const heads = new Int32Array(cols * cols);
+    const next = new Int32Array(4096);
+    let cells = new Int32Array(4096);
+    const items = new Array(4096);
+    heads.fill(-1);
+    let count = 0;
+    let maxR = 0;
+    let cap = 4096;
+    const hash = {
+      on: false,
+      get count() { return count; },
+      items,
+      clear() {
+        for (let i = 0; i < count; i++) heads[cells[i]] = -1;
+        count = 0;
+        maxR = 0;
+        hash.on = false;
+      },
+      insert(ent) {
+        if (count >= cap) {
+          cap *= 2;
+          const grown = new Int32Array(cap);
+          grown.set(hash._next);
+          hash._next = grown;
+          const grownCells = new Int32Array(cap);
+          grownCells.set(cells);
+          cells = grownCells;
+        }
+        const i = count++;
+        items[i] = ent;
+        ent._seq = i;
+        let cx = (ent.x / cell) | 0;
+        let cy = (ent.y / cell) | 0;
+        if (cx < 0) cx = 0;
+        else if (cx >= cols) cx = cols - 1;
+        if (cy < 0) cy = 0;
+        else if (cy >= cols) cy = cols - 1;
+        const k = cy * cols + cx;
+        cells[i] = k;
+        const link = hash._next;
+        link[i] = heads[k];
+        heads[k] = i;
+        if (ent.r > maxR) maxR = ent.r;
+      },
+      finish() { hash.on = true; },
+      query(x, y, rad, fn) {
+        const reach = rad + maxR;
+        let x0 = ((x - reach) / cell) | 0;
+        let y0 = ((y - reach) / cell) | 0;
+        let x1 = ((x + reach) / cell) | 0;
+        let y1 = ((y + reach) / cell) | 0;
+        if (x0 < 0) x0 = 0;
+        if (y0 < 0) y0 = 0;
+        if (x1 >= cols) x1 = cols - 1;
+        if (y1 >= cols) y1 = cols - 1;
+        const link = hash._next;
+        for (let cy = y0; cy <= y1; cy++) {
+          const row = cy * cols;
+          for (let cx = x0; cx <= x1; cx++) {
+            for (let i = heads[row + cx]; i >= 0; i = link[i]) fn(items[i]);
+          }
+        }
+      },
+      nearest(x, y, maxDist, pred) {
+        let best = null;
+        let bestD = maxDist * maxDist;
+        hash.query(x, y, maxDist, (o) => {
+          if (pred && !pred(o)) return;
+          const dx = o.x - x;
+          const dy = o.y - y;
+          const d = dx * dx + dy * dy;
+          if (d < bestD) { bestD = d; best = o; }
+        });
+        return best;
+      },
+      _next: next,
+    };
+    return hash;
+  }
+
+  const tankHash = makeHash(160);
+  const shapeHash = makeHash(160);
+  const shotHash = makeHash(128);
+  const flockHash = makeHash(96);
+
+  function fillHash(hash, list, pred) {
+    hash.clear();
+    for (let i = 0; i < list.length; i++) {
+      const ent = list[i];
+      if (ent && ent.alive && (!pred || pred(ent))) hash.insert(ent);
+    }
+    hash.finish();
   }
 
   function collideCircles(a, b, bounce = 0.6) {
@@ -6541,7 +6725,7 @@
         y: owner.y + Math.sin(state.time * 1.7 + b.orbit) * 52,
       };
     }
-    const prey = nearestSeen(owner, state.tanks.concat(state.shapes), 700, (o) => o !== owner && (o.type !== "tank" || isEnemyTank(owner, o)));
+    const prey = nearestSeen(owner, null, 700, (o) => o !== owner && (o.type !== "tank" || isEnemyTank(owner, o)));
     if (prey) return { x: prey.x + ox, y: prey.y + oy };
     return {
       x: owner.x + Math.cos(state.time * 1.7 + b.orbit) * 52,
@@ -6550,20 +6734,19 @@
   }
 
   function separateFlocks() {
-    const flock = [];
-    for (const b of state.bullets) {
-      if (b.alive && flockKind(b.kind)) flock.push(b);
-    }
-    for (let i = 0; i < flock.length; i++) {
-      const a = flock[i];
-      for (let j = i + 1; j < flock.length; j++) {
-        const b = flock[j];
-        if (a.owner !== b.owner && !sameTeam(a.owner, b.owner)) continue;
+    fillHash(flockHash, state.bullets, (b) => flockKind(b.kind));
+    const n = flockHash.count;
+    for (let i = 0; i < n; i++) {
+      const a = flockHash.items[i];
+      if (!a.alive) continue;
+      flockHash.query(a.x, a.y, a.r, (b) => {
+        if (!b.alive || b._seq <= a._seq) return;
+        if (a.owner !== b.owner && !sameTeam(a.owner, b.owner)) return;
         const dx = b.x - a.x;
         const dy = b.y - a.y;
         const min = (a.r + b.r) * (a.kind === "swarm" || b.kind === "swarm" ? 0.82 : 0.9);
         const d2 = dx * dx + dy * dy;
-        if (d2 >= min * min) continue;
+        if (d2 >= min * min) return;
         const d = Math.sqrt(d2) || 0.0001;
         const push = (min - d) * 0.58;
         const nx = dx / d;
@@ -6576,8 +6759,27 @@
         a.vy -= ny * 70;
         b.vx += nx * 70;
         b.vy += ny * 70;
-      }
+      });
     }
+  }
+
+  function compactList(list, keep) {
+    let w = 0;
+    for (let i = 0; i < list.length; i++) {
+      if (keep(list[i])) list[w++] = list[i];
+    }
+    list.length = w;
+  }
+
+  function shotQuery(bullet, fn) {
+    const px = bullet.prevX == null ? bullet.x : bullet.prevX;
+    const py = bullet.prevY == null ? bullet.y : bullet.prevY;
+    const step = Math.hypot(bullet.x - px, bullet.y - py);
+    const rad = bullet.r + step * 0.5;
+    const qx = (bullet.x + px) * 0.5;
+    const qy = (bullet.y + py) * 0.5;
+    if (shapeHash.on) shapeHash.query(qx, qy, rad, fn);
+    if (tankHash.on) tankHash.query(qx, qy, rad, fn);
   }
 
   function update(dt) {
@@ -6603,6 +6805,11 @@
     updateAssault(dt);
     updateSiege(dt);
     updateRespawnUi();
+    fillHash(tankHash, state.tanks);
+    fillHash(shapeHash, state.shapes);
+    const tankDamp = Math.pow(0.0008, dt);
+    const alphaDamp = Math.pow(0.0004, dt);
+    const driftDamp = Math.pow(0.04, dt);
     if (!state.spectating) updatePlayer(dt);
     else updateGhost(dt);
 
@@ -6610,8 +6817,8 @@
     for (const tank of state.tanks) {
       if (!tank.alive) continue;
       if (tank.ai) updateAI(tank, dt);
-      tank.vx *= Math.pow(0.0008, dt);
-      tank.vy *= Math.pow(0.0008, dt);
+      tank.vx *= tankDamp;
+      tank.vy *= tankDamp;
       const spd = Math.hypot(tank.vx, tank.vy);
       const st = tankStats(tank);
       let cap = st.moveSpeed * SPEED_CAP;
@@ -6682,6 +6889,7 @@
       else tank.fade = Math.min(1, tank.fade + dt * 2.5);
     }
 
+    fillHash(tankHash, state.tanks);
     for (const s of state.shapes) {
       if (!s.alive) continue;
       s.rot += s.spin * dt;
@@ -6690,8 +6898,8 @@
         const cy = WORLD.h / 2;
         s.vx += (cx - s.x) * 1.6 * dt;
         s.vy += (cy - s.y) * 1.6 * dt;
-        s.vx *= Math.pow(0.0004, dt);
-        s.vy *= Math.pow(0.0004, dt);
+        s.vx *= alphaDamp;
+        s.vy *= alphaDamp;
       } else if (s.kind === "crasher") {
         const prey = nearestSeen(s, state.tanks, 980, (t) => !spawnProtected(t) && !zoneAt(t.x, t.y));
         const tankCruise = BASE_MOVE * 62 / -Math.log(0.0008);
@@ -6702,13 +6910,13 @@
           s.vy += Math.sin(a) * BASE_MOVE * 1.1 * 62 * dt;
           s.rot = a;
         }
-        s.vx *= Math.pow(0.0008, dt);
-        s.vy *= Math.pow(0.0008, dt);
+        s.vx *= tankDamp;
+        s.vy *= tankDamp;
         const mag = Math.hypot(s.vx, s.vy);
         if (mag > spd) { s.vx *= spd / mag; s.vy *= spd / mag; }
       } else {
-        s.vx *= Math.pow(0.04, dt);
-        s.vy *= Math.pow(0.04, dt);
+        s.vx *= driftDamp;
+        s.vy *= driftDamp;
       }
       s.x += s.vx * dt;
       s.y += s.vy * dt;
@@ -6737,6 +6945,8 @@
       }
     }
 
+    fillHash(tankHash, state.tanks);
+    fillHash(shapeHash, state.shapes);
     for (const b of state.bullets) {
       if (!b.alive) continue;
       b.age += dt;
@@ -6792,66 +7002,70 @@
       }
     }
     separateFlocks();
+    fillHash(tankHash, state.tanks);
+    fillHash(shapeHash, state.shapes);
+    fillHash(shotHash, state.bullets);
 
-    for (let i = 0; i < state.tanks.length; i++) {
-      const a = state.tanks[i];
+    const tankN = tankHash.count;
+    for (let i = 0; i < tankN; i++) {
+      const a = tankHash.items[i];
       if (!a.alive) continue;
-      for (let j = i + 1; j < state.tanks.length; j++) {
-        const b = state.tanks[j];
-        if (!b.alive) continue;
+      tankHash.query(a.x, a.y, a.r, (b) => {
+        if (!b.alive || b._seq <= a._seq) return;
         if (collideCircles(a, b, 0.7) && !sameTeam(a, b) && a.bodyHitT <= 0 && b.bodyHitT <= 0) {
           damage(b, tankStats(a).bodyDamage, a);
           damage(a, tankStats(b).bodyDamage, b);
           a.bodyHitT = 0.22;
           b.bodyHitT = 0.22;
         }
-      }
-      for (const s of state.shapes) {
-        if (!s.alive) continue;
+      });
+      shapeHash.query(a.x, a.y, a.r, (s) => {
+        if (!s.alive) return;
         if (collideCircles(a, s, 0.5) && a.bodyHitT <= 0) {
           if (tryNecro(a, s, null)) {
             a.bodyHitT = 0.12;
-            continue;
+            return;
           }
           damage(s, tankStats(a).bodyDamage * 0.85, a);
           damage(a, s.kind === "alpha" ? 18 : s.kind === "pentagon" ? 8 : 5, null);
           a.bodyHitT = 0.18;
         }
-      }
+      });
     }
 
-    for (let i = 0; i < state.shapes.length; i++) {
-      const a = state.shapes[i];
+    const shapeN = shapeHash.count;
+    for (let i = 0; i < shapeN; i++) {
+      const a = shapeHash.items[i];
       if (!a.alive) continue;
-      for (let j = i + 1; j < state.shapes.length; j++) {
-        const b = state.shapes[j];
-        if (b.alive) collideCircles(a, b, 0.4);
-      }
+      shapeHash.query(a.x, a.y, a.r, (b) => {
+        if (b.alive && b._seq > a._seq) collideCircles(a, b, 0.4);
+      });
     }
 
-    for (let i = 0; i < state.bullets.length; i++) {
-      const a = state.bullets[i];
+    const shotN = shotHash.count;
+    for (let i = 0; i < shotN; i++) {
+      const a = shotHash.items[i];
       if (!a.alive) continue;
-      for (let j = i + 1; j < state.bullets.length; j++) {
-        const b = state.bullets[j];
-        if (!b.alive || a.owner === b.owner || sameTeam(a.owner, b.owner)) continue;
-        if (a.kind === "heal" || b.kind === "heal") continue;
+      shotHash.query(a.x, a.y, a.r, (b) => {
+        if (!a.alive || !b.alive || b._seq <= a._seq) return;
+        if (a.owner === b.owner || sameTeam(a.owner, b.owner)) return;
+        if (a.kind === "heal" || b.kind === "heal") return;
         const aClose = a.owner && a.owner.closer;
         const bClose = b.owner && b.owner.closer;
-        if (aClose && bClose) continue;
+        if (aClose && bClose) return;
         const dx = b.x - a.x;
         const dy = b.y - a.y;
         const rr = a.r + b.r;
-        if (dx * dx + dy * dy >= rr * rr) continue;
+        if (dx * dx + dy * dy >= rr * rr) return;
         if (aClose) {
           b.alive = false;
           burst(b.x, b.y, b.color, 4, 80);
-          continue;
+          return;
         }
         if (bClose) {
           a.alive = false;
           burst(a.x, a.y, a.color, 4, 80);
-          break;
+          return;
         }
         const wa = shotWeight(a);
         const wb = shotWeight(b);
@@ -6869,30 +7083,31 @@
           b.alive = false;
           burst(b.x, b.y, b.color, 4, 80);
         }
-        if (!a.alive) break;
-      }
+      });
     }
 
-    for (const bullet of state.bullets) {
+    for (let i = 0; i < shotN; i++) {
+      const bullet = shotHash.items[i];
       if (!bullet.alive) continue;
-      for (const s of state.shapes) {
-        if (!s.alive || !bullet.alive || bullet.kind === "heal") continue;
-        if (!shotHits(bullet, s)) continue;
-        applyShotHit(bullet, s);
-      }
-      for (const tank of state.tanks) {
-        if (!tank.alive || tank === bullet.owner) continue;
-        if (tank.dominator && tank.destroyed) continue;
-        if (!shotHits(bullet, tank)) continue;
-        if (bullet.kind === "heal") {
-          if (tank.dominator || !sameTeam(tank, bullet.owner)) continue;
-          tank.health = Math.min(tank.maxHealth, tank.health + bullet.damage);
-          bullet.alive = false;
-          continue;
+      shotQuery(bullet, (ent) => {
+        if (!bullet.alive || !ent.alive) return;
+        if (ent.type === "shape") {
+          if (bullet.kind === "heal" || !shotHits(bullet, ent)) return;
+          applyShotHit(bullet, ent);
+          return;
         }
-        if (sameTeam(tank, bullet.owner)) continue;
-        applyShotHit(bullet, tank);
-      }
+        if (ent.type !== "tank" || ent === bullet.owner) return;
+        if (ent.dominator && ent.destroyed) return;
+        if (!shotHits(bullet, ent)) return;
+        if (bullet.kind === "heal") {
+          if (ent.dominator || !sameTeam(ent, bullet.owner)) return;
+          ent.health = Math.min(ent.maxHealth, ent.health + bullet.damage);
+          bullet.alive = false;
+          return;
+        }
+        if (sameTeam(ent, bullet.owner)) return;
+        applyShotHit(bullet, ent);
+      });
     }
 
     for (const p of state.particles) {
@@ -6908,11 +7123,11 @@
     }
 
     updateDevDrag();
-    state.bullets = state.bullets.filter((b) => b.alive);
-    state.shapes = state.shapes.filter((s) => s.alive);
-    state.tanks = state.tanks.filter((t) => t.alive || t === state.player);
-    state.particles = state.particles.filter((p) => p.life > 0);
-    state.floaters = state.floaters.filter((f) => f.life > 0);
+    compactList(state.bullets, (b) => b.alive);
+    compactList(state.shapes, (s) => s.alive);
+    compactList(state.tanks, (t) => t.alive || t === state.player);
+    compactList(state.particles, (p) => p.life > 0);
+    compactList(state.floaters, (f) => f.life > 0);
     refreshHunted();
     if (state.mode === "tag") checkTagVictory();
     if (isRoyale()) checkRoyale();
@@ -7095,6 +7310,9 @@
         : (!royaleLocked() ? `${label} · prep · ${alive} left` : `${label} · ${alive} left`);
     }
     if (els.skillPoints) els.skillPoints.textContent = state.spectating ? "" : (free > 0 ? `x${free}` : "");
+    if (leaderPaintAt >= 0 && state.time - leaderPaintAt < 0.25) return;
+    leaderPaintAt = state.time;
+    leaderSig = "";
     const teamRows = teamBoardRows();
     const playerRows = ranked.map((t) => {
       const name = `${t.name}${t === state.hunted ? " · hunted" : ""}`;
@@ -7548,11 +7766,318 @@
     drawTank(c, mock, { hideName: true, hideHealth: true, highlightGun });
   }
 
+  function overlaps(x, y, r, left, top, viewW, viewH) {
+    return x + r >= left && x - r <= left + viewW && y + r >= top && y - r <= top + viewH;
+  }
+
+  function emitCross(x, y, s, thick, fill, alpha) {
+    TankfieldGL.rect(x - s, y - thick * 0.5, s * 2, thick, fill, alpha);
+    TankfieldGL.rect(x - thick * 0.5, y - s, thick, s * 2, fill, alpha);
+  }
+
+  function emitGun(tank, gun, index) {
+    const u = unitOf(tank);
+    const pos = gun.pos || [18, 8, 1, 0, 0, 0, 0];
+    const L = pos[0];
+    const W = pos[1];
+    const A = pos[2];
+    const X = pos[3];
+    const Y = pos[4];
+    const auto = gun.type === "auto";
+    const pivot = auto ? autoPivot(tank, gun, index) : null;
+    const ang = auto ? pivot.ang : tank.angle + (pos[5] * Math.PI) / 180;
+    const fade = tank.fade == null ? 1 : tank.fade;
+    const fill = rgbOf(COLORS.barrel);
+    const stroke = rgbOf(COLORS.outline);
+    let ox;
+    let oy;
+    if (auto) {
+      ox = pivot.x;
+      oy = pivot.y;
+    } else {
+      const c = Math.cos(ang);
+      const s = Math.sin(ang);
+      ox = tank.x + c * X * u - s * Y * u;
+      oy = tank.y + s * X * u + c * Y * u;
+    }
+    const len = Math.max(2, (auto && pivot.ring ? L * 0.62 : L) * u);
+    const w0 = Math.max(1.5, W * u * 0.5);
+    const w1 = Math.max(1.5, W * Math.abs(A) * u * 0.5);
+    TankfieldGL.trap(ox, oy, ang, len, w0, w1, fill, stroke, 3, fade);
+    if (gun.type === "trap" || gun.type === "pillbox") {
+      const c = Math.cos(ang);
+      const s = Math.sin(ang);
+      TankfieldGL.trap(ox + c * len, oy + s * len, ang, 6, w1 * 1.15, w1 * 1.45, fill, stroke, 3, fade);
+    }
+    if (auto) {
+      const domeR = Math.max(4.2, Math.min(tank.r * (pivot.ring ? 0.3 : 0.45), W * u * (pivot.ring ? 0.58 : 0.9)));
+      TankfieldGL.shape(ox, oy, domeR, 0, 0, fill, stroke, 3, fade, fade);
+    }
+  }
+
+  function emitHealth(ent, yOff) {
+    const repairing = !!(ent.dominator && ent.destroyed && (ent.repair || 0) > 0);
+    const maxSh = ent.maxShield || 0;
+    const sh = Math.max(0, ent.shield || 0);
+    const hpFull = !repairing && ent.maxHealth > 0 && ent.health >= ent.maxHealth * 0.995;
+    const shFull = maxSh <= 0.5 || sh >= maxSh * 0.995;
+    if (hpFull && shFull) return;
+    const w = ent.r * 2.2;
+    const h = 5;
+    const x = ent.x - w / 2;
+    const y = ent.y + (yOff || ent.r + 8);
+    const hpPct = repairing ? clamp(ent.repair, 0, 1) : (ent.maxHealth > 0 ? clamp(ent.health / ent.maxHealth, 0, 1) : 1);
+    const frame = rgbOf("#333333");
+    const drawH = (bx, by, pct, track, fill) => {
+      TankfieldGL.rect(bx - 1, by - 1, w + 2, h + 2, frame, 1);
+      TankfieldGL.rect(bx, by, w, h, track, 1);
+      if (pct > 0.002) TankfieldGL.rect(bx, by, w * clamp(pct, 0, 1), h, fill, 1);
+    };
+    if (maxSh > 0.5) {
+      drawH(x, y, sh / maxSh, rgbOf("#1f4f7a"), rgbOf("#4ea4ff"));
+      drawH(x, y + 7, hpPct, rgbOf(repairing ? "#6a5a18" : "#3a7a32"), rgbOf(repairing ? "#f2e863" : "#9dff5a"));
+    } else {
+      drawH(x, y, hpPct, rgbOf(repairing ? "#6a5a18" : "#3a7a32"), rgbOf(repairing ? "#f2e863" : (hpPct < 0.3 ? "#e85d5d" : "#9dff5a")));
+    }
+  }
+
+  function emitTank(tank) {
+    const def = tank.customDef || TankCatalog.get(tank.classId);
+    const guns = (def && def.guns) || [];
+    const skipGuns = tank.dominator && (tank.destroyed || (tank.team === "blue" && !tank.sanctuary));
+    const fade = tank.fade == null ? 1 : tank.fade;
+    if (!skipGuns) {
+      for (let i = 0; i < guns.length; i++) {
+        if (guns[i].type === "auto") continue;
+        emitGun(tank, guns[i], i);
+      }
+    }
+    const sides = (def && def.body) || 0;
+    const flash = tank.bodyHitT > 0;
+    const fillHex = flash ? "#ffffff" : tank.color;
+    const fill = rgbOf(fillHex);
+    if (def && def.smasher) {
+      const ring = darken(tank.color, 0.15);
+      TankfieldGL.shape(tank.x, tank.y, tank.r * 1.28, tank.angle / 4, 6, rgbOf(ring), rgbOf(darken(ring)), 3, fade, fade);
+    }
+    if (sides >= 3) TankfieldGL.shape(tank.x, tank.y, tank.r, Math.PI / sides, sides, fill, rgbOf(darken(fillHex)), 3, fade, fade);
+    else TankfieldGL.shape(tank.x, tank.y, tank.r, 0, 0, fill, rgbOf(outlineFor(tank.color)), 3.4, fade, fade);
+    if (def && def.healer) {
+      emitCross(tank.x, tank.y, tank.r * 0.34, Math.max(4, tank.r * 0.22), rgbOf("#8abc3f"), fade);
+    }
+    if (!skipGuns) {
+      for (let i = 0; i < guns.length; i++) {
+        if (guns[i].type !== "auto") continue;
+        emitGun(tank, guns[i], i);
+      }
+    }
+    if (tank.mainBase && !tank.destroyed) {
+      emitCross(tank.x, tank.y, tank.r * 0.34, 7, rgbOf("#f14e54"), 1);
+    }
+    if (tank === state.hunted) {
+      const a = 0.55 + 0.35 * Math.abs(Math.sin(state.time * 5));
+      TankfieldGL.shape(tank.x, tank.y, tank.r + 10, 0, 0, rgbOf("#e8b020"), rgbOf("#e8b020"), 3.5, 0, a);
+    }
+    if (tank.spawnProtect > 0) {
+      const a = 0.4 + 0.4 * Math.abs(Math.sin(state.time * 8));
+      TankfieldGL.shape(tank.x, tank.y, tank.r + 7, 0, 0, WHITE, WHITE, 3, 0, a);
+    }
+    emitHealth(tank);
+  }
+
+  function emitBullet(b) {
+    const fill = rgbOf(b.color);
+    const stroke = rgbOf(darken(b.color));
+    const barrel = rgbOf(COLORS.barrel);
+    const outline = rgbOf(COLORS.outline);
+    if (b.kind === "trap" || b.kind === "heal") {
+      TankfieldGL.shape(b.x, b.y, b.r, b.angle || 0, 4, fill, stroke, 3, 1, 1);
+    } else if (b.kind === "drone" || b.kind === "swarm") {
+      const sides = b.sides || 3;
+      if (sides < 3) TankfieldGL.shape(b.x, b.y, b.r, 0, 0, fill, stroke, 2.5, 1, 1);
+      else TankfieldGL.shape(b.x, b.y, b.r, b.angle || 0, sides, fill, stroke, 3, 1, 1);
+    } else if (b.kind === "minion") {
+      const a = b.turretAim == null ? b.angle : b.turretAim;
+      TankfieldGL.trap(b.x, b.y, a, b.r + 9, 3.2, 2.4, barrel, outline, 2.2, 1);
+      TankfieldGL.shape(b.x, b.y, b.r, 0, 0, fill, stroke, 2.5, 1, 1);
+    } else if (b.kind === "pillbox") {
+      TankfieldGL.shape(b.x, b.y, b.r, b.angle || 0, 4, fill, stroke, 3, 1, 1);
+      const a = b.turretAim == null ? 0 : b.turretAim;
+      TankfieldGL.trap(b.x, b.y, a, b.r + 7, 2.6, 2, barrel, outline, 2, 1);
+      TankfieldGL.shape(b.x, b.y, Math.max(3.4, b.r * 0.42), 0, 0, barrel, outline, 2, 1, 1);
+    } else {
+      TankfieldGL.shape(b.x, b.y, b.r, 0, 0, fill, stroke, 2.5, 1, 1);
+    }
+  }
+
+  function renderLabels(cam, zoom, sx, sy, left, top, viewW, viewH) {
+    if (!lctx) return;
+    lctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    lctx.clearRect(0, 0, width, height);
+    lctx.save();
+    lctx.translate(width / 2 + sx, height / 2 + sy);
+    lctx.scale(zoom, zoom);
+    lctx.translate(-cam.x, -cam.y);
+    for (const t of state.tanks) {
+      if (!t.alive || !overlaps(t.x, t.y, t.r + 36, left, top, viewW, viewH)) continue;
+      if (t.dominator) {
+        const label = t.destroyed ? (t.mainBase ? "Healer wreck" : "Dominator wreck") : t.name;
+        drawOutlinedText(lctx, label, t.x, t.y - t.r - 8, "bold 13px Ubuntu, Segoe UI, sans-serif", "#fff", 3.6);
+      } else {
+        const label = t === state.hunted ? t.name + "  HUNTED" : t.name;
+        const baseY = t.y - t.r - 5;
+        drawOutlinedText(lctx, formatScore(t.score || 0), t.x, baseY, "bold 10px Ubuntu, Segoe UI, sans-serif", "#fff", 3.2);
+        drawOutlinedText(lctx, label, t.x, baseY - 12, "bold 13px Ubuntu, Segoe UI, sans-serif", "#fff", 3.6);
+      }
+    }
+    if (spectateFree()) drawGhost(lctx, state.ghost);
+    lctx.fillStyle = "#333";
+    lctx.font = "bold 14px Segoe UI, sans-serif";
+    lctx.textAlign = "center";
+    for (const f of state.floaters) {
+      if (!overlaps(f.x, f.y, 20, left, top, viewW, viewH)) continue;
+      lctx.globalAlpha = clamp(f.life / 0.4, 0, 1);
+      lctx.fillText(f.text, f.x, f.y);
+      lctx.globalAlpha = 1;
+    }
+    for (const d of state.doms) {
+      if (!(d.progress > 0) || !(d.progress < 1)) continue;
+      lctx.beginPath();
+      lctx.arc(d.x, d.y, d.r - 18, -Math.PI / 2, -Math.PI / 2 + TAU * d.progress);
+      lctx.strokeStyle = "#fff";
+      lctx.lineWidth = 6;
+      lctx.stroke();
+    }
+    lctx.restore();
+  }
+
+  function renderGL(cam, zoom, sx, sy) {
+    const viewW = width / zoom;
+    const viewH = height / zoom;
+    const left = cam.x - viewW / 2;
+    const top = cam.y - viewH / 2;
+    let storm = [0, 0, -1, 0];
+    if (isRoyale()) {
+      const c = stormCenter();
+      const rr = Math.max(0, royaleRadius());
+      const stormOn = royaleLocked() && rr < royaleMaxR() - 2;
+      if (stormOn) storm = [c.x, c.y, Math.max(rr, 0), 1];
+      TankfieldGL.begin({
+        camX: cam.x, camY: cam.y, zoom, shakeX: sx, shakeY: sy,
+        bg: rgbOf(COLORS.bg), grid: rgbOf(COLORS.grid), gridStep: 24,
+        storm, stormCol: [210 / 255, 64 / 255, 42 / 255, 0.2],
+      });
+      if (rr > 4) {
+        const ring = stormOn ? [232 / 255, 72 / 255, 48 / 255] : [255 / 255, 140 / 255, 64 / 255];
+        TankfieldGL.shape(c.x, c.y, rr, 0, 0, ring, ring, stormOn ? 10 : 6, 0, stormOn ? 0.85 : 0.4);
+      }
+    } else {
+      TankfieldGL.begin({
+        camX: cam.x, camY: cam.y, zoom, shakeX: sx, shakeY: sy,
+        bg: rgbOf(COLORS.bg), grid: rgbOf(COLORS.grid), gridStep: 24,
+        storm, stormCol: [0, 0, 0, 0],
+      });
+    }
+    const edge = rgbOf("#9a9a9a");
+    const thick = 8;
+    TankfieldGL.rect(-thick * 0.5, -thick * 0.5, WORLD.w + thick, thick, edge, 1);
+    TankfieldGL.rect(-thick * 0.5, WORLD.h - thick * 0.5, WORLD.w + thick, thick, edge, 1);
+    TankfieldGL.rect(-thick * 0.5, 0, thick, WORLD.h, edge, 1);
+    TankfieldGL.rect(WORLD.w - thick * 0.5, 0, thick, WORLD.h, edge, 1);
+    const paint = (team, x, y, w, h) => {
+      const col = rgbOf(TEAMS[team].color);
+      TankfieldGL.rect(x, y, w, h, col, 0.16);
+      TankfieldGL.rect(x + 4, y + 4, Math.max(0, w - 8), 8, col, 0.5);
+      TankfieldGL.rect(x + 4, y + h - 12, Math.max(0, w - 8), 8, col, 0.5);
+      TankfieldGL.rect(x + 4, y + 4, 8, Math.max(0, h - 8), col, 0.5);
+      TankfieldGL.rect(x + w - 12, y + 4, 8, Math.max(0, h - 8), col, 0.5);
+    };
+    if (state.mode === "tdm" || isFourTeamMode()) {
+      if (isFourTeamMode()) {
+        paint("blue", 0, BASE_W, BASE_W, WORLD.h - BASE_W * 2);
+        paint("red", WORLD.w - BASE_W, BASE_W, BASE_W, WORLD.h - BASE_W * 2);
+        paint("green", BASE_W, 0, WORLD.w - BASE_W * 2, BASE_W);
+        paint("purple", BASE_W, WORLD.h - BASE_W, WORLD.w - BASE_W * 2, BASE_W);
+      } else {
+        paint("blue", 0, 0, BASE_W, WORLD.h);
+        paint("red", WORLD.w - BASE_W, 0, BASE_W, WORLD.h);
+      }
+    }
+    if (state.mode === "siege") {
+      const L = siegeLayout();
+      if (L) {
+        const col = rgbOf(TEAMS.boss.color);
+        TankfieldGL.rect(L.red.x0, L.red.y0, L.red.x1 - L.red.x0, L.wall.y0 - L.red.y0, col, 0.28);
+        TankfieldGL.rect(L.red.x0, L.wall.y1, L.red.x1 - L.red.x0, L.red.y1 - L.wall.y1, col, 0.28);
+        TankfieldGL.rect(L.red.x0, L.wall.y0, L.wall.x0 - L.red.x0, L.wall.y1 - L.wall.y0, col, 0.28);
+        TankfieldGL.rect(L.wall.x1, L.wall.y0, L.red.x1 - L.wall.x1, L.wall.y1 - L.wall.y0, col, 0.28);
+      }
+    }
+    if (state.mode === "assault") {
+      const col = rgbOf(TEAMS.blue.color);
+      TankfieldGL.rect(0, 0, WORLD.w, ASSAULT_ZONE, col, 0.16);
+      TankfieldGL.rect(0, WORLD.h - ASSAULT_ZONE, WORLD.w, ASSAULT_ZONE, col, 0.16);
+      TankfieldGL.rect(0, ASSAULT_ZONE, ASSAULT_ZONE, WORLD.h - ASSAULT_ZONE * 2, col, 0.16);
+      TankfieldGL.rect(WORLD.w - ASSAULT_ZONE, ASSAULT_ZONE, ASSAULT_ZONE, WORLD.h - ASSAULT_ZONE * 2, col, 0.16);
+      TankfieldGL.rect(ASSAULT_ZONE, ASSAULT_ZONE, WORLD.w - ASSAULT_ZONE * 2, 8, col, 0.5);
+      TankfieldGL.rect(ASSAULT_ZONE, WORLD.h - ASSAULT_ZONE - 8, WORLD.w - ASSAULT_ZONE * 2, 8, col, 0.5);
+      TankfieldGL.rect(ASSAULT_ZONE, ASSAULT_ZONE, 8, WORLD.h - ASSAULT_ZONE * 2, col, 0.5);
+      TankfieldGL.rect(WORLD.w - ASSAULT_ZONE - 8, ASSAULT_ZONE, 8, WORLD.h - ASSAULT_ZONE * 2, col, 0.5);
+      for (const d of assaultDoms()) {
+        const hex = d.destroyed ? "#8a8a8a" : (TEAMS[d.team] ? TEAMS[d.team].color : "#8a8a8a");
+        const c = rgbOf(hex);
+        TankfieldGL.shape(d.x, d.y, assaultZoneR(d), 0, 0, c, c, 7, 0.16, 0.48);
+      }
+    }
+    const wallFill = rgbOf("#8f8f8f");
+    const wallEdge = rgbOf("#6a6a6a");
+    for (const w of state.walls) {
+      if (!overlaps(w.x + w.w * 0.5, w.y + w.h * 0.5, Math.max(w.w, w.h), left, top, viewW, viewH)) continue;
+      TankfieldGL.rect(w.x, w.y, w.w, w.h, wallEdge, 1);
+      const inset = 3;
+      TankfieldGL.rect(w.x + inset, w.y + inset, Math.max(0, w.w - inset * 2), Math.max(0, w.h - inset * 2), wallFill, 1);
+    }
+    for (const d of state.doms) {
+      const hex = d.team && TEAMS[d.team] ? TEAMS[d.team].color : "#888888";
+      const col = rgbOf(hex);
+      TankfieldGL.shape(d.x, d.y, d.r, 0, 0, col, col, 10, 0.22, 1);
+    }
+    if (!isRoyale() && state.mode !== "protect" && !isMazeCombatMode()) {
+      TankfieldGL.shape(WORLD.w / 2, WORLD.h / 2, 700, 0, 0, NEST_COL, NEST_COL, 0, 0.08, 0);
+    }
+    for (const s of state.shapes) {
+      if (!s.alive || !overlaps(s.x, s.y, s.r, left, top, viewW, viewH)) continue;
+      const fill = rgbOf(s.color);
+      TankfieldGL.shape(s.x, s.y, s.r, s.rot, s.sides, fill, rgbOf(darken(s.color)), 3, 1, 1);
+      emitHealth(s, s.r + 10);
+    }
+    for (const b of state.bullets) {
+      if (!b.alive || !overlaps(b.x, b.y, b.r + 12, left, top, viewW, viewH)) continue;
+      emitBullet(b);
+    }
+    for (const t of state.tanks) {
+      if (!t.alive || !overlaps(t.x, t.y, t.r + 80, left, top, viewW, viewH)) continue;
+      emitTank(t);
+    }
+    for (const pt of state.particles) {
+      if (!overlaps(pt.x, pt.y, pt.r, left, top, viewW, viewH)) continue;
+      TankfieldGL.shape(pt.x, pt.y, pt.r, 0, 0, rgbOf(pt.color), WHITE, 0, pt.life / pt.max, 0);
+    }
+    TankfieldGL.flush();
+    renderLabels(cam, zoom, sx, sy, left, top, viewW, viewH);
+  }
+
   function render() {
     const cam = state.camera;
     const zoom = cam.zoom / viewFov();
     const sx = (Math.random() - 0.5) * shake;
     const sy = (Math.random() - 0.5) * shake;
+    if (glOn) {
+      renderGL(cam, zoom, sx, sy);
+      drawMinimap();
+      return;
+    }
+    if (!ctx) return;
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.fillStyle = COLORS.bg;
@@ -7703,6 +8228,7 @@
     }
 
     for (const b of state.bullets) {
+      if (b.x + b.r < left || b.x - b.r > left + viewW || b.y + b.r < top || b.y - b.r > top + viewH) continue;
       if (b.kind === "trap" || b.kind === "heal") {
         drawPoly(ctx, b.x, b.y, b.r, 4, b.angle, b.color);
       } else if (b.kind === "drone" || b.kind === "swarm") {
@@ -7775,7 +8301,11 @@
       }
     }
 
-    for (const t of state.tanks) if (t.alive) drawTank(ctx, t);
+    for (const t of state.tanks) {
+      if (!t.alive) continue;
+      if (t.x + t.r < left - 48 || t.x - t.r > left + viewW + 48 || t.y + t.r < top - 48 || t.y - t.r > top + viewH + 48) continue;
+      drawTank(ctx, t);
+    }
     if (spectateFree()) drawGhost(ctx, state.ghost);
 
     for (const pt of state.particles) {
@@ -7805,10 +8335,22 @@
     mctx.fillRect(0, 0, s, s);
     const mapX = (x) => (x / WORLD.w) * s;
     const mapY = (y) => (y / WORLD.h) * s;
-    mctx.fillStyle = "rgba(72, 72, 72, 0.48)";
-    for (const w of state.walls) {
-      mctx.fillRect(mapX(w.x), mapY(w.y), (w.w / WORLD.w) * s, (w.h / WORLD.h) * s);
+    const wallKey = WORLD.w + "x" + WORLD.h;
+    if (miniWalls !== state.walls || miniWallKey !== wallKey) {
+      miniWalls = state.walls;
+      miniWallKey = wallKey;
+      if (!drawMinimap.cache) drawMinimap.cache = document.createElement("canvas");
+      const cache = drawMinimap.cache;
+      cache.width = s;
+      cache.height = s;
+      const g = cache.getContext("2d");
+      g.clearRect(0, 0, s, s);
+      g.fillStyle = "rgba(72, 72, 72, 0.48)";
+      for (const w of state.walls) {
+        g.fillRect(mapX(w.x), mapY(w.y), (w.w / WORLD.w) * s, (w.h / WORLD.h) * s);
+      }
     }
+    if (drawMinimap.cache) mctx.drawImage(drawMinimap.cache, 0, 0);
     const paintZone = (team, x, y, w, h) => {
       if (!TEAMS[team]) return;
       mctx.fillStyle = TEAMS[team].color;
@@ -7918,7 +8460,8 @@
     try {
       if (running && !state.paused) update(dt);
       if (running) render();
-      else {
+      else if (glOn) TankfieldGL.paintEmpty(0.467, 0.482, 0.494);
+      else if (ctx) {
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.fillStyle = "#777b7e";
         ctx.fillRect(0, 0, width, height);
