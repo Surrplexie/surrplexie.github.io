@@ -2179,19 +2179,31 @@
     return { x: WORLD.w * 0.5, y: WORLD.h * 0.5 };
   }
 
-  function siegeBossSpawn() {
+  function siegeBossSpawn(slot) {
     const L = siegeLayout();
-    const pad = 90;
+    const pad = 80;
     if (!L) return { x: pad, y: WORLD.h * 0.5 };
-    const red = L.red;
-    const side = irand(0, 3);
-    let p;
-    if (side === 0) p = { x: Math.max(pad, red.x0 - 90), y: rand(red.y0 + 180, red.y1 - 180) };
-    else if (side === 1) p = { x: Math.min(WORLD.w - pad, red.x1 + 90), y: rand(red.y0 + 180, red.y1 - 180) };
-    else if (side === 2) p = { x: rand(red.x0 + 180, red.x1 - 180), y: Math.max(pad, red.y0 - 90) };
-    else p = { x: rand(red.x0 + 180, red.x1 - 180), y: Math.min(WORLD.h - pad, red.y1 + 90) };
-    if (!inSiegeSafe(p.x, p.y, 0) && !hitsWall(p.x, p.y, 80)) return p;
-    return { x: Math.max(pad, red.x0 - 90), y: (red.y0 + red.y1) * 0.5 };
+    const gates = siegeGatePoints();
+    const g = gates.length
+      ? gates[(slot == null ? irand(0, gates.length - 1) : Math.abs(slot | 0)) % gates.length]
+      : { x: (L.wall.x0 + L.wall.x1) * 0.5, y: L.wall.y0 };
+    const cx = (L.wall.x0 + L.wall.x1) * 0.5;
+    const cy = (L.wall.y0 + L.wall.y1) * 0.5;
+    let nx = g.x - cx;
+    let ny = g.y - cy;
+    if (Math.abs(nx) >= Math.abs(ny)) ny = 0;
+    else nx = 0;
+    const len = Math.hypot(nx, ny) || 1;
+    nx /= len;
+    ny /= len;
+    const redBand = Math.abs(nx) > 0.5
+      ? Math.abs(L.wall.x0 - L.red.x0)
+      : Math.abs(L.wall.y0 - L.red.y0);
+    const dist = (L.wall.t || 180) * 0.5 + redBand + 90;
+    return {
+      x: clamp(g.x + nx * dist + rand(-40, 40), pad, WORLD.w - pad),
+      y: clamp(g.y + ny * dist + rand(-40, 40), pad, WORLD.h - pad),
+    };
   }
 
   function siegeFrontPlayer(tank, toward) {
@@ -2389,18 +2401,12 @@
     state.siegeWon = false;
   }
 
-  function spawnSiegeBoss(classId, fodder) {
+  function spawnSiegeBoss(classId, fodder, slot) {
     const def = TankCatalog.get(classId);
-    let pos = siegeBossSpawn();
-    if (inSiegeSafe(pos.x, pos.y, 0)) {
-      const L = siegeLayout();
-      const r = L ? L.red : null;
-      pos = r
-        ? { x: r.x0 - 80, y: rand(r.y0, r.y1) }
-        : { x: 140, y: WORLD.h * 0.5 };
-    }
-    pos = openAround(pos.x, pos.y, 0, 60, 48);
-    if (inSiegeSafe(pos.x, pos.y, 0)) pos = siegeBossSpawn();
+    let pos = siegeBossSpawn(slot);
+    const nudged = openAround(pos.x, pos.y, 0, 48, 40);
+    if (nudged && (nudged.x - pos.x) ** 2 + (nudged.y - pos.y) ** 2 < 90 * 90 && !inSiegeSafe(nudged.x, nudged.y, 0)) pos = nudged;
+    if (inSiegeSafe(pos.x, pos.y, 0)) pos = siegeBossSpawn(slot);
     const tank = createTank({
       name: def && def.name ? def.name : "Boss",
       ai: true,
@@ -2427,9 +2433,9 @@
     const wave = siegeWaveAt(waveId);
     if (!wave || !wave.length) return;
     note(`Wave ${waveId + 1} has started!`, 4000);
-    for (const id of wave) spawnSiegeBoss(id, false);
+    for (let i = 0; i < wave.length; i++) spawnSiegeBoss(wave[i], false, i);
     const sentries = Math.floor(waveId / 2);
-    for (let i = 0; i < sentries; i++) spawnSiegeBoss(SIEGE_SENTRIES[i % SIEGE_SENTRIES.length], true);
+    for (let i = 0; i < sentries; i++) spawnSiegeBoss(SIEGE_SENTRIES[i % SIEGE_SENTRIES.length], true, wave.length + i);
     const tier = Math.min(6, Math.floor(waveId / 5) + 1);
     if (tier !== state.siegeTier) {
       state.siegeTier = tier;
@@ -5410,6 +5416,12 @@
     const muzzle = Math.max(1.6, W * Math.abs(A || 1) * u * 0.5);
     let br = muzzle * Math.max(0.78, sizeMul || 1) * 1.08;
     if (tank.mothership && kind !== "drone" && kind !== "swarm" && kind !== "minion") br = Math.max(br, 8.2 * (sizeMul || 1));
+    if (tank.boss || tank.fodder) {
+      const cap = (tank.fodder ? 14 : 30) * Math.min(1.35, Math.max(0.75, sizeMul || 1));
+      if (kind === "minion") br = Math.min(br, tank.fodder ? 14 : 22);
+      else if (kind === "drone" || kind === "swarm") br = Math.min(br, tank.fodder ? 11 : 16);
+      else br = Math.min(Math.max(br, tank.fodder ? 7 : 15), cap);
+    }
     if (tank.closer) br = 26;
     if (kind === "heal") br = Math.max(3.1, br * 0.36);
     if (kind === "minion") br = Math.max(10, tank.r * 0.55);
@@ -5617,14 +5629,20 @@
       ? (kind === "swarm" ? 3 : kind === "drone" ? 3 : kind === "trap" || kind === "pillbox" ? 4 : 0)
       : gun.shape;
     const topSpeed = (kind === "trap" || kind === "pillbox") ? 0 : Math.max(50, (shoot.SPEED || 1) * 70);
+    let shotDamage = Math.max(0.2, Math.abs(shoot.DAMAGE) * (gs.damage || 1));
+    let shotHealth = Math.max(0.2, shoot.HEALTH);
+    if (tank.boss && state.mode === "siege" && (kind === "bullet" || kind === "missile")) {
+      shotDamage = Math.max(shotDamage, 480);
+      shotHealth = Math.max(shotHealth, 5.5);
+    }
     state.bullets.push({
       x: spawn.x,
       y: spawn.y,
       vx: Math.cos(ang) * speed + tank.vx * 0.15,
       vy: Math.sin(ang) * speed + tank.vy * 0.15,
       r: br,
-      health: Math.max(0.2, shoot.HEALTH),
-      damage: Math.max(0.2, Math.abs(shoot.DAMAGE) * (gs.damage || 1)),
+      health: shotHealth,
+      damage: shotDamage,
       pen: shoot.PENETRATION || 1,
       life: lifeBase * (gs.life || 1),
       color: kind === "heal" ? "#8abc3f" : tank.color,
