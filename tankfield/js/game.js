@@ -556,12 +556,21 @@
     const len = Math.hypot(dx, dy) || 1;
     const ux = dx / len;
     const uy = dy / len;
-    let h = 0;
-    const seed = tank.name || "b";
-    for (let i = 0; i < seed.length; i++) h = (h * 33 + seed.charCodeAt(i)) | 0;
-    const side = ((h % 7) - 3) * 26;
-    const behindX = ball.x - ux * 120 + (-uy) * side;
-    const behindY = ball.y - uy * 120 + ux * side;
+    const mates = [];
+    for (const t of state.tanks) {
+      if (t.alive && t.ai && t.team === tank.team && !t.dominator && !t.mothership) mates.push(t);
+    }
+    mates.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    let idx = mates.indexOf(tank);
+    if (idx < 0) idx = 0;
+    const unit = mates.length <= 1 ? 0.5 : idx / (mates.length - 1);
+    // Fan across the rear half instead of stacking on the single point straight behind the ball.
+    const spread = (unit - 0.5) * Math.PI * 0.9;
+    const hold = (ball.r || 36) + (tank.r || 28) + 86;
+    const c = Math.cos(spread);
+    const s = Math.sin(spread);
+    const behindX = ball.x + (-ux * c - uy * s) * hold;
+    const behindY = ball.y + (-uy * c + ux * s) * hold;
     const relX = tank.x - ball.x;
     const relY = tank.y - ball.y;
     const rel = Math.hypot(relX, relY) || 1;
@@ -573,12 +582,12 @@
       x: clamp(x, f.x0 + pad, f.x1 - pad),
       y: clamp(y, f.y0 + pad, f.y1 - pad),
     });
-    if (along > 36) {
+    if (along > 12) {
       const p = clampPt(behindX, behindY);
-      return { x: p.x, y: p.y, shoot: along > 48 && align > 0.34 };
+      return { x: p.x, y: p.y, shoot: along > 16 && align > 0.04 };
     }
     // Ball is between the tank and its own goal. Step around the outside instead of shooting it backward.
-    const sign = side >= 0 ? 1 : -1;
+    const sign = spread >= 0 ? 1 : -1;
     const sx = -uy * sign;
     const sy = ux * sign;
     const bx = sx * 0.82 - ux * 0.58;
