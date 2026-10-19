@@ -76,6 +76,8 @@
   };
   const BASE_W = 560;
   const FFA_CLOSE_AT = 4 * 60 * 60;
+  const SOCCER_MATCH = 90 * 60;
+  const SOCCER_AUTO_NEAR = 480;
   const SERVER_RESET_DELAY = 5;
   const ROYALE_PREP = 60;
   const ROYALE_SHRINK = 180;
@@ -645,10 +647,34 @@
     note(`The current score is ${gs} to ${bs}${lead}`);
     resetSoccerBall();
     leaderPaintAt = -1;
-    if (gs >= 20 || bs >= 20) {
-      const win = gs >= 20 ? "green" : "blue";
-      beginArenaClose(`${TEAMS[win].name} wins Soccer ${gs}-${bs}! Fresh server shortly.`);
+  }
+
+  function finishSoccer() {
+    if (state.mode !== "soccer" || state.closing) return;
+    const g = state.goals || { green: 0, blue: 0 };
+    const gs = g.green || 0;
+    const bs = g.blue || 0;
+    if (gs === bs) beginArenaClose(`Soccer ends ${gs}-${bs}. It's a draw.`);
+    else {
+      const win = gs > bs ? "green" : "blue";
+      beginArenaClose(`${TEAMS[win].name} wins Soccer ${gs}-${bs}!`);
     }
+  }
+
+  function soccerAutoTarget(tank, range) {
+    const ball = state.ball;
+    if (state.mode !== "soccer" || !ball || ball.alive === false || !tank || !tank.team) return null;
+    if (tank.dominator || tank.mothership || tank.closer) return null;
+    if (dist2(tank, ball) > range * range) return null;
+    if (!canSee(tank, ball)) return null;
+    if (!soccerPushPlan(tank, ball).shoot) return null;
+    const near2 = SOCCER_AUTO_NEAR * SOCCER_AUTO_NEAR;
+    for (const t of state.tanks) {
+      if (!t.alive || t === tank || t.dominator || t.mothership || t.closer) continue;
+      if (!isEnemyTank(tank, t)) continue;
+      if (dist2(t, ball) <= near2) return null;
+    }
+    return ball;
   }
 
   function stepSoccerBall(dt) {
@@ -5886,9 +5912,8 @@
       const autoGun = gun.type === "auto";
       if (tank.spawnProtect > 0 && autoGun) continue;
       if (!autoGun && !fire) continue;
-      if (autoGun && !nearestSeen(tank, null, 520, (o) => {
-        if (!o || o === tank || !o.alive) return false;
-        if (o === state.ball) return !!tank.soccerShoot;
+      if (autoGun && !soccerAutoTarget(tank, 520) && !nearestSeen(tank, null, 520, (o) => {
+        if (!o || o === tank || !o.alive || o === state.ball) return false;
         return o.type !== "tank" || isEnemyTank(tank, o);
       })) continue;
       if (tank.gunCd[i] > 0) continue;
@@ -5909,12 +5934,10 @@
 
   function updateTurrets(tank, dt) {
     const guns = getDef(tank).guns || [];
-    let target = nearestSeen(tank, null, 640, (o) => o !== tank && o.alive && (o.type !== "tank" || isEnemyTank(tank, o)));
-    if (tank.ai && state.mode === "soccer" && state.ball && tank.soccerShoot && tank.aiTarget === state.ball && dist2(tank, state.ball) <= 840 * 840) {
-      target = state.ball;
-    } else if (tank.ai && state.mode === "soccer" && target === state.ball) {
-      target = null;
-    } else if (tank.ai && tank.aiTarget && tank.aiTarget.dominator && state.mode === "domination") {
+    let target = nearestSeen(tank, null, 640, (o) => o !== tank && o.alive && o !== state.ball && (o.type !== "tank" || isEnemyTank(tank, o)));
+    const ballShot = soccerAutoTarget(tank, 640);
+    if (ballShot && (!target || dist2(tank, ballShot) < dist2(tank, target))) target = ballShot;
+    else if (tank.ai && tank.aiTarget && tank.aiTarget.dominator && state.mode === "domination") {
       target = tank.aiTarget;
     }
     if (!tank.turretAim) tank.turretAim = [];
@@ -7273,7 +7296,8 @@
       beginRoyaleStorm();
     }
     if (isRoyale()) checkRoyale();
-    if (!state.closing && state.mode !== "siege" && state.time >= FFA_CLOSE_AT) beginArenaClose("4 hours up. Starting a fresh server.");
+    if (!state.closing && state.mode === "soccer" && state.time >= SOCCER_MATCH) finishSoccer();
+    if (!state.closing && state.mode !== "siege" && state.mode !== "soccer" && state.time >= FFA_CLOSE_AT) beginArenaClose("4 hours up. Starting a fresh server.");
     updateDoms(dt);
     updateAssault(dt);
     updateSiege(dt);
@@ -7693,6 +7717,8 @@
         } else {
           els.closeTimer.textContent = `Hold ${live}/${need} to win · ${resetText}`;
         }
+      } else if (state.mode === "soccer") {
+        els.closeTimer.textContent = `Full time ${formatClock(SOCCER_MATCH - state.time)}`;
       } else if (state.mode === "siege") {
         const wave = Math.max(1, (state.siegeWave || 0) + 1);
         const live = liveSanctuaries().length;
@@ -7829,7 +7855,7 @@
       }
     } else if (state.mode === "soccer") {
       const g = state.goals || { green: 0, blue: 0 };
-      rows.push({ color: "#3a3a3a", label: "Goals to win: 20", sort: 3 });
+      rows.push({ color: "#3a3a3a", label: `Time left ${formatClock(SOCCER_MATCH - state.time)}`, sort: 3 });
       rows.push({ color: TEAMS.green.color, label: `Green — ${g.green || 0} goals`, sort: 2 });
       rows.push({ color: TEAMS.blue.color, label: `Blue — ${g.blue || 0} goals`, sort: 1 });
     } else if (state.mode === "domination") {
@@ -9216,7 +9242,7 @@
     protect: "Two motherships roam · random team · start at 45 · [N] skip to 45 · [H] to take control · win or 4 hours starts a fresh server",
     maze: "FFA · open L / Y / zig wall clusters · start at 45 · fresh server after 4 hours",
     domination: "Shoot the 4 dominators · last 30 seconds of damage decides the team · both teams turns it yellow · all 4 owned by one team wins · or 4 hours starts a fresh server",
-    soccer: "Green vs blue · shoot the ball into the other goal · first to 20 · ball hurts tanks that touch it · or 4 hours starts a fresh server",
+    soccer: "Green vs blue · shoot the ball into the other goal · most goals after 90 minutes wins · ball hurts tanks that touch it · then a fresh server",
     assault: "Blue attacks Green · Blue spawns across a 360-wide perimeter ring · smaller maze · capture zones · start at 45 · Green wins in 10:00 if they hold 3/4 · win or 4 hours starts a fresh server",
     siege: "One team · four bases · bosses spawn behind the red ring and push in · yellow bases do not shoot · shoot them to restore · endless until all four bases fall",
     growth: "FFA · grow past 45 to 1000 · everyone starts at 45 · never below 45 · [N] skip to 45 · fresh server after 4 hours",
