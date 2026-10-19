@@ -5499,7 +5499,7 @@
   }
 
   function applyRecoil(tank, gun, kind, shoot, width, ang) {
-    if (!tank || tank.closer || tank.mothership || tank.dominator) return;
+    if (!tank || tank.closer || tank.mothership || tank.dominator || tank.boss || tank.fodder) return;
     if (gun.type === "deco") return;
     let rec = gun.recoil;
     if (rec == null) rec = shoot && shoot.recoil != null ? shoot.recoil : 1;
@@ -7017,8 +7017,17 @@
     const ny = dy / d;
     const massA = massOf(a);
     const massB = massOf(b);
-    const shareA = massB / (massA + massB);
-    const shareB = massA / (massA + massB);
+    const aLock = !!(a.boss || a.fodder);
+    const bLock = !!(b.boss || b.fodder);
+    let shareA = massB / (massA + massB);
+    let shareB = massA / (massA + massB);
+    if (aLock && !bLock) {
+      shareA = 0;
+      shareB = 1;
+    } else if (bLock && !aLock) {
+      shareA = 1;
+      shareB = 0;
+    }
     a.x -= nx * overlap * shareA;
     a.y -= ny * overlap * shareA;
     b.x += nx * overlap * shareB;
@@ -7028,10 +7037,14 @@
     const rel = dvx * nx + dvy * ny;
     if (rel < 0) {
       const impulse = rel * bounce;
-      a.vx += impulse * nx * shareA * 2;
-      a.vy += impulse * ny * shareA * 2;
-      b.vx -= impulse * nx * shareB * 2;
-      b.vy -= impulse * ny * shareB * 2;
+      if (!aLock) {
+        a.vx += impulse * nx * shareA * 2;
+        a.vy += impulse * ny * shareA * 2;
+      }
+      if (!bLock) {
+        b.vx -= impulse * nx * shareB * 2;
+        b.vy -= impulse * ny * shareB * 2;
+      }
     }
     return true;
   }
@@ -7078,9 +7091,12 @@
 
   function applyShotHit(bullet, target) {
     if (tryNecro(bullet.owner, target, bullet)) return;
-    const kick = target.kind === "alpha" ? 0.00008 : target.kind === "pentagon" ? 0.0022 : target.type === "tank" ? 0.01 : 0.01;
-    target.vx = (target.vx || 0) + bullet.vx * kick;
-    target.vy = (target.vy || 0) + bullet.vy * kick;
+    const anchored = !!(target.boss || target.fodder);
+    if (!anchored) {
+      const kick = target.kind === "alpha" ? 0.00008 : target.kind === "pentagon" ? 0.0022 : target.type === "tank" ? 0.01 : 0.01;
+      target.vx = (target.vx || 0) + bullet.vx * kick;
+      target.vy = (target.vy || 0) + bullet.vy * kick;
+    }
     const lived = target.alive && target.health > 0;
     damage(target, bullet.damage, bullet.owner);
     if (bullet.owner && bullet.owner.closer) return;
