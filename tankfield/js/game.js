@@ -5818,7 +5818,12 @@
 
   function updateTurrets(tank, dt) {
     const guns = getDef(tank).guns || [];
-    const target = nearestSeen(tank, null, 640, (o) => o !== tank && o.alive && (o.type !== "tank" || isEnemyTank(tank, o)));
+    let target = nearestSeen(tank, null, 640, (o) => o !== tank && o.alive && (o.type !== "tank" || isEnemyTank(tank, o)));
+    if (tank.ai && state.mode === "soccer" && state.ball && tank.aiTarget === state.ball && dist2(tank, state.ball) <= 840 * 840) {
+      target = state.ball;
+    } else if (tank.ai && tank.aiTarget && tank.aiTarget.dominator && state.mode === "domination") {
+      target = tank.aiTarget;
+    }
     if (!tank.turretAim) tank.turretAim = [];
     for (let i = 0; i < guns.length; i++) {
       const gun = guns[i];
@@ -6391,25 +6396,6 @@
     else if (shape && dist2(tank, shape) < (maze ? 280 : 420) * (maze ? 280 : 420) && (!maze || canSee(tank, shape))) tank.aiState = "farm";
     else tank.aiState = "wander";
 
-    if (state.mode === "domination" && tank.team && tank.aiState !== "flee" && tank.aiState !== "attack" && tank.aiState !== "home" && tank.aiState !== "heal") {
-      let claim = null;
-      let claimD = Infinity;
-      for (const d of state.doms) {
-        if (d.team === tank.team) continue;
-        const dd = dist2(tank, d);
-        if (dd < claimD) {
-          claimD = dd;
-          claim = d;
-        }
-      }
-      if (claim) {
-        tank.aiState = "wander";
-        tank.roamX = claim.x;
-        tank.roamY = claim.y;
-        tank.aiT = 1.6;
-      }
-    }
-
     if (state.mode === "assault" && !recovering && tank.team && tank.aiState !== "flee" && tank.aiState !== "attack" && tank.aiState !== "heal") {
       if (tank.team === "green") {
         const wreck = nearest(tank, state.tanks, 2800, (t) => t.dominator && t.destroyed);
@@ -6486,21 +6472,64 @@
         tank.aiTarget = null;
       }
     }
-    if (state.mode === "domination" && tank.team && tank.aiState !== "flee" && tank.aiState !== "heal") {
+    if (state.mode === "domination" && tank.team && tank.aiState !== "flee") {
+      const reach = 900;
+      const reach2 = reach * reach;
       let claim = null;
       let claimD = Infinity;
       for (const d of state.doms) {
-        if (!d.alive || d.team === tank.team) continue;
+        if (!d.alive || (d.team === tank.team && !d.contested)) continue;
         const dd = dist2(tank, d);
         if (dd < claimD) {
           claimD = dd;
           claim = d;
         }
       }
-      if (claim) {
+      const rival = nearestSeen(tank, state.tanks, Math.max(fightRange, 640), (t) => isEnemyTank(tank, t) && !t.dominator && !t.mothership && !t.boss && !t.fodder);
+      const inReach = !!(claim && claimD <= reach2);
+      const rivalAtBase = !!(inReach && rival && dist2(rival, claim) <= reach2);
+      if (inReach && rivalAtBase) {
+        enemy = rival;
+        tank.aiState = "attack";
+        tank.aiTarget = rival;
+      } else if (inReach) {
         enemy = claim;
         tank.aiState = "attack";
         tank.aiTarget = claim;
+      } else if (rival) {
+        enemy = rival;
+        tank.aiState = "attack";
+        tank.aiTarget = rival;
+        if (tank.aiLock && tank.aiLock.dominator) tank.aiLock = null;
+      } else if (claim) {
+        enemy = claim;
+        tank.aiState = "attack";
+        tank.aiTarget = claim;
+      }
+    }
+    if (state.mode === "soccer" && state.ball && state.ball.alive !== false && tank.team && tank.aiState !== "flee") {
+      const ball = state.ball;
+      const pushR = 840;
+      const inPush = dist2(tank, ball) <= pushR * pushR;
+      const foe = enemy && isEnemyTank(tank, enemy) ? enemy : null;
+      const fighting = foe && dist2(tank, foe) <= fightRange * fightRange;
+      if (inPush || !fighting) {
+        const f = soccerField();
+        const depth = soccerGoalDepth();
+        const goalX = tank.team === "blue" ? f.x1 - depth * 0.35 : f.x0 + depth * 0.35;
+        const dx = goalX - ball.x;
+        const dy = (f.y0 + f.y1) * 0.5 - ball.y;
+        const len = Math.hypot(dx, dy) || 1;
+        let h = 0;
+        const seed = tank.name || "b";
+        for (let i = 0; i < seed.length; i++) h = (h * 33 + seed.charCodeAt(i)) | 0;
+        const side = ((h % 7) - 3) * 26;
+        tank.aiPushX = ball.x - (dx / len) * 92 + (-dy / len) * side;
+        tank.aiPushY = ball.y - (dy / len) * 92 + (dx / len) * side;
+        enemy = ball;
+        tank.aiState = "attack";
+        tank.aiTarget = ball;
+        if (tank.aiLock && tank.aiLock.type === "tank") tank.aiLock = null;
       }
     }
     if (enemy && (tank.aiState === "attack" || tank.aiState === "flee" || tank.aiState === "home" || tank.aiState === "storm")) {
@@ -6543,6 +6572,11 @@
       const lock = tank.aiTarget || enemy;
       if (lock && canSee(tank, lock)) tank.angle = aimAt(tank, lock, st);
       else tank.angle = Math.atan2(ty - tank.y, tx - tank.x);
+    } else if (state.mode === "soccer" && state.ball && tank.aiState === "attack" && enemy === state.ball) {
+      const steered = steerAround(tank, tank.aiPushX == null ? enemy.x : tank.aiPushX, tank.aiPushY == null ? enemy.y : tank.aiPushY);
+      tx = steered.x;
+      ty = steered.y;
+      tank.angle = Math.atan2(enemy.y - tank.y, enemy.x - tank.x);
     } else if (tank.aiState === "attack" && enemy) {
       const enemySeen = canSee(tank, enemy);
       const ez = zoneAt(enemy.x, enemy.y);
@@ -6731,36 +6765,6 @@
         tank.aiTarget = null;
       }
     } else tank.stuckT = 0;
-    if (state.mode === "soccer" && state.ball && tank.team && tank.aiState !== "flee") {
-      const ball = state.ball;
-      const foe = tank.aiTarget && tank.aiTarget.type === "tank" && tank.aiTarget.alive && isEnemyTank(tank, tank.aiTarget)
-        ? tank.aiTarget
-        : null;
-      const fighting = foe && dist2(tank, foe) < 540 * 540;
-      const f = soccerField();
-      const depth = soccerGoalDepth();
-      const goalX = tank.team === "blue" ? f.x1 - depth * 0.35 : f.x0 + depth * 0.35;
-      const dx = goalX - ball.x;
-      const dy = (f.y0 + f.y1) * 0.5 - ball.y;
-      const len = Math.hypot(dx, dy) || 1;
-      const behindX = ball.x - (dx / len) * 88;
-      const behindY = ball.y - (dy / len) * 88;
-      const far = (tank.x - behindX) ** 2 + (tank.y - behindY) ** 2;
-      if (!fighting) {
-        tank.angle = Math.atan2(ball.y - tank.y, ball.x - tank.x);
-        tank.aiTarget = ball;
-        tank.aiState = "attack";
-        if (far > 36 * 36) {
-          const ang = Math.atan2(behindY - tank.y, behindX - tank.x);
-          tank.vx += Math.cos(ang) * pace * 86 * dt;
-          tank.vy += Math.sin(ang) * pace * 86 * dt;
-        }
-      } else if (far > 420 * 420) {
-        const ang = Math.atan2(behindY - tank.y, behindX - tank.x);
-        tank.vx += Math.cos(ang) * pace * 28 * dt;
-        tank.vy += Math.sin(ang) * pace * 28 * dt;
-      }
-    }
     updateTurrets(tank, dt);
     shoot(tank, dt);
   }
@@ -7064,6 +7068,12 @@
         x: owner.x + Math.cos(state.time * 1.7 + b.orbit) * 52,
         y: owner.y + Math.sin(state.time * 1.7 + b.orbit) * 52,
       };
+    }
+    if (owner.aiTarget === state.ball && state.mode === "soccer" && state.ball) {
+      return { x: state.ball.x + ox, y: state.ball.y + oy };
+    }
+    if (owner.aiTarget && owner.aiTarget.dominator && state.mode === "domination") {
+      return { x: owner.aiTarget.x + ox, y: owner.aiTarget.y + oy };
     }
     const prey = nearestSeen(owner, null, 700, (o) => o !== owner && (o.type !== "tank" || isEnemyTank(owner, o)));
     if (prey) return { x: prey.x + ox, y: prey.y + oy };
