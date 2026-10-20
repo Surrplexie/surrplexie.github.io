@@ -164,6 +164,15 @@
       calculator: extra.calculator || calculatorFor(type),
       shape: extra.shape,
       necro: !!extra.necro,
+      maxChildren: extra.maxChildren || 0,
+      altFire: !!extra.altFire,
+      autoFire: !!extra.autoFire,
+      payload: extra.payload || null,
+      motion: extra.motion || "",
+      fixedReload: !!extra.fixedReload,
+      sustained: !!extra.sustained,
+      necroScale: !!extra.necroScale,
+      destroyOldest: !!extra.destroyOldest,
     };
   }
 
@@ -183,6 +192,15 @@
         calculator: item.calculator || calculatorFor(type),
         shape: item.shape,
         necro: !!item.necro,
+        maxChildren: item.maxChildren || 0,
+        altFire: !!item.altFire,
+        autoFire: !!item.autoFire,
+        payload: item.payload ? cloneGuns(item.payload) : null,
+        motion: item.motion || "",
+        fixedReload: !!item.fixedReload,
+        sustained: !!item.sustained,
+        necroScale: !!item.necroScale,
+        destroyOldest: !!item.destroyOldest,
       };
     });
   }
@@ -225,6 +243,11 @@
       necro: spec.necro || 0,
       healer: !!spec.healer,
       spin: !!spec.spin,
+      fade: !!spec.fade,
+      lancer: !!spec.lancer,
+      shield: spec.shield || 1,
+      skillCaps: spec.skillCaps || null,
+      statSet: spec.statSet || 0,
       mods: spec.mods || { damage: 1, reload: 1, speed: 1, size: 1, fov: 1, health: 1 },
     };
     return tanks[id];
@@ -3364,6 +3387,80 @@
     });
   }
 
+  const PROTECT_IDS = new Set([
+    "mothership", "assault_guard", "sanctuary", "dom_gun", "dom_idle", "dom_heal", "arena_closer",
+    "summoner", "nest_keeper", "nest_warden", "nest_guardian", "rogue_palisade", "rogue_armada",
+    "celestial", "eternal", "sorcerer", "enchantress", "exorcistor", "shaman", "witch",
+    "elite_destroyer", "elite_gunner", "elite_sprayer", "elite_battleship", "elite_spawner",
+    "elite_trapguard", "elite_spinner", "elite_skimmer", "sentry_gun", "sentry_swarm", "sentry_trap",
+  ]);
+
+  function slotId(id) {
+    return PROTECT_IDS.has(id) ? "tree_" + id : id;
+  }
+
+  function gunFromRecord(record) {
+    const pos = record.pos || [18, 8, 1, 0, 0, 0, 0];
+    return gun(pos[0], pos[1], pos[2], pos[3], pos[4], pos[5], pos[6], {
+      type: record.type,
+      calculator: record.calculator,
+      shoot: record.shoot,
+      shape: record.shape,
+      necro: record.necro,
+      maxChildren: record.maxChildren,
+      altFire: record.altFire,
+      autoFire: record.autoFire,
+      payload: record.payload ? record.payload.map(gunFromRecord) : null,
+      motion: record.motion,
+      fixedReload: record.fixedReload,
+      sustained: record.sustained,
+      necroScale: record.necroScale,
+      destroyOldest: record.destroyOldest,
+    });
+  }
+
+  function installSample(list) {
+    const prevArms = {};
+    for (const id of Object.keys(tanks)) {
+      const t = tanks[id];
+      if (t && t.armsUpgrades && t.armsUpgrades.length) prevArms[id] = t.armsUpgrades.slice();
+    }
+    for (const spec of list || []) {
+      if (!spec || !spec.id) continue;
+      const id = slotId(spec.id);
+      const guns = (spec.guns || []).map(gunFromRecord);
+      def(id, {
+        name: spec.name || id,
+        body: spec.body || 0,
+        guns,
+        upgrades: (spec.upgrades || []).map(slotId),
+        armsUpgrades: prevArms[id] || [],
+        arms: false,
+        needLevel: spec.needLevel == null ? 1 : spec.needLevel,
+        fov: spec.fov || 1,
+        speed: spec.speed || 1,
+        health: spec.health || 1,
+        bodyDamage: spec.bodyDamage || 1,
+        shield: spec.shield || 1,
+        maxDrones: spec.maxDrones || 0,
+        smasher: !!spec.smasher,
+        necro: spec.necro || 0,
+        healer: !!spec.healer,
+        spin: !!spec.spin,
+        fade: !!spec.fade,
+        lancer: !!spec.lancer,
+        skillCaps: spec.skillCaps || null,
+        statSet: spec.statSet || 0,
+        mods: spec.mods || { damage: 1, reload: 1, speed: 1, size: 1, fov: 1, health: 1 },
+      });
+    }
+    for (const id of Object.keys(tanks)) {
+      const t = tanks[id];
+      if (!t || !t.upgrades) continue;
+      t.upgrades = t.upgrades.filter((up) => tanks[up]);
+    }
+  }
+
   window.TankCatalog = {
     tanks,
     get,
@@ -3375,6 +3472,7 @@
     combineStats,
     g,
     PROJECTILE,
+    install: installSample,
     count: () => Object.keys(tanks).length,
   };
 })();

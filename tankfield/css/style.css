@@ -1030,9 +1030,11 @@ kbd {
 
 .class-btn .class-name {
   display: block;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   line-height: 1.1;
+  max-height: 2.2em;
+  overflow: hidden;
 }
 
 .class-btn .class-key {
