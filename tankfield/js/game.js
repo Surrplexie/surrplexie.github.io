@@ -628,27 +628,49 @@
     miniWallRev++;
   }
 
-  function clipSoccerMaze() {
-    const m = state.maze;
-    if (!m) return;
+  function buildSoccerMaze() {
+    const { cube, cols, rows, x0, y0 } = mazeGrid();
+    const filled = Array.from({ length: rows }, () => Array(cols).fill(false));
     const f = soccerField();
     const g = soccerClearDepth();
-    const x0 = f.x0 + g;
-    const x1 = f.x1 - g;
+    const pitchL = f.x0 + g;
+    const pitchR = f.x1 - g;
     const cx = (f.x0 + f.x1) / 2;
     const cy = (f.y0 + f.y1) / 2;
     const clear = 720;
-    for (let r = 0; r < m.rows; r++) {
-      for (let c = 0; c < m.cols; c++) {
-        if (!m.filled[r][c]) continue;
-        const x = m.x0 + c * m.cube;
-        const y = m.y0 + r * m.cube;
-        const inside = x >= x0 && x + m.cube <= x1 && y >= f.y0 && y + m.cube <= f.y1;
-        const mx = x + m.cube * 0.5;
-        const my = y + m.cube * 0.5;
-        if (!inside || (mx - cx) * (mx - cx) + (my - cy) * (my - cy) <= clear * clear) m.filled[r][c] = false;
+    const open = [];
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const x = x0 + c * cube;
+        const y = y0 + r * cube;
+        if (x < pitchL || x + cube > pitchR || y < f.y0 || y + cube > f.y1) continue;
+        const mx = x + cube * 0.5;
+        const my = y + cube * 0.5;
+        if ((mx - cx) * (mx - cx) + (my - cy) * (my - cy) <= clear * clear) continue;
+        open.push([r, c]);
       }
     }
+    for (let i = open.length - 1; i > 0; i--) {
+      const j = irand(0, i);
+      const swap = open[i];
+      open[i] = open[j];
+      open[j] = swap;
+    }
+    const crowded = (r, c) => {
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          const rr = r + dr;
+          const cc = c + dc;
+          if (rr < 0 || cc < 0 || rr >= rows || cc >= cols) continue;
+          if (filled[rr][cc]) return true;
+        }
+      }
+      return false;
+    };
+    for (const [r, c] of open) {
+      if (!crowded(r, c)) filled[r][c] = true;
+    }
+    state.maze = { cube, x0, y0, cols, rows, filled };
     rebuildMazeWalls();
     miniWallRev++;
   }
@@ -3483,10 +3505,7 @@
     if (state.mode === "domination") spawnDoms();
     if (state.mode === "soccer") {
       buildSoccerWalls();
-      if (isMazeVariant()) {
-        buildOpenBlocks();
-        clipSoccerMaze();
-      }
+      if (isMazeVariant()) buildSoccerMaze();
       resetSoccerBall();
     }
     populateWorld();
