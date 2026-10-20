@@ -455,6 +455,16 @@
     return m === "4tdm" || m === "4tdm-maze";
   }
 
+  function isSoccer4(mode) {
+    const m = mode == null ? state.mode : mode;
+    return m === "soccer4";
+  }
+
+  function isSoccerMode(mode) {
+    const m = mode == null ? state.mode : mode;
+    return m === "soccer" || m === "soccer4";
+  }
+
   function isMazeVariant() {
     return !!state.mazeVariant;
   }
@@ -479,13 +489,7 @@
   }
 
   function zoneAt(x, y) {
-    if (state.mode === "soccer") {
-      const f = soccerField();
-      const g = soccerGoalDepth();
-      if (x <= f.x0 + g) return "blue";
-      if (x >= f.x1 - g) return "green";
-      return null;
-    }
+    if (isSoccerMode()) return soccerZoneAt(x, y, 0);
     if (state.mode === "assault") return inAssaultSpawnRing(x, y) ? "blue" : null;
     if (state.mode === "siege") return inSiegeRed(x, y) ? "boss" : null;
     if (state.mode === "tdm") {
@@ -520,8 +524,99 @@
   }
 
   function soccerField() {
+    if (isSoccer4()) return { x0: 0, y0: 0, x1: WORLD.w, y1: WORLD.h };
     const insetY = 1680;
     return { x0: 0, y0: insetY, x1: WORLD.w, y1: WORLD.h - insetY };
+  }
+
+  function soccerTeams() {
+    return isSoccer4() ? ["blue", "green", "red", "purple"] : ["blue", "green"];
+  }
+
+  function soccerOpposite(team) {
+    if (team === "blue") return "green";
+    if (team === "green") return "blue";
+    if (team === "red") return "purple";
+    if (team === "purple") return "red";
+    return "blue";
+  }
+
+  function soccerGoalAims() {
+    const f = soccerField();
+    const d = soccerGoalDepth() * 0.35;
+    const mx = (f.x0 + f.x1) * 0.5;
+    const my = (f.y0 + f.y1) * 0.5;
+    const aims = [
+      { team: "blue", x: f.x0 + d, y: my },
+      { team: "green", x: f.x1 - d, y: my },
+    ];
+    if (isSoccer4()) {
+      aims.push({ team: "red", x: mx, y: f.y0 + d });
+      aims.push({ team: "purple", x: mx, y: f.y1 - d });
+    }
+    return aims;
+  }
+
+  function soccerEnemyAim(team, ball) {
+    let best = null;
+    let bestD = Infinity;
+    for (const g of soccerGoalAims()) {
+      if (g.team === team) continue;
+      const d = (g.x - ball.x) ** 2 + (g.y - ball.y) ** 2;
+      if (d < bestD) { bestD = d; best = g; }
+    }
+    return best || soccerGoalAims()[0];
+  }
+
+  function soccerClearOfZone(zone, x, y, margin) {
+    const f = soccerField();
+    const g = soccerGoalDepth();
+    const y0 = isSoccer4() ? f.y0 + g + margin : f.y0 + margin;
+    const y1 = isSoccer4() ? f.y1 - g - margin : f.y1 - margin;
+    const x0 = f.x0 + g + margin;
+    const x1 = f.x1 - g - margin;
+    if (zone === "blue") return { x: x0, y: clamp(y, y0, y1) };
+    if (zone === "green") return { x: x1, y: clamp(y, y0, y1) };
+    if (zone === "red") return { x: clamp(x, x0, x1), y: f.y0 + g + margin };
+    if (zone === "purple") return { x: clamp(x, x0, x1), y: f.y1 - g - margin };
+    return { x, y };
+  }
+
+  function soccerZoneRects() {
+    const f = soccerField();
+    const g = soccerGoalDepth();
+    if (!isSoccer4()) {
+      return [
+        { team: "blue", x: f.x0, y: f.y0, w: g, h: f.y1 - f.y0 },
+        { team: "green", x: f.x1 - g, y: f.y0, w: g, h: f.y1 - f.y0 },
+      ];
+    }
+    const rects = [];
+    const midW = (f.x1 - f.x0) - g * 2;
+    const midH = (f.y1 - f.y0) - g * 2;
+    rects.push({ team: "blue", x: f.x0, y: f.y0 + g, w: g, h: midH });
+    rects.push({ team: "green", x: f.x1 - g, y: f.y0 + g, w: g, h: midH });
+    rects.push({ team: "red", x: f.x0 + g, y: f.y0, w: midW, h: g });
+    rects.push({ team: "purple", x: f.x0 + g, y: f.y1 - g, w: midW, h: g });
+    const steps = 12;
+    const cw = g / steps;
+    for (let i = 0; i < steps; i++) {
+      const cut = i * cw;
+      const xL = f.x0 + cut;
+      const xR = f.x1 - g + cut;
+      if (cut > 0) rects.push({ team: "red", x: xL, y: f.y0, w: cw, h: cut });
+      rects.push({ team: "blue", x: xL, y: f.y0 + cut, w: cw, h: g - cut });
+      const redH = g - cut;
+      if (redH > 0) rects.push({ team: "red", x: xR, y: f.y0, w: cw, h: redH });
+      if (cut > 0) rects.push({ team: "green", x: xR, y: f.y0 + redH, w: cw, h: cut });
+      const by = f.y1 - g;
+      const blueH = g - cut;
+      if (blueH > 0) rects.push({ team: "blue", x: xL, y: by, w: cw, h: blueH });
+      if (cut > 0) rects.push({ team: "purple", x: xL, y: by + blueH, w: cw, h: cut });
+      if (cut > 0) rects.push({ team: "green", x: xR, y: by, w: cw, h: cut });
+      if (g - cut > 0) rects.push({ team: "purple", x: xR, y: by + cut, w: cw, h: g - cut });
+    }
+    return rects;
   }
 
   function soccerClearDepth() {
@@ -535,29 +630,52 @@
     return full;
   }
 
-  function soccerZoneAt(x, rad) {
+  function soccerZoneAt(x, y, rad) {
     const f = soccerField();
     const g = soccerGoalDepth();
     const r = rad || 0;
-    if (x - r <= f.x0 + g) return "blue";
-    if (x + r >= f.x1 - g) return "green";
-    return null;
+    const penL = (f.x0 + g) - (x - r);
+    const penR = (x + r) - (f.x1 - g);
+    if (!isSoccer4()) {
+      if (penL > 0) return "blue";
+      if (penR > 0) return "green";
+      return null;
+    }
+    const penT = (f.y0 + g) - (y - r);
+    const penB = (y + r) - (f.y1 - g);
+    let best = null;
+    let bestP = 0;
+    if (penL > bestP) { best = "blue"; bestP = penL; }
+    if (penR > bestP) { best = "green"; bestP = penR; }
+    if (penT > bestP) { best = "red"; bestP = penT; }
+    if (penB > bestP) { best = "purple"; bestP = penB; }
+    return best;
   }
 
   function soccerSpawn(team) {
     const f = soccerField();
     const g = soccerGoalDepth();
     const pad = 90;
-    const y = rand(f.y0 + pad, f.y1 - pad);
-    if (team === "blue") return { x: rand(f.x0 + 70, f.x0 + g - 50), y };
-    return { x: rand(f.x1 - g + 50, f.x1 - 70), y };
+    if (!isSoccer4()) {
+      const y = rand(f.y0 + pad, f.y1 - pad);
+      if (team === "blue") return { x: rand(f.x0 + 70, f.x0 + g - 50), y };
+      return { x: rand(f.x1 - g + 50, f.x1 - 70), y };
+    }
+    const xMid0 = f.x0 + g + pad;
+    const xMid1 = f.x1 - g - pad;
+    const yMid0 = f.y0 + g + pad;
+    const yMid1 = f.y1 - g - pad;
+    if (team === "blue") return { x: rand(f.x0 + 70, f.x0 + g - 50), y: rand(yMid0, yMid1) };
+    if (team === "green") return { x: rand(f.x1 - g + 50, f.x1 - 70), y: rand(yMid0, yMid1) };
+    if (team === "red") return { x: rand(xMid0, xMid1), y: rand(f.y0 + 70, f.y0 + g - 50) };
+    return { x: rand(xMid0, xMid1), y: rand(f.y1 - g + 50, f.y1 - 70) };
   }
 
   function soccerPushPlan(tank, ball) {
     const f = soccerField();
-    const depth = soccerGoalDepth();
-    const goalX = tank.team === "blue" ? f.x1 - depth * 0.35 : f.x0 + depth * 0.35;
-    const goalY = (f.y0 + f.y1) * 0.5;
+    const aim = soccerEnemyAim(tank.team, ball);
+    const goalX = aim.x;
+    const goalY = aim.y;
     const dx = goalX - ball.x;
     const dy = goalY - ball.y;
     const len = Math.hypot(dx, dy) || 1;
@@ -615,6 +733,7 @@
   }
 
   function soccerBorderWalls() {
+    if (isSoccer4()) return [];
     const f = soccerField();
     return [
       { x: 0, y: 0, w: WORLD.w, h: f.y0, wall: true },
@@ -643,7 +762,9 @@
       for (let c = 0; c < cols; c++) {
         const x = x0 + c * cube;
         const y = y0 + r * cube;
-        if (x < pitchL || x + cube > pitchR || y < f.y0 || y + cube > f.y1) continue;
+        const pitchT = isSoccer4() ? f.y0 + g : f.y0;
+        const pitchB = isSoccer4() ? f.y1 - g : f.y1;
+        if (x < pitchL || x + cube > pitchR || y < pitchT || y + cube > pitchB) continue;
         const mx = x + cube * 0.5;
         const my = y + cube * 0.5;
         if ((mx - cx) * (mx - cx) + (my - cy) * (my - cy) <= clear * clear) continue;
@@ -686,39 +807,47 @@
       vy: 0,
       r: 36,
       alive: true,
+      lastTeam: null,
+      prevTeam: null,
     };
   }
 
   function scoreSoccer(zone) {
-    const scorer = zone === "blue" ? "green" : "blue";
-    if (!state.goals) state.goals = { green: 0, blue: 0 };
+    const teams = soccerTeams();
+    if (!state.goals) state.goals = { blue: 0, green: 0, red: 0, purple: 0 };
+    const last = state.ball && state.ball.lastTeam;
+    const prev = state.ball && state.ball.prevTeam;
+    let scorer;
+    if (!isSoccer4()) scorer = zone === "blue" ? "green" : "blue";
+    else if (last && last !== zone) scorer = last;
+    else if (prev && prev !== zone) scorer = prev;
+    else scorer = soccerOpposite(zone);
     state.goals[scorer] = (state.goals[scorer] || 0) + 1;
-    const gs = state.goals.green || 0;
-    const bs = state.goals.blue || 0;
-    const other = scorer === "green" ? bs : gs;
-    const mine = state.goals[scorer];
-    const lead = mine > other ? `, with ${TEAMS[scorer].name.toLowerCase()} in the lead.` : mine === other ? ", and the score is tied." : ".";
+    const parts = teams.map((id) => `${TEAMS[id].name} ${state.goals[id] || 0}`);
+    const mine = state.goals[scorer] || 0;
+    const bestOther = Math.max(...teams.filter((id) => id !== scorer).map((id) => state.goals[id] || 0));
+    const lead = mine > bestOther ? `, with ${TEAMS[scorer].name.toLowerCase()} in the lead.` : mine === bestOther ? ", and the lead is tied." : ".";
     note(`${TEAMS[scorer].name} Team has scored!`);
-    note(`The current score is ${gs} to ${bs}${lead}`);
+    note(`The current score is ${parts.join(", ")}${lead}`);
     resetSoccerBall();
     leaderPaintAt = -1;
   }
 
   function finishSoccer() {
-    if (state.mode !== "soccer" || state.closing) return;
-    const g = state.goals || { green: 0, blue: 0 };
-    const gs = g.green || 0;
-    const bs = g.blue || 0;
-    if (gs === bs) beginArenaClose(`Soccer ends ${gs}-${bs}. It's a draw.`);
-    else {
-      const win = gs > bs ? "green" : "blue";
-      beginArenaClose(`${TEAMS[win].name} wins Soccer ${gs}-${bs}!`);
-    }
+    if (!isSoccerMode() || state.closing) return;
+    const g = state.goals || {};
+    const teams = soccerTeams();
+    let best = 0;
+    for (const id of teams) best = Math.max(best, g[id] || 0);
+    const winners = teams.filter((id) => (g[id] || 0) === best);
+    const line = teams.map((id) => `${TEAMS[id].name} ${g[id] || 0}`).join(", ");
+    if (winners.length !== 1) beginArenaClose(`Soccer ends ${line}. It's a draw.`);
+    else beginArenaClose(`${TEAMS[winners[0]].name} wins Soccer ${line}!`);
   }
 
   function soccerAutoTarget(tank, range) {
     const ball = state.ball;
-    if (state.mode !== "soccer" || !ball || ball.alive === false || !tank || !tank.team) return null;
+    if (!isSoccerMode() || !ball || ball.alive === false || !tank || !tank.team) return null;
     if (tank.dominator || tank.mothership || tank.closer) return null;
     if (dist2(tank, ball) > range * range) return null;
     if (!canSee(tank, ball)) return null;
@@ -788,7 +917,7 @@
 
   function stepSoccerBall(dt) {
     const b = state.ball;
-    if (!b || state.mode !== "soccer" || state.closing) return;
+    if (!b || !isSoccerMode() || state.closing) return;
     if (devDrag && devDrag.entity === b) {
       b.vx = 0;
       b.vy = 0;
@@ -800,13 +929,13 @@
     b.x += b.vx * dt;
     b.y += b.vy * dt;
     bounceSoccerBall(b);
-    const zone = soccerZoneAt(b.x, b.r);
+    const zone = soccerZoneAt(b.x, b.y, b.r);
     if (zone) scoreSoccer(zone);
   }
 
   function touchSoccerBall() {
     const b = state.ball;
-    if (!b || state.mode !== "soccer") return;
+    if (!b || !isSoccerMode()) return;
     for (const t of state.tanks) {
       if (!t.alive || t.dominator || t.mothership || t.closer) continue;
       const dx = t.x - b.x;
@@ -824,6 +953,10 @@
       t.vy += ny * 260;
       b.vx -= nx * 16;
       b.vy -= ny * 16;
+      if (t.team) {
+        if (b.lastTeam && b.lastTeam !== t.team) b.prevTeam = b.lastTeam;
+        b.lastTeam = t.team;
+      }
       if (state.time < (t.ballHitT || 0)) continue;
       t.ballHitT = state.time + 0.4;
       t.spawnProtect = 0;
@@ -835,7 +968,7 @@
 
   function kickBall(bullet) {
     const b = state.ball;
-    if (!b || state.mode !== "soccer" || !bullet || !bullet.alive) return false;
+    if (!b || !isSoccerMode() || !bullet || !bullet.alive) return false;
     if (!shotHits(bullet, b)) return false;
     const travel = Math.hypot(bullet.vx || 0, bullet.vy || 0);
     const ang = travel > 12
@@ -849,6 +982,11 @@
     if (sp > cap) {
       b.vx *= cap / sp;
       b.vy *= cap / sp;
+    }
+    const team = bullet.owner && bullet.owner.team;
+    if (team) {
+      if (b.lastTeam && b.lastTeam !== team) b.prevTeam = b.lastTeam;
+      b.lastTeam = team;
     }
     bullet.alive = false;
     burst(bullet.x, bullet.y, bullet.color, 3, 36);
@@ -2792,7 +2930,10 @@
     if (mode === "tdm" && mine) return splitTwoTeams(count, mine, mine === "blue" ? "red" : "blue");
     if (isFourTeamMode(mode) && mine) return splitFourTeams(count, mine);
     if (mode === "domination" && mine) return splitTwoTeams(count, mine, mine === "blue" ? "red" : "blue");
-    if (mode === "soccer" && mine) return splitTwoTeams(count, mine, mine === "green" ? "blue" : "green");
+    if (isSoccerMode(mode) && mine) {
+      if (isSoccer4(mode)) return splitFourTeams(count, mine);
+      return splitTwoTeams(count, mine, mine === "green" ? "blue" : "green");
+    }
     if (mode === "assault" && mine) return splitTwoTeams(count, mine, mine === "blue" ? "green" : "blue");
     if (mode === "tag" && mine) return splitTwoTeams(count, mine, mine === "green" ? "red" : "green");
     if (mode === "protect") {
@@ -2850,6 +2991,7 @@
       maze: "Maze",
       domination: "Domination",
       soccer: "Soccer",
+      soccer4: "4 Soccer",
       assault: "Assault",
       siege: "Siege",
       growth: "Growth",
@@ -2891,7 +3033,7 @@
 
   function teamMode(mode) {
     const m = mode == null ? state.mode : mode;
-    return m === "tdm" || isFourTeamMode(m) || m === "tag" || m === "protect" || m === "domination" || m === "assault" || m === "siege" || m === "teamhunt" || m === "soccer";
+    return m === "tdm" || isFourTeamMode(m) || m === "tag" || m === "protect" || m === "domination" || m === "assault" || m === "siege" || m === "teamhunt" || isSoccerMode(m);
   }
 
   function healerAllowed(tank) {
@@ -2923,7 +3065,8 @@
     if (mode === "siege") return "blue";
     if (mode === "teamhunt") return HUNTER_TEAM;
     if (mode === "tdm" || mode === "domination") return Math.random() < 0.5 ? "red" : "blue";
-    if (mode === "soccer") return Math.random() < 0.5 ? "green" : "blue";
+    if (isSoccer4(mode)) return ["blue", "green", "red", "purple"][irand(0, 3)];
+    if (isSoccerMode(mode)) return Math.random() < 0.5 ? "green" : "blue";
     if (mode === "assault") return Math.random() < 0.5 ? "blue" : "green";
     if (isFourTeamMode(mode)) return TEAM4[irand(0, TEAM4.length - 1)];
     if (mode === "tag" || mode === "protect") return Math.random() < 0.5 ? "red" : "green";
@@ -3171,7 +3314,7 @@
 
   function populateWorld() {
     state.shapes = [];
-    if (state.mode === "soccer") return;
+    if (isSoccerMode()) return;
     const growth = isGrowthVariant();
     const smallOnly = isRoyale() && !growth;
     const squares = growth ? 320 : smallOnly ? 160 : 220;
@@ -3231,7 +3374,7 @@
         classId: "basic",
         team,
         color: colorFor({ team }),
-        pos: state.mode === "soccer" && team
+        pos: isSoccerMode() && team
           ? soccerSpawn(team)
           : (state.mode === "tdm" || isFourTeamMode()) && team
           ? spawnInBase(team)
@@ -3497,13 +3640,13 @@
     state.closeAt = 0;
     state.closersSpawned = false;
     state.serverResetAt = 0;
-    if (isMazeVariant() && state.mode !== "assault" && state.mode !== "siege" && state.mode !== "soccer") buildOpenBlocks();
+    if (isMazeVariant() && state.mode !== "assault" && state.mode !== "siege" && !isSoccerMode()) buildOpenBlocks();
     if (state.mode === "assault") buildAssaultArena();
     if (state.mode === "siege") buildSiegeArena();
-    state.goals = { green: 0, blue: 0 };
+    state.goals = { green: 0, blue: 0, red: 0, purple: 0 };
     state.ball = null;
     if (state.mode === "domination") spawnDoms();
-    if (state.mode === "soccer") {
+    if (isSoccerMode()) {
       buildSoccerWalls();
       if (isMazeVariant()) buildSoccerMaze();
       resetSoccerBall();
@@ -3519,7 +3662,7 @@
       classId: opts.classId || "basic",
       customDef: opts.customDef || null,
       score: startScore(),
-      pos: state.mode === "soccer" && team
+      pos: isSoccerMode() && team
         ? soccerSpawn(team)
         : (state.mode === "tdm" || isFourTeamMode()) && team
         ? spawnInBase(team)
@@ -3706,7 +3849,7 @@
           customDef: tank.respawnCustomDef,
           team,
           color: colorFor({ team }),
-          pos: state.mode === "soccer" && team
+          pos: isSoccerMode() && team
             ? soccerSpawn(team)
             : (state.mode === "tdm" || isFourTeamMode()) && team
             ? spawnInBase(team)
@@ -4069,7 +4212,7 @@
     const prev = state.player;
     const team = isTeamHunt() ? HUNTER_TEAM : (prev && prev.team ? prev.team : pickStartTeam(state.mode));
     const home = team ? mothershipOf(team) : null;
-    const pos = state.mode === "soccer" && team
+    const pos = isSoccerMode() && team
       ? soccerSpawn(team)
       : (state.mode === "tdm" || isFourTeamMode()) && team
       ? spawnInBase(team)
@@ -4298,7 +4441,7 @@
   }
 
   function devMovableEntities() {
-    const ball = state.mode === "soccer" && state.ball && state.ball.alive !== false ? [state.ball] : [];
+    const ball = isSoccerMode() && state.ball && state.ball.alive !== false ? [state.ball] : [];
     return [
       ...liveDevTanks(),
       ...state.shapes.filter((s) => s && s.alive),
@@ -4319,7 +4462,7 @@
   function resolveDevEntities(selector) {
     const key = String(selector || "").trim().toLowerCase();
     if (key === "ball" || key === "@ball") {
-      return state.mode === "soccer" && state.ball ? [state.ball] : [];
+      return isSoccerMode() && state.ball ? [state.ball] : [];
     }
     if (key === "@e") return devMovableEntities();
     if (key === "@a") return liveDevTanks();
@@ -4591,7 +4734,7 @@
       ...liveDevTanks(),
       ...state.shapes.filter((s) => s && s.alive),
       ...state.bullets.filter((b) => b && b.alive),
-      ...(state.mode === "soccer" && state.ball ? [state.ball] : []),
+      ...(isSoccerMode() && state.ball ? [state.ball] : []),
       ...state.doms,
     ];
     for (const entity of circles) {
@@ -5030,7 +5173,8 @@
     if (state.mode === "assault") return ["blue", "green"];
     if (state.mode === "tag" || state.mode === "protect") return ["green", "red"];
     if (state.mode === "siege") return ["blue"];
-    if (state.mode === "soccer") return ["blue", "green"];
+    if (isSoccer4()) return ["blue", "green", "red", "purple"];
+    if (isSoccerMode()) return ["blue", "green"];
     if (isTeamHunt()) return [HUNTER_TEAM, HUNTED_TEAM];
     return ["blue", "red"];
   }
@@ -5986,7 +6130,7 @@
     if (tank.mothership) return true;
     if (tank.ai) {
       if (isRammer(tank)) return false;
-      if (state.mode === "soccer" && state.ball && tank.aiTarget === state.ball && !tank.soccerShoot) return false;
+      if (isSoccerMode() && state.ball && tank.aiTarget === state.ball && !tank.soccerShoot) return false;
       const combat = tank.aiState === "attack" || tank.aiState === "farm" || tank.aiState === "defend"
         || tank.aiState === "heal" || tank.aiState === "flee" || tank.aiState === "home"
         || tank.aiState === "storm" || tank.aiState === "seek";
@@ -6068,7 +6212,7 @@
   }
 
   function maintainShapes() {
-    if (state.mode === "soccer") return;
+    if (isSoccerMode()) return;
     const counts = { square: 0, triangle: 0, pentagon: 0, alpha: 0, crasher: 0 };
     for (const s of state.shapes) if (s.alive) counts[s.kind]++;
     const want = isGrowthVariant()
@@ -6728,7 +6872,7 @@
         tank.aiTarget = claim;
       }
     }
-    if (state.mode === "soccer" && state.ball && state.ball.alive !== false && tank.team && tank.aiState !== "flee") {
+    if (isSoccerMode() && state.ball && state.ball.alive !== false && tank.team && tank.aiState !== "flee") {
       const ball = state.ball;
       const pushR = 840;
       const inPush = dist2(tank, ball) <= pushR * pushR;
@@ -6769,11 +6913,9 @@
         const steered = steerAround(tank, s.x, s.y);
         tx = steered.x;
         ty = steered.y;
-      } else if (state.mode === "soccer") {
-        const f = soccerField();
-        const g = soccerGoalDepth();
-        const hx = tank.team === "blue" ? f.x0 + g * 0.45 : f.x1 - g * 0.45;
-        const steered = steerAround(tank, hx, (f.y0 + f.y1) * 0.5);
+      } else if (isSoccerMode()) {
+        const home = soccerGoalAims().find((g) => g.team === tank.team) || soccerGoalAims()[0];
+        const steered = steerAround(tank, home.x, home.y);
         tx = steered.x;
         ty = steered.y;
       } else {
@@ -6792,7 +6934,7 @@
       const lock = tank.aiTarget || enemy;
       if (lock && canSee(tank, lock)) tank.angle = aimAt(tank, lock, st);
       else tank.angle = Math.atan2(ty - tank.y, tx - tank.x);
-    } else if (state.mode === "soccer" && state.ball && tank.aiState === "attack" && enemy === state.ball) {
+    } else if (isSoccerMode() && state.ball && tank.aiState === "attack" && enemy === state.ball) {
       const steered = steerAround(tank, tank.aiPushX == null ? enemy.x : tank.aiPushX, tank.aiPushY == null ? enemy.y : tank.aiPushY);
       tx = steered.x;
       ty = steered.y;
@@ -6806,12 +6948,11 @@
         tx = enemy.x;
         ty = enemy.y;
       } else if (ez && ez === enemy.team) {
-        if (state.mode === "soccer") {
-          const f = soccerField();
-          const g = soccerGoalDepth();
+        if (isSoccerMode()) {
           const margin = (tank.r || 22) + 30;
-          tx = ez === "blue" ? f.x0 + g + margin : f.x1 - g - margin;
-          ty = clamp(enemy.y, f.y0 + margin, f.y1 - margin);
+          const out = soccerClearOfZone(ez, enemy.x, enemy.y, margin);
+          tx = out.x;
+          ty = out.y;
         } else if (state.mode === "assault") {
           const inset = ASSAULT_ZONE + 90;
           tx = clamp(enemy.x, inset, WORLD.w - inset);
@@ -6936,15 +7077,14 @@
       ty = steered.y;
       if (!tank.aiTarget) tank.angle = Math.atan2(ty - tank.y, tx - tank.x);
     }
-    if ((state.mode === "tdm" || isFourTeamMode() || state.mode === "assault" || state.mode === "soccer") && tank.team && tank.aiState !== "home") {
+    if ((state.mode === "tdm" || isFourTeamMode() || state.mode === "assault" || isSoccerMode()) && tank.team && tank.aiState !== "home") {
       const destZone = zoneAt(tx, ty);
       if (destZone && destZone !== tank.team) {
-        if (state.mode === "soccer") {
-          const f = soccerField();
-          const g = soccerGoalDepth();
+        if (isSoccerMode()) {
           const margin = (tank.r || 22) + 24;
-          tx = destZone === "blue" ? f.x0 + g + margin : f.x1 - g - margin;
-          ty = tank.y;
+          const out = soccerClearOfZone(destZone, tank.x, tank.y, margin);
+          tx = out.x;
+          ty = out.y;
         } else if (state.mode === "assault") {
           const inset = ASSAULT_ZONE + (tank.r || 22) + 30;
           tx = clamp(tank.x, inset, WORLD.w - inset);
@@ -7319,7 +7459,7 @@
         y: owner.y + Math.sin(state.time * 1.7 + b.orbit) * 52,
       };
     }
-    if (owner.aiTarget === state.ball && state.mode === "soccer" && state.ball) {
+    if (owner.aiTarget === state.ball && isSoccerMode() && state.ball) {
       if (!owner.soccerShoot && owner.aiPushX != null) return { x: owner.aiPushX + ox, y: owner.aiPushY + oy };
       return { x: state.ball.x + ox, y: state.ball.y + oy };
     }
@@ -7401,8 +7541,8 @@
       beginRoyaleStorm();
     }
     if (isRoyale()) checkRoyale();
-    if (!state.closing && state.mode === "soccer" && state.time >= SOCCER_MATCH) finishSoccer();
-    if (!state.closing && state.mode !== "siege" && state.mode !== "soccer" && state.time >= FFA_CLOSE_AT) beginArenaClose("4 hours up. Starting a fresh server.");
+    if (!state.closing && isSoccerMode() && state.time >= SOCCER_MATCH) finishSoccer();
+    if (!state.closing && state.mode !== "siege" && !isSoccerMode() && state.time >= FFA_CLOSE_AT) beginArenaClose("4 hours up. Starting a fresh server.");
     updateDoms(dt);
     updateAssault(dt);
     updateSiege(dt);
@@ -7477,7 +7617,7 @@
           if (burn > 0) tank.health -= burn;
           tank.bodyHitT = 0.08;
           if (tank === state.player) shake = Math.max(shake, inStorm ? 3 : 4);
-          if (tank.health <= 0) killTank(tank, null, inStorm ? "the storm" : (state.mode === "siege" ? "the red zone" : state.mode === "soccer" ? `the ${zoneAt(tank.x, tank.y)} goal` : `the ${zoneAt(tank.x, tank.y)} base`));
+          if (tank.health <= 0) killTank(tank, null, inStorm ? "the storm" : (state.mode === "siege" ? "the red zone" : isSoccerMode() ? `the ${zoneAt(tank.x, tank.y)} goal` : `the ${zoneAt(tank.x, tank.y)} base`));
         }
       } else {
         tank.health = Math.min(tank.maxHealth, tank.health + st.regen * dt);
@@ -7822,7 +7962,7 @@
         } else {
           els.closeTimer.textContent = `Hold ${live}/${need} to win · ${resetText}`;
         }
-      } else if (state.mode === "soccer") {
+      } else if (isSoccerMode()) {
         els.closeTimer.textContent = `Full time ${formatClock(SOCCER_MATCH - state.time)}`;
       } else if (state.mode === "siege") {
         const wave = Math.max(1, (state.siegeWave || 0) + 1);
@@ -7875,9 +8015,10 @@
       const r = state.doms.filter((d) => d.team === "red").length;
       els.arenaMode.textContent = state.closing ? "Fresh server" : `${modeLabel()} · Blue ${b} – ${r} Red`;
     }
-    if (els.arenaMode && state.mode === "soccer") {
-      const g = state.goals || { green: 0, blue: 0 };
-      els.arenaMode.textContent = state.closing ? "Fresh server" : `${modeLabel()} · Green ${g.green || 0} – ${g.blue || 0} Blue`;
+    if (els.arenaMode && isSoccerMode()) {
+      const g = state.goals || {};
+      const bits = soccerTeams().map((id) => `${TEAMS[id].name} ${g[id] || 0}`);
+      els.arenaMode.textContent = state.closing ? "Fresh server" : `${modeLabel()} · ${bits.join(" · ")}`;
     }
     if (els.arenaMode && state.mode === "assault") {
       const live = assaultLiveCount();
@@ -7958,11 +8099,13 @@
         const hp = m && m.maxHealth ? m.health / m.maxHealth : 0;
         rows.push({ color: TEAMS[id].color, label: `${TEAMS[id].name} mothership — ${Math.round(hp * 100)}%`, sort: hp });
       }
-    } else if (state.mode === "soccer") {
-      const g = state.goals || { green: 0, blue: 0 };
-      rows.push({ color: "#3a3a3a", label: `Time left ${formatClock(SOCCER_MATCH - state.time)}`, sort: 3 });
-      rows.push({ color: TEAMS.green.color, label: `Green — ${g.green || 0} goals`, sort: 2 });
-      rows.push({ color: TEAMS.blue.color, label: `Blue — ${g.blue || 0} goals`, sort: 1 });
+    } else if (isSoccerMode()) {
+      const g = state.goals || {};
+      const teams = soccerTeams();
+      rows.push({ color: "#3a3a3a", label: `Time left ${formatClock(SOCCER_MATCH - state.time)}`, sort: 1e9 });
+      for (const id of teams) {
+        rows.push({ color: TEAMS[id].color, label: `${TEAMS[id].name} — ${g[id] || 0} goals`, sort: g[id] || 0 });
+      }
     } else if (state.mode === "domination") {
       for (const id of ["blue", "red"]) {
         const pts = state.doms.filter((d) => d.team === id).length;
@@ -8667,11 +8810,10 @@
       const col = rgbOf(hex);
       TankfieldGL.shape(d.x, d.y, d.domCap ? 220 : d.r, 0, 0, col, col, d.domCap ? 0 : 10, d.domCap ? 0.16 : 0.22, d.domCap ? 0 : 1);
     }
-    if (state.mode === "soccer") {
-      const f = soccerField();
-      const g = soccerGoalDepth();
-      TankfieldGL.rect(f.x0, f.y0, g, f.y1 - f.y0, rgbOf(TEAMS.blue.color), 0.22);
-      TankfieldGL.rect(f.x1 - g, f.y0, g, f.y1 - f.y0, rgbOf(TEAMS.green.color), 0.22);
+    if (isSoccerMode()) {
+      for (const z of soccerZoneRects()) {
+        TankfieldGL.rect(z.x, z.y, z.w, z.h, rgbOf(TEAMS[z.team].color), 0.22);
+      }
       if (state.ball) {
         const b = state.ball;
         const white = rgbOf("#f4f4f4");
@@ -8680,7 +8822,7 @@
         TankfieldGL.shape(b.x, b.y, b.r * 0.38, 0.2, 5, ink, ink, 0, 1, 0);
       }
     }
-    if (!isRoyale() && state.mode !== "protect" && state.mode !== "soccer" && !isMazeCombatMode()) {
+    if (!isRoyale() && state.mode !== "protect" && !isSoccerMode() && !isMazeCombatMode()) {
       TankfieldGL.shape(WORLD.w / 2, WORLD.h / 2, 700, 0, 0, NEST_COL, NEST_COL, 0, 0.08, 0);
     }
     for (const s of state.shapes) {
@@ -9007,11 +9149,8 @@
     } else if (state.mode === "tdm") {
       paintZone("blue", 0, 0, BASE_W, WORLD.h);
       paintZone("red", WORLD.w - BASE_W, 0, BASE_W, WORLD.h);
-    } else if (state.mode === "soccer") {
-      const f = soccerField();
-      const g = soccerGoalDepth();
-      paintZone("blue", f.x0, f.y0, g, f.y1 - f.y0);
-      paintZone("green", f.x1 - g, f.y0, g, f.y1 - f.y0);
+    } else if (isSoccerMode()) {
+      for (const z of soccerZoneRects()) paintZone(z.team, z.x, z.y, z.w, z.h);
     } else if (state.mode === "assault") {
       paintZone("blue", 0, 0, WORLD.w, ASSAULT_ZONE);
       paintZone("blue", 0, WORLD.h - ASSAULT_ZONE, WORLD.w, ASSAULT_ZONE);
@@ -9032,7 +9171,7 @@
       mctx.fillStyle = d.team && TEAMS[d.team] ? TEAMS[d.team].color : (d.domCap ? "#f0d848" : "#777");
       mctx.fill();
     }
-    if (state.mode === "soccer" && state.ball) {
+    if (isSoccerMode() && state.ball) {
       mctx.beginPath();
       mctx.arc(mapX(state.ball.x), mapY(state.ball.y), 4.5, 0, TAU);
       mctx.fillStyle = "#fff";
@@ -9348,6 +9487,7 @@
     maze: "FFA · open L / Y / zig wall clusters · start at 45 · fresh server after 4 hours",
     domination: "Shoot the 4 dominators · last 30 seconds of damage decides the team · both teams turns it yellow · all 4 owned by one team wins · or 4 hours starts a fresh server",
     soccer: "Green vs blue · shoot the ball into the other goal · most goals after 90 minutes wins · ball hurts tanks that touch it · goals reach the side edges · optional maze in the open field · then a fresh server",
+    soccer4: "Four teams · left blue, right green, top red, bottom purple · last touch scores · corners belong to the deeper side · most goals after 90 minutes wins · optional maze · then a fresh server",
     assault: "Blue attacks Green · Blue spawns across a 360-wide perimeter ring · smaller maze · capture zones · start at 45 · Green wins in 10:00 if they hold 3/4 · win or 4 hours starts a fresh server",
     siege: "One team · four bases · bosses spawn behind the red ring and push in · yellow bases do not shoot · shoot them to restore · endless until all four bases fall",
     growth: "FFA · grow past 45 to 1000 · everyone starts at 45 · never below 45 · [N] skip to 45 · fresh server after 4 hours",
