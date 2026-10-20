@@ -6365,6 +6365,20 @@
     return gun && gun.type === "auto" && countAutoGuns(getDef(tank)) >= 2;
   }
 
+  function barrelShape(gun, u, shorten) {
+    const pos = (gun && gun.pos) || [18, 8, 1, 0, 0, 0, 0];
+    const signed = (pos[0] || 0) * (shorten || 1) * u;
+    const aspect = Number.isFinite(pos[2]) ? pos[2] : 1;
+    const base = Math.abs(pos[1] || 0) * u * 0.5;
+    const wide = Math.abs((pos[1] || 0) * aspect) * u * 0.5;
+    return {
+      back: signed < 0 ? signed : 0,
+      front: signed < 0 ? 0 : signed,
+      wBack: aspect < 0 ? wide : base,
+      wFront: aspect < 0 ? base : wide,
+    };
+  }
+
   function autoPivot(tank, gun, index) {
     const u = unitOf(tank);
     const X = (gun.pos && gun.pos[3]) || 0;
@@ -6372,9 +6386,10 @@
     const rest = tank.angle + (((gun.pos && gun.pos[5]) || 0) * Math.PI) / 180;
     const ang = gunAngle(tank, gun, index);
     const ring = autoRingMount(tank, gun);
+    const rim = ring && Math.abs(X) < 1 && Math.abs(Y) < 1;
     const px = -Math.sin(ring ? rest : ang);
     const py = Math.cos(ring ? rest : ang);
-    const along = ring ? tank.r * 0.5 + X * u : X * u;
+    const along = rim ? tank.r * 0.42 : X * u;
     return {
       x: tank.x + Math.cos(ring ? rest : ang) * along + px * Y * u,
       y: tank.y + Math.sin(ring ? rest : ang) * along + py * Y * u,
@@ -6389,7 +6404,7 @@
     const [L, , , X, Y] = gun.pos;
     if (gun.type === "auto") {
       const pivot = autoPivot(tank, gun, index);
-      const len = Math.max(2, (pivot.ring ? L * 0.62 : L) * u);
+      const len = Math.abs((pivot.ring && Math.abs(X) < 1 && Math.abs(Y) < 1 ? L * 0.62 : L) * u);
       return {
         x: pivot.x + Math.cos(ang) * len,
         y: pivot.y + Math.sin(ang) * len,
@@ -6397,7 +6412,7 @@
     }
     const px = -Math.sin(ang);
     const py = Math.cos(ang);
-    const tipAlong = (X + L) * u;
+    const tipAlong = (L < 0 ? X : X + L) * u;
     const perp = Y * u;
     const hullAlong = Math.sqrt(Math.max(0, tank.r * tank.r - perp * perp));
     const along = Math.min(tipAlong, hullAlong) - Math.min(br * 0.18, tank.r * 0.06);
@@ -9164,14 +9179,16 @@
       c.rotate(ang);
       c.translate(X * u, Y * u);
     }
-    const len = Math.max(2, (auto && pivot.ring ? L * 0.62 : L) * u);
-    const w0 = Math.max(1.5, W * u * 0.5);
-    const w1 = Math.max(1.5, W * Math.abs(A) * u * 0.5);
+    const shape = barrelShape(gun, u, auto && pivot.ring && Math.abs(X) < 1 && Math.abs(Y) < 1 ? 0.62 : 1);
+    if (shape.front - shape.back < 0.4) {
+      c.restore();
+      return;
+    }
     c.beginPath();
-    c.moveTo(0, -w0);
-    c.lineTo(len, -w1);
-    c.lineTo(len, w1);
-    c.lineTo(0, w0);
+    c.moveTo(shape.back, -shape.wBack);
+    c.lineTo(shape.front, -shape.wFront);
+    c.lineTo(shape.front, shape.wFront);
+    c.lineTo(shape.back, shape.wBack);
     c.closePath();
     c.fillStyle = fill;
     c.strokeStyle = COLORS.outline;
@@ -9180,11 +9197,13 @@
     c.fill();
     c.stroke();
     if (gun.type === "trap" || gun.type === "pillbox") {
+      const tip = shape.front;
+      const w1 = shape.wFront;
       c.beginPath();
-      c.moveTo(len, -w1 * 1.15);
-      c.lineTo(len + 6, -w1 * 1.45);
-      c.lineTo(len + 6, w1 * 1.45);
-      c.lineTo(len, w1 * 1.15);
+      c.moveTo(tip, -w1 * 1.15);
+      c.lineTo(tip + 6, -w1 * 1.45);
+      c.lineTo(tip + 6, w1 * 1.45);
+      c.lineTo(tip, w1 * 1.15);
       c.closePath();
       c.fill();
       c.stroke();
@@ -9424,14 +9443,19 @@
       ox = tank.x + c * X * u - s * Y * u;
       oy = tank.y + s * X * u + c * Y * u;
     }
-    const len = Math.max(2, (auto && pivot.ring ? L * 0.62 : L) * u);
-    const w0 = Math.max(1.5, W * u * 0.5);
-    const w1 = Math.max(1.5, W * Math.abs(A) * u * 0.5);
-    TankfieldGL.trap(ox, oy, ang, len, w0, w1, fill, stroke, 3, fade);
-    if (gun.type === "trap" || gun.type === "pillbox") {
+    const shape = barrelShape(gun, u, auto && pivot.ring && Math.abs(X) < 1 && Math.abs(Y) < 1 ? 0.62 : 1);
+    const span = shape.front - shape.back;
+    if (span > 0.4) {
       const c = Math.cos(ang);
       const s = Math.sin(ang);
-      TankfieldGL.trap(ox + c * len, oy + s * len, ang, 6, w1 * 1.15, w1 * 1.45, fill, stroke, 3, fade);
+      const bx = ox + c * shape.back;
+      const by = oy + s * shape.back;
+      TankfieldGL.trap(bx, by, ang, span, shape.wBack, shape.wFront, fill, stroke, 3, fade);
+      if (gun.type === "trap" || gun.type === "pillbox") {
+        const tx = ox + c * shape.front;
+        const ty = oy + s * shape.front;
+        TankfieldGL.trap(tx, ty, ang, 6, shape.wFront * 1.15, shape.wFront * 1.45, fill, stroke, 3, fade);
+      }
     }
     if (auto) {
       const domeR = Math.max(4.2, Math.min(tank.r * (pivot.ring ? 0.3 : 0.45), W * u * (pivot.ring ? 0.58 : 0.9)));
