@@ -6,7 +6,7 @@
   const ASSAULT_ZONE = 360;
   const TAU = Math.PI * 2;
   const STAT_MAX = 9;
-  const LEVEL_CAP = 45;
+  const LEVEL_CAP = 60;
   const MAX_NICK_LENGTH = 25;
   const MAX_DEV_SCORE = 1_000_000_000_000;
   const BASE_MOVE = 23.2;
@@ -15,12 +15,12 @@
   const ARRAS_BASE = {
     ACCEL: 1.6,
     SPEED: 5.25,
-    HEALTH: 20,
-    DAMAGE: 3,
+    HEALTH: 30,
+    DAMAGE: 4,
     RESIST: 1,
     PENETRATION: 1.05,
-    SHIELD: 5.75,
-    REGEN: 0.01,
+    SHIELD: 6,
+    REGEN: 0.05,
     FOV: 1.02,
     DENSITY: 0.5,
   };
@@ -90,17 +90,21 @@
   const HUNTER_TEAM = "blue";
 
   const STATS = [
-    { key: "regen", name: "Health Regen", color: "#e85d9c" },
-    { key: "maxHealth", name: "Max Health", color: "#e56b6b" },
-    { key: "bodyDamage", name: "Body Damage", color: "#f28482" },
-    { key: "bulletSpeed", name: "Bullet Speed", color: "#f6bd60" },
-    { key: "bulletPen", name: "Bullet Pen", color: "#f2e863" },
-    { key: "bulletDamage", name: "Bullet Damage", color: "#84d46c" },
     { key: "reload", name: "Reload", color: "#6cd4c5" },
-    { key: "moveSpeed", name: "Movement", color: "#6cb6d4" },
-    { key: "shieldRegen", name: "Shield Regen", color: "#4ea4ff" },
+    { key: "bulletPen", name: "Bullet Penetration", color: "#f2e863" },
+    { key: "bulletHealth", name: "Bullet Health", color: "#d6e27a" },
+    { key: "bulletDamage", name: "Bullet Damage", color: "#84d46c" },
+    { key: "bulletSpeed", name: "Bullet Speed", color: "#f6bd60" },
     { key: "shieldCap", name: "Shield Capacity", color: "#7ec8e3" },
+    { key: "bodyDamage", name: "Body Damage", color: "#f28482" },
+    { key: "maxHealth", name: "Max Health", color: "#e56b6b" },
+    { key: "shieldRegen", name: "Shield Regeneration", color: "#4ea4ff" },
+    { key: "moveSpeed", name: "Movement Speed", color: "#6cb6d4" },
   ];
+  const SMASHER_CAPS = {
+    reload: 12, bulletPen: 0, bulletHealth: 0, bulletDamage: 0, bulletSpeed: 0,
+    shieldCap: 12, bodyDamage: 12, maxHealth: 12, shieldRegen: 12, moveSpeed: 12,
+  };
 
   const BOT_NAMES = [
     "Hexa", "Pulse", "Nim", "Vex", "Orbit", "Kite", "Bolt", "Mara",
@@ -1603,23 +1607,44 @@
     return def.mods || { damage: 1, reload: 1, speed: 1, size: 1, fov: 1, health: 1 };
   }
 
-  const XP_AT = [0, 0];
-  const SKILL_AT = [0, 0];
-  const GROWTH_SKILL = [0, 0];
+  const XP_AT = [0];
+  const SKILL_AT = [0];
+  const GROWTH_SKILL = [0];
+  const SKILL_LEVELS = new Set();
+  for (let i = 0; i < 45; i++) SKILL_LEVELS.add(((i / 45) * 60 + 1) | 0);
 
   function levelCap() {
     return isGrowthVariant() ? 1000 : LEVEL_CAP;
   }
 
-  function statCap() {
+  function isSmasher(tank) {
+    return !!(tank && getDef(tank).smasher);
+  }
+
+  function statCapFor(tank, key) {
+    if (isSmasher(tank) && Object.prototype.hasOwnProperty.call(SMASHER_CAPS, key)) return SMASHER_CAPS[key];
     return STAT_MAX;
   }
 
+  function fillStats(tank) {
+    if (!tank || !tank.stats) return;
+    for (const st of STATS) tank.stats[st.key] = statCapFor(tank, st.key);
+  }
+
+  function clampStatsToCaps(tank) {
+    if (!tank || !tank.stats) return;
+    for (const st of STATS) {
+      const cap = statCapFor(tank, st.key);
+      if ((tank.stats[st.key] || 0) > cap) tank.stats[st.key] = cap;
+    }
+  }
+
   function xpForLevel(level) {
-    const lv = Math.max(1, Math.floor(Number(level) || 1));
+    const lv = Math.max(0, Math.floor(Number(level) || 0));
     while (XP_AT.length <= lv) {
-      const i = XP_AT.length;
-      XP_AT.push(XP_AT[i - 1] + Math.round(4 + (i - 1) * (i - 1) * 1.15));
+      const prev = XP_AT.length - 1;
+      const cost = Math.ceil(1.8 * Math.pow(prev + 1, 1.8) - 2 * prev + 1);
+      XP_AT.push(XP_AT[prev] + cost);
     }
     return XP_AT[lv];
   }
@@ -1656,7 +1681,7 @@
 
   function levelFromScore(score) {
     const cap = levelCap();
-    let lo = 1;
+    let lo = 0;
     let hi = cap;
     while (lo < hi) {
       const mid = (lo + hi + 1) >> 1;
@@ -1667,8 +1692,7 @@
   }
 
   function skillCurve(points) {
-    const cap = Math.max(1, statCap());
-    return Math.log(4 * (Math.max(0, points) / cap) + 1) / 1.6;
+    return Math.log(4 * (Math.max(0, points) / STAT_MAX) + 1) / Math.log(5);
   }
 
   function applyFactor(f, x) {
@@ -1697,17 +1721,28 @@
     const s = (tank && tank.stats) || {};
     const sk = tank ? (tank._sk || (tank._sk = {})) : skillScratch;
     const c = (key) => skillCurve(s[key] || 0);
-    sk.rld = Math.pow(0.5, c("reload"));
-    sk.pen = applyFactor(2.5, c("bulletPen"));
-    sk.str = applyFactor(2, c("bulletPen"));
-    sk.dam = applyFactor(3, c("bulletDamage"));
-    sk.spd = 0.5 + applyFactor(1.5, c("bulletSpeed"));
-    sk.shi = applyFactor(2, c("shieldCap"));
-    sk.atk = applyFactor(0.021, c("bodyDamage"));
-    sk.hlt = applyFactor(1, c("maxHealth"));
-    sk.rgn = applyFactor(25, c("regen"));
-    sk.shieldRgn = applyFactor(25, c("shieldRegen"));
-    sk.mob = applyFactor(0.8, c("moveSpeed"));
+    const a = {
+      rld: c("reload"), pen: c("bulletPen"), str: c("bulletHealth"), dam: c("bulletDamage"), spd: c("bulletSpeed"),
+      shi: c("shieldCap"), atk: c("bodyDamage"), hlt: c("maxHealth"), rgn: c("shieldRegen"), mob: c("moveSpeed"),
+    };
+    sk.rld = Math.pow(0.5, a.rld);
+    sk.pen = applyFactor(2.7, a.pen);
+    sk.str = applyFactor(2.2, a.str);
+    sk.dam = applyFactor(3.2, a.dam);
+    sk.spd = 0.5 + applyFactor(1.5, a.spd);
+    sk.acl = applyFactor(0.5, a.rld);
+    sk.shi = applyFactor(0.3, a.shi);
+    sk.atk = applyFactor(0.085, a.atk);
+    sk.hlt = applyFactor(0.3, a.hlt);
+    sk.mob = applyFactor(0.8, a.mob);
+    sk.rgn = applyFactor(10, a.rgn);
+    sk.brst = 0.3 * (0.5 * a.atk + 0.5 * a.hlt);
+    sk.lancer = {
+      pen: applyFactor(10, a.pen),
+      str: applyFactor(10, a.str),
+      dam: applyFactor(10, a.dam),
+      spd: applyFactor(10, a.spd),
+    };
     return sk;
   }
 
@@ -1721,12 +1756,13 @@
     const withLevel = !(tank && (tank.closer));
     const bodyHealth = ARRAS_BASE.HEALTH * (def.health || 1) * (m.health || 1);
     const bodyDamage = ARRAS_BASE.DAMAGE * (def.bodyDamage || 1);
+    const ram = isSmasher(tank);
     const sizeRatio = Math.max(1, (tank.r || 22) / 22);
     const speedReduce = Math.min(growthTank ? 4 : 2, sizeRatio);
     const out = tank ? (tank._st || (tank._st = {})) : statsScratch;
-    out.maxHealth = ((withLevel ? 2 * lvl : 0) + bodyHealth) * sk.hlt;
-    out.regen = ((withLevel ? 0.006 * lvl : 0) + 1) * ARRAS_BASE.REGEN * 55 * sk.rgn;
-    out.bodyDamage = bodyDamage * sk.atk * 2.4;
+    out.maxHealth = ((withLevel ? 1.5 * lvl : 0) + bodyHealth) * sk.hlt;
+    out.regen = 0;
+    out.bodyDamage = bodyDamage * (1 + (ram ? sk.lancer.dam : sk.atk));
     out.bulletSpeed = sk.spd * 4;
     out.bulletPen = sk.pen;
     out.bulletDamage = 0.75 * sk.dam * 6;
@@ -1737,9 +1773,11 @@
     out.maxDrones = def.maxDrones || 0;
     out.maxShield = 0;
     out.shieldRegen = 0;
+    out.resist = 0;
     if (!(tank && (tank.closer || tank.mothership || tank.dominator))) {
-      out.maxShield = ((withLevel ? 0.6 * lvl : 0) + ARRAS_BASE.SHIELD) * sk.shi;
-      out.shieldRegen = ((withLevel ? 0.006 * lvl : 0) + 1) * ARRAS_BASE.REGEN * 40 * sk.shieldRgn;
+      out.maxShield = ARRAS_BASE.SHIELD * (1 + sk.shi);
+      out.shieldRegen = ARRAS_BASE.REGEN * sk.rgn;
+      out.resist = 1 - 1 / Math.max(1, ARRAS_BASE.RESIST + (sk.brst || 0));
     }
     if (tank && tank.dominator && !tank.destroyed) {
       out.regen = Math.max(out.regen, 12);
@@ -1778,18 +1816,13 @@
   }
 
   function pointAtLevel(level, growth) {
-    if (level < 2) return 0;
-    if (level <= 40) return 1;
-    if (level <= 45 && level % 2 === 1) return 1;
-    if (growth) {
-      if (level <= 51 && level % 2 === 1) return 1;
-      if (level % 10 === 1) return 1;
-    }
+    if (SKILL_LEVELS.has(level)) return 1;
+    if (growth && level > 59 && level % 4 !== 0) return 1;
     return 0;
   }
 
   function skillPointsFor(level) {
-    const lv = Math.max(1, Math.floor(Number(level) || 1));
+    const lv = Math.max(0, Math.floor(Number(level) || 0));
     const growth = isGrowthVariant();
     const cache = growth ? GROWTH_SKILL : SKILL_AT;
     while (cache.length <= lv) {
@@ -1798,7 +1831,7 @@
     }
     return cache[lv];
   }
-  function spentPoints(tank) { return STATS.reduce((n, st) => n + tank.stats[st.key], 0); }
+  function spentPoints(tank) { return STATS.reduce((n, st) => n + (tank.stats[st.key] || 0), 0); }
 
   function detectBrowserZoom() {
     const dprNow = window.devicePixelRatio || 1;
@@ -3670,9 +3703,8 @@
       classId: opts.classId || "basic",
       customDef: opts.customDef ? TankCatalog.cloneDef(opts.customDef) : null,
       stats: {
-        regen: 0, maxHealth: 0, bodyDamage: 0, bulletSpeed: 0,
-        bulletPen: 0, bulletDamage: 0, reload: 0, moveSpeed: 0,
-        shieldRegen: 0, shieldCap: 0,
+        reload: 0, bulletPen: 0, bulletHealth: 0, bulletDamage: 0, bulletSpeed: 0,
+        shieldCap: 0, bodyDamage: 0, maxHealth: 0, shieldRegen: 0, moveSpeed: 0,
       },
       score: opts.score || 0,
       level: 1,
@@ -3730,13 +3762,14 @@
     const next = levelFromScore(tank.score);
     const gained = next > tank.level;
     tank.level = next;
+    clampStatsToCaps(tank);
     const m = modsOf(getDef(tank));
     const growthTank = isGrowthTank(tank);
     const sizeLv = growthTank ? tank.level : Math.min(tank.level, LEVEL_CAP);
     // Sample bosses use a class SIZE near 25–30 against a tank SIZE of 12. Our old 4.6 scale drew them, and their shots, far past that.
     let scale = m.size || 1;
     if (tank.boss || tank.fodder) scale = Math.max(1.15, scale * (2.5 / 4.6));
-    tank.r = (20 + Math.min(sizeLv, 45) * 0.18) * scale;
+    tank.r = (20 + Math.min(sizeLv, growthTank ? 45 : LEVEL_CAP) * 0.18) * scale;
     if (growthTank && tank.level > 45) {
       tank.r += Math.max(0, tank.score - xpForLevel(45)) / 3e6 * 90;
       tank.r = Math.min(tank.r, 220);
@@ -3988,24 +4021,23 @@
   function autoUpgradeBot(bot, preserveClass = false) {
     applyLevel(bot);
     const rammerIds = new Set(["smasher", "landmine", "spike", "autosmasher", "bonker", "auto_bonker", "auto_smasher"]);
-    const dead = isOneHp() ? ["maxHealth", "regen", "shieldCap", "shieldRegen"] : [];
+    const dead = isOneHp() ? ["maxHealth", "shieldCap", "shieldRegen"] : [];
     const focus = isOneHp()
-      ? ["reload", "bulletDamage", "bulletSpeed", "bulletPen", "moveSpeed", "bodyDamage"]
+      ? ["reload", "bulletDamage", "bulletHealth", "bulletSpeed", "bulletPen", "moveSpeed", "bodyDamage"]
       : bot.aiFocus === "ram"
-      ? ["maxHealth", "bodyDamage", "moveSpeed", "regen", "bulletDamage"]
+      ? ["maxHealth", "bodyDamage", "moveSpeed", "shieldRegen", "shieldCap"]
       : bot.aiFocus === "farm"
-        ? ["reload", "bulletSpeed", "bulletPen", "bulletDamage", "moveSpeed"]
+        ? ["reload", "bulletSpeed", "bulletPen", "bulletHealth", "bulletDamage", "moveSpeed"]
         : [
-          ["bulletDamage", "reload", "bulletSpeed", "maxHealth", "moveSpeed"],
-          ["reload", "bulletSpeed", "bulletPen", "bulletDamage", "moveSpeed"],
+          ["bulletDamage", "bulletHealth", "reload", "bulletSpeed", "maxHealth", "moveSpeed"],
+          ["reload", "bulletSpeed", "bulletPen", "bulletHealth", "bulletDamage", "moveSpeed"],
         ][irand(0, 1)];
     let left = skillPointsFor(bot.level) - spentPoints(bot);
-    const cap = statCap();
     while (left > 0) {
-      const open = focus.filter((k) => bot.stats[k] < cap);
+      const open = focus.filter((k) => (bot.stats[k] || 0) < statCapFor(bot, k));
       const pool = open.length
         ? open
-        : STATS.filter((s) => bot.stats[s.key] < cap && !dead.includes(s.key)).map((s) => s.key);
+        : STATS.filter((s) => (bot.stats[s.key] || 0) < statCapFor(bot, s.key) && !dead.includes(s.key)).map((s) => s.key);
       if (!pool.length) break;
       bot.stats[pool[irand(0, pool.length - 1)]]++;
       left--;
@@ -4051,7 +4083,7 @@
 
   function maxOutTank(tank) {
     tank.score = Math.max(tank.score, xpForLevel(LEVEL_CAP));
-    for (const st of STATS) tank.stats[st.key] = STAT_MAX;
+    fillStats(tank);
     applyLevel(tank);
     tank.health = tank.maxHealth;
     tank.shield = tank.maxShield || 0;
@@ -4071,8 +4103,8 @@
     state.classDismissed = false;
     try { renderStats(); } catch (err) {}
     try { renderClassPanel(); } catch (err) {}
-    floater(tank.x, tank.y - tank.r - 8, "Level 45");
-    if (tank === state.player || tank === menuTank()) note("You are now level 45.");
+    floater(tank.x, tank.y - tank.r - 8, `Level ${LEVEL_CAP}`);
+    if (tank === state.player || tank === menuTank()) note(`You are now level ${LEVEL_CAP}.`);
     return true;
   }
 
@@ -7001,7 +7033,7 @@
         score: xpForLevel(LEVEL_CAP),
         pos,
       });
-      for (const st of STATS) bot.stats[st.key] = STAT_MAX;
+      fillStats(bot);
       applyLevel(bot);
       bot.health = bot.maxHealth;
       bot.spawnProtect = 0;
@@ -7029,7 +7061,7 @@
     tank.team = null;
     tank.color = COLORS.square;
     tank.score = Math.max(tank.score, xpForLevel(LEVEL_CAP));
-    for (const st of STATS) tank.stats[st.key] = STAT_MAX;
+    fillStats(tank);
     applyLevel(tank);
     tank.health = tank.maxHealth;
     tank.shield = tank.maxShield || 0;
@@ -8034,13 +8066,17 @@
     if (tryTagHit(target, src)) return;
     if (target.spawnProtect > 0 && !(src && src.closer)) return;
     if (src && src.spawnProtect > 0 && !src.closer) return;
+    if (target.type === "tank" && !target.dominator && !target.mothership && !target.closer) {
+      amount *= Math.max(0, 1 - (tankStats(target).resist || 0));
+    }
     let left = amount;
     if (target.type === "tank" && (target.shield || 0) > 0) {
       const soak = Math.min(target.shield, left);
       target.shield -= soak;
       left -= soak;
-      target.shieldDelay = 2.8;
+      target.shieldDelay = 3;
     }
+    if (target.type === "tank" && left > 0) target.healthDelay = 3;
     const taken = (amount - left) + Math.min(left, Math.max(0, target.health));
     if (taken > 0) creditDamage(target, taken, src);
     if (left > 0) target.health -= left;
@@ -8248,18 +8284,30 @@
             const soak = Math.min(tank.shield, burn);
             tank.shield -= soak;
             burn -= soak;
-            tank.shieldDelay = 1.2;
+            if (soak > 0) tank.shieldDelay = 3;
           }
-          if (burn > 0) tank.health -= burn;
+          if (burn > 0) {
+            tank.health -= burn;
+            tank.healthDelay = 3;
+          }
           tank.bodyHitT = 0.08;
           if (tank === state.player) shake = Math.max(shake, inStorm ? 3 : 4);
           if (tank.health <= 0) killTank(tank, null, inStorm ? "the storm" : nestBurn ? "the infection" : (state.mode === "siege" ? "the red zone" : isSoccerMode() ? `the ${zoneAt(tank.x, tank.y)} goal` : `the ${zoneAt(tank.x, tank.y)} base`));
         }
       } else {
-        tank.health = Math.min(tank.maxHealth, tank.health + st.regen * dt);
+        tank.healthDelay = Math.max(0, (tank.healthDelay || 0) - dt);
         tank.shieldDelay = Math.max(0, (tank.shieldDelay || 0) - dt);
-        if ((tank.maxShield || 0) > 0 && tank.shieldDelay <= 0) {
-          tank.shield = Math.min(tank.maxShield, (tank.shield || 0) + st.shieldRegen * dt);
+        if (tank.healthDelay <= 0 && tank.health < tank.maxHealth) {
+          const shieldFull = (tank.maxShield || 0) > 0 && tank.shield >= tank.maxShield - 0.05;
+          const perTick = tank.maxHealth / 1500 + (shieldFull ? 1.25 : 0);
+          tank.health = Math.min(tank.maxHealth, tank.health + perTick * ARRAS_TICK * dt);
+        }
+        if ((tank.maxShield || 0) > 0 && tank.shieldDelay <= 0 && (tank.shield || 0) < tank.maxShield) {
+          const held = tank.shield || 0;
+          const r = Math.max(0, Math.min(1, held / tank.maxShield));
+          const exp = Math.exp(-50 * Math.pow(Math.sqrt(0.5 * r) - 0.4, 2));
+          const perTick = 2.5 * ((st.shieldRegen || 0) * exp + r * tank.maxShield / 225);
+          tank.shield = Math.min(tank.maxShield, held + perTick * ARRAS_TICK * dt);
         }
       }
       const fadeId = getDef(tank).id;
@@ -8808,14 +8856,15 @@
     if (!p) return;
     const free = skillPointsFor(p.level) - spentPoints(p);
     if (els.skillPoints) els.skillPoints.textContent = free > 0 ? `x${free}` : "";
-    const cap = statCap();
     els.stats.innerHTML = STATS.map((st, i) => {
-      const v = p.stats[st.key];
-      const maxed = v >= cap;
+      const v = p.stats[st.key] || 0;
+      const cap = statCapFor(p, st.key);
+      const maxed = cap <= 0 || v >= cap;
+      const width = cap > 0 ? (v / cap) * 100 : 100;
       return `<div class="stat-row ${maxed || free <= 0 ? "maxed" : ""}" data-stat="${st.key}" style="--pip:${st.color}">
         <div class="stat-dot"></div>
         <div class="stat-track">
-          <div class="stat-fill" style="width:${(v / cap) * 100}%"></div>
+          <div class="stat-fill" style="width:${width}%"></div>
           <div class="stat-name">${st.name}</div>
         </div>
         <div class="stat-key">[${i === 9 ? 0 : i + 1}]</div>
@@ -8896,7 +8945,7 @@
     let used = false;
     while (true) {
       const free = skillPointsFor(p.level) - spentPoints(p);
-      if (free <= 0 || p.stats[key] >= statCap()) break;
+      if (free <= 0 || (p.stats[key] || 0) >= statCapFor(p, key)) break;
       p.stats[key]++;
       used = true;
       if (!dump) break;
@@ -10165,7 +10214,7 @@
     onehp: "Everyone for themselves · 1 HP · no shields · health stats do nothing · medium map · start at 45 · fresh server after 4 hours",
     royale: "1 min prep · shrinking storm to a random point · closes fully · damage ramps · last tank wins · then a fresh server",
     royalemaze: "Same as Battle Royale · L / Y / zig clusters · open map · storm closes fully · then a fresh server",
-    sandbox: "Level 45 · pick any tank · bots included · [T] swaps tanks without resetting · fresh server after 4 hours",
+    sandbox: "Level 60 · pick any tank · bots included · [T] swaps tanks without resetting · fresh server after 4 hours",
     armsrace: "FFA rules · expanded Arras class tree · hybrids, extra T4–T5 tanks at 45 · start at 45 · never below 45 · [N] skip to 45 · fresh server after 4 hours",
     "growth-ar": "Growth · Arms Race class tree · everyone starts at 45 · never below 45 · [N] skip to 45 · fresh server after 4 hours",
     "protect-ar": "Mothership Protect · Arms Race class tree · random team · start at 45 · [N] skip · [H] to take control · win or 4 hours starts a fresh server",
@@ -10400,7 +10449,7 @@
         p.classId = def.id || "basic";
       }
       if (opts.maxStats) {
-        for (const st of STATS) p.stats[st.key] = STAT_MAX;
+        fillStats(p);
       }
       applyLevel(p);
       if (p.classId !== prevId) clearOwnedShots(p);
