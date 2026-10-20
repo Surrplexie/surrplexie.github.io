@@ -3733,7 +3733,10 @@
     const m = modsOf(getDef(tank));
     const growthTank = isGrowthTank(tank);
     const sizeLv = growthTank ? tank.level : Math.min(tank.level, LEVEL_CAP);
-    tank.r = (20 + Math.min(sizeLv, 45) * 0.18) * (m.size || 1);
+    // Sample bosses use a class SIZE near 25–30 against a tank SIZE of 12. Our old 4.6 scale drew them, and their shots, far past that.
+    let scale = m.size || 1;
+    if (tank.boss || tank.fodder) scale = Math.max(1.15, scale * (2.5 / 4.6));
+    tank.r = (20 + Math.min(sizeLv, 45) * 0.18) * scale;
     if (growthTank && tank.level > 45) {
       tank.r += Math.max(0, tank.score - xpForLevel(45)) / 3e6 * 90;
       tank.r = Math.min(tank.r, 220);
@@ -6291,24 +6294,15 @@
   function unitOf(tank) { return tank.r / 12; }
 
   function shotRadius(tank, gun, sizeMul, kind) {
-    const u = unitOf(tank);
-    const W = (gun && gun.pos && gun.pos[1]) || 8;
-    const A = (gun && gun.pos && gun.pos[2] != null) ? gun.pos[2] : 1;
-    const muzzle = Math.max(1.6, W * Math.abs(A || 1) * u * 0.5);
-    let br = muzzle * Math.max(0.78, sizeMul || 1) * 1.08;
-    if (tank.mothership && kind !== "drone" && kind !== "swarm" && kind !== "minion") br = Math.max(br, 8.2 * (sizeMul || 1));
-    if (tank.boss || tank.fodder) {
-      const cap = (tank.fodder ? 14 : 30) * Math.min(1.35, Math.max(0.75, sizeMul || 1));
-      if (kind === "minion") br = Math.min(br, tank.fodder ? 14 : 22);
-      else if (kind === "drone" || kind === "swarm") br = Math.min(br, tank.fodder ? 11 : 16);
-      else br = Math.min(Math.max(br, tank.fodder ? 7 : 15), cap);
-    }
+    // Arras: bullet SIZE = body.size * (barrelWidth / 10) * bulletSize / 2.
+    // sizeMul is the gun's bullet size. The body scale is already inside tank.r.
+    const W = Math.max(0.4, (gun && gun.pos && gun.pos[1]) || 8);
+    let br = (tank.r || 20) * (W / 10) * Math.max(0.05, sizeMul || 1) / 2;
+    if (tank.mothership && kind !== "drone" && kind !== "swarm" && kind !== "minion") br = Math.min(Math.max(br, 6), 16);
     if (tank.closer) br = 26;
     if (kind === "heal") br = Math.max(3.1, br * 0.36);
-    if (kind === "minion") br = Math.max(10, tank.r * 0.55);
-    if (kind === "pillbox") br = Math.max(8, muzzle * 1.05 * (sizeMul || 1));
-    if (kind === "trap") br = Math.max(br, muzzle * 0.92);
-    return br;
+    if (kind === "minion") br = Math.max(8, Math.min(br, (tank.r || 20) * 0.42));
+    return Math.max(1.6, br);
   }
 
   function countAutoGuns(def) {
@@ -6372,11 +6366,26 @@
     return tank.angle + (gun.pos[5] * Math.PI) / 180;
   }
 
+  function thrusterGun(gun) {
+    if (!gun || gun.type === "deco" || gun.type === "trap" || gun.type === "drone" || gun.type === "swarm" || gun.type === "minion") return false;
+    if (gun.calculator === "thruster") return true;
+    const raw = Math.abs((gun.pos && gun.pos[5]) || 0) % 360;
+    const ang = Math.min(raw, 360 - raw);
+    const rec = gun.recoil != null ? gun.recoil : (gun.shoot && gun.shoot.recoil);
+    return ang >= 120 && rec != null && rec >= 1.5;
+  }
+
   function applyRecoil(tank, gun, kind, shoot, width, ang) {
     if (!tank || tank.closer || tank.mothership || tank.dominator || tank.boss || tank.fodder) return;
     if (gun.type === "deco") return;
     let rec = gun.recoil;
     if (rec == null) rec = shoot && shoot.recoil != null ? shoot.recoil : 1;
+    if (thrusterGun(gun)) {
+      const sk = skillOf(tank);
+      const reloadPower = 1 / Math.max(0.2, sk.rld || 1);
+      const speedPower = (sk.spd || 1.5) / 1.5;
+      rec *= Math.sqrt(Math.max(0.25, reloadPower * speedPower));
+    }
     const widthMul = Math.max(0.4, (width || 8) / 8);
     const sizeMul = (shoot && shoot.size) || 1;
     const mass = Math.max(0.5, (tank.r / 22) ** 2);
@@ -6486,7 +6495,9 @@
     const ang = gunAngle(tank, gun, index) + jitter + rand(-(gun.spread || 0), gun.spread || 0);
     const kind = gun.type === "auto" ? "bullet" : gun.type;
     const gs = gun.stats || {};
-    const sizeMul = gun.size || gs.size || shoot.size || 1;
+    const bodyScale = modsOf(getDef(tank)).size || 1;
+    const stacked = shoot.size || 1;
+    const sizeMul = gun.size || gs.size || (stacked / bodyScale);
     const br = shotRadius(tank, gun, sizeMul, kind);
     const spawn = muzzleSpawn(tank, gun, ang, br, index);
     if (tank.team) {
@@ -6639,8 +6650,9 @@
     const shoot = gunShootSettings(owner, fakeGun);
     const ang = b.turretAim == null ? b.angle : b.turretAim;
     const speed = Math.max(40, (shoot.launch || 4) * 70);
-    const sizeMul = shoot.size || 1;
-    const br = Math.max(3.2, b.r * 0.42 * sizeMul);
+    const bodyScale = modsOf(getDef(owner)).size || 1;
+    const sizeMul = (shoot.size || 1) / bodyScale;
+    const br = Math.max(2.4, b.r * (8 / 10) * sizeMul / 2);
     const along = Math.max(0, b.r - br * 0.2);
     b.gunCd = Math.max(0.12, (shoot.reload * (shoot.rld || 1) / ARRAS_TICK));
     state.bullets.push({
@@ -6756,6 +6768,7 @@
         return o.type !== "tank" || isEnemyTank(tank, o);
       })) continue;
       if (tank.gunCd[i] > 0) continue;
+      if (autoGun && !autoBarrelReady(tank, gun, i)) continue;
       const cap = capKind(gun.type);
       if (cap) {
         const limit = Math.max(1, st.maxDrones);
@@ -6771,14 +6784,29 @@
     }
   }
 
-  function updateTurrets(tank, dt) {
-    const guns = getDef(tank).guns || [];
+  function autoAimTarget(tank) {
     let target = nearestSeen(tank, null, 640, (o) => o !== tank && o.alive && o !== state.ball && (o.type !== "tank" || isEnemyTank(tank, o)));
     const ballShot = soccerAutoTarget(tank, 640);
     if (ballShot && (!target || dist2(tank, ballShot) < dist2(tank, target))) target = ballShot;
-    else if (tank.ai && tank.aiTarget && tank.aiTarget.dominator && state.mode === "domination") {
-      target = tank.aiTarget;
-    }
+    else if (tank.ai && tank.aiTarget && tank.aiTarget.dominator && state.mode === "domination") target = tank.aiTarget;
+    return target;
+  }
+
+  function autoBarrelReady(tank, gun, index) {
+    const target = autoAimTarget(tank);
+    if (!target) return false;
+    const pivot = autoPivot(tank, gun, index);
+    const lead = leadPoint(pivot, target, tankStats(tank));
+    const want = Math.atan2(lead.y - pivot.y, lead.x - pivot.x);
+    let diff = want - gunAngle(tank, gun, index);
+    while (diff > Math.PI) diff -= TAU;
+    while (diff < -Math.PI) diff += TAU;
+    return Math.abs(diff) <= 0.025;
+  }
+
+  function updateTurrets(tank, dt) {
+    const guns = getDef(tank).guns || [];
+    const target = autoAimTarget(tank);
     if (!tank.turretAim) tank.turretAim = [];
     for (let i = 0; i < guns.length; i++) {
       const gun = guns[i];
