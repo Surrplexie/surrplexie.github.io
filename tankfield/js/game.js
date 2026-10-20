@@ -90,16 +90,16 @@
   const HUNTER_TEAM = "blue";
 
   const STATS = [
-    { key: "reload", name: "Reload", color: "#6cd4c5" },
-    { key: "bulletPen", name: "Bullet Penetration", color: "#f2e863" },
-    { key: "bulletHealth", name: "Bullet Health", color: "#d6e27a" },
-    { key: "bulletDamage", name: "Bullet Damage", color: "#84d46c" },
-    { key: "bulletSpeed", name: "Bullet Speed", color: "#f6bd60" },
-    { key: "shieldCap", name: "Shield Capacity", color: "#7ec8e3" },
-    { key: "bodyDamage", name: "Body Damage", color: "#f28482" },
-    { key: "maxHealth", name: "Max Health", color: "#e56b6b" },
-    { key: "shieldRegen", name: "Shield Regeneration", color: "#4ea4ff" },
-    { key: "moveSpeed", name: "Movement Speed", color: "#6cb6d4" },
+    { key: "bodyDamage", name: "Body_Damage", color: "#f07a62" },
+    { key: "maxHealth", name: "Max_Health", color: "#e85a5a" },
+    { key: "bulletSpeed", name: "Bullet_Speed", color: "#f0a03a" },
+    { key: "bulletHealth", name: "Bullet_Health", color: "#c6d84a" },
+    { key: "bulletPen", name: "Bullet_Penetration", color: "#f2e04a" },
+    { key: "bulletDamage", name: "Bullet_Damage", color: "#7ed44a" },
+    { key: "reload", name: "Reload", color: "#3ec8b0" },
+    { key: "moveSpeed", name: "Movement_Speed", color: "#4aa8e8" },
+    { key: "shieldRegen", name: "Shield_Regeneration", color: "#e888c8" },
+    { key: "shieldCap", name: "Shield_Capacity", color: "#c07ae8" },
   ];
   const SMASHER_CAPS = {
     reload: 12, bulletPen: 0, bulletHealth: 0, bulletDamage: 0, bulletSpeed: 0,
