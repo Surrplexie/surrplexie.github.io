@@ -834,6 +834,10 @@
     leaderPaintAt = -1;
   }
 
+  function soccerDeadline() {
+    return SOCCER_MATCH + (state.soccerOT || 0);
+  }
+
   function finishSoccer() {
     if (!isSoccerMode() || state.closing) return;
     const g = state.goals || {};
@@ -842,8 +846,574 @@
     for (const id of teams) best = Math.max(best, g[id] || 0);
     const winners = teams.filter((id) => (g[id] || 0) === best);
     const line = teams.map((id) => `${TEAMS[id].name} ${g[id] || 0}`).join(", ");
-    if (winners.length !== 1) beginArenaClose(`Soccer ends ${line}. It's a draw.`);
-    else beginArenaClose(`${TEAMS[winners[0]].name} wins Soccer ${line}!`);
+    if (winners.length !== 1) {
+      if (!state.soccerOT) {
+        state.soccerOT = 3 * 60;
+        note("It's a tie. 3 minutes added.");
+        leaderPaintAt = -1;
+        return;
+      }
+      beginArenaClose(`Soccer ends ${line}. It's a draw.`);
+    } else beginArenaClose(`${TEAMS[winners[0]].name} wins Soccer ${line}!`);
+  }
+
+  const RUSH_SMALL = ["elite_destroyer", "elite_gunner", "elite_sprayer", "elite_battleship", "elite_spawner", "elite_spinner", "elite_skimmer", "elite_trapguard"];
+  const RUSH_BIG = ["summoner", "nest_guardian", "nest_keeper", "nest_warden", "celestial"];
+  const RUSH_FINAL = ["eternal", "celestial"];
+  const KILL_RACE_GOAL = 50;
+  const HIDE_GOAL = 25;
+  const HIDE_TICK = 30;
+  const EPIC_GOAL = 1000;
+  const EPIC_RING = 480;
+
+  function edgeSpawn() {
+    const side = irand(0, 3);
+    if (side === 0) return { x: rand(160, WORLD.w - 160), y: 160 };
+    if (side === 1) return { x: rand(160, WORLD.w - 160), y: WORLD.h - 160 };
+    if (side === 2) return { x: 160, y: rand(160, WORLD.h - 160) };
+    return { x: WORLD.w - 160, y: rand(160, WORLD.h - 160) };
+  }
+
+  function modeSpawn(opts) {
+    if (!opts || opts.keepPos || opts.mothership) return null;
+    if (state.mode === "escort" && state.escort && state.escort.ship && state.escort.ship.alive) {
+      return around(state.escort.ship.x, state.escort.ship.y, 340);
+    }
+    if (state.mode === "infection" && state.infect) {
+      for (let i = 0; i < 24; i++) {
+        const p = randomInWorld(220);
+        if (!infectAt(p.x, p.y)) return p;
+      }
+    }
+    return null;
+  }
+
+  function huntMarkAI(tank, dt, prefer) {
+    const mark = prefer && prefer.alive ? prefer : nearest(tank, state.tanks, 99999, (t) => isEnemyTank(tank, t) && !t.boss && !t.fodder);
+    const st = tankStats(tank);
+    let tx = mark ? mark.x : WORLD.w * 0.5;
+    let ty = mark ? mark.y : WORLD.h * 0.5;
+    if (mark) {
+      const hold = holdPoint(tank, mark, (mark.r || 28) + (tank.r || 28) + 70);
+      tx = hold.x;
+      ty = hold.y;
+    }
+    if (state.maze) {
+      const steered = steerAround(tank, tx, ty);
+      tx = steered.x;
+      ty = steered.y;
+    }
+    const ang = Math.atan2(ty - tank.y, tx - tank.x);
+    tank.vx += Math.cos(ang) * st.moveSpeed * 70 * dt;
+    tank.vy += Math.sin(ang) * st.moveSpeed * 70 * dt;
+    tank.aiState = "attack";
+    tank.aiTarget = mark || null;
+    if (mark) tank.angle = aimAt(tank, mark, st);
+    else tank.angle = ang;
+    updateTurrets(tank, dt);
+    shoot(tank, dt);
+  }
+
+  function buildRushWaves() {
+    const waves = [];
+    const counts = [2, 2, 3, 4];
+    for (const n of counts) {
+      const bosses = [];
+      for (let i = 0; i < n; i++) bosses.push(RUSH_SMALL[irand(0, RUSH_SMALL.length - 1)]);
+      waves.push(bosses);
+    }
+    for (let i = 0; i < 3; i++) {
+      waves.push([RUSH_BIG[i % RUSH_BIG.length], RUSH_SMALL[irand(0, RUSH_SMALL.length - 1)]]);
+    }
+    waves.push([RUSH_FINAL[irand(0, RUSH_FINAL.length - 1)]]);
+    return waves;
+  }
+
+  function spawnRushBoss(classId) {
+    const def = TankCatalog.get(classId);
+    const tank = createTank({
+      name: def && def.name ? def.name : "Boss",
+      ai: true,
+      classId,
+      team: "boss",
+      color: TEAMS.boss.color,
+      score: xpForLevel(LEVEL_CAP),
+      pos: edgeSpawn(),
+      keepPos: true,
+    });
+    tank.boss = true;
+    tank.rush = true;
+    tank.spawnProtect = 0;
+    tank.aiJob = "hunt";
+    tank.aiFocus = "gun";
+    applyLevel(tank);
+    tank.health = tank.maxHealth;
+    state.tanks.push(tank);
+  }
+
+  function startBossRush() {
+    state.rush = { waves: buildRushWaves(), index: 0, left: 0, nextAt: 2, done: false };
+    note("Boss Rush. Clear every wave.");
+  }
+
+  function updateBossRush() {
+    const r = state.rush;
+    if (!r || state.mode !== "bossrush" || state.closing || r.done) return;
+    if (r.left > 0) return;
+    if (r.index >= r.waves.length) {
+      r.done = true;
+      beginArenaClose("Blue cleared Boss Rush!");
+      return;
+    }
+    if (state.time < r.nextAt) return;
+    const wave = r.waves[r.index];
+    const last = r.index === r.waves.length - 1;
+    note(last ? "The last boss has arrived." : `Wave ${r.index + 1} has arrived.`);
+    for (const id of wave) spawnRushBoss(id);
+    r.left = wave.length;
+    r.index += 1;
+  }
+
+  function onRushBossKilled() {
+    const r = state.rush;
+    if (!r || state.closing || r.done) return;
+    r.left = Math.max(0, r.left - 1);
+    if (r.left > 0) return;
+    if (r.index >= r.waves.length) {
+      r.done = true;
+      beginArenaClose("Blue cleared Boss Rush!");
+      return;
+    }
+    note("The next wave will begin in 10 seconds.");
+    r.nextAt = state.time + 10;
+  }
+
+  function startEscort() {
+    const y = WORLD.h * 0.5;
+    const ship = createTank({
+      name: "Mothership",
+      ai: true,
+      mothership: true,
+      classId: "mothership",
+      team: "blue",
+      color: TEAMS.blue.color,
+      score: xpForLevel(LEVEL_CAP),
+      pos: { x: 980, y },
+      keepPos: true,
+    });
+    ship.escort = true;
+    ship.spawnProtect = 0;
+    ship.aiJob = "roam";
+    maxOutTank(ship);
+    ship.x = 980;
+    ship.y = y;
+    state.tanks.push(ship);
+    state.escort = {
+      ship,
+      goalX: WORLD.w - 420,
+      goalY: y,
+      goalW: 780,
+      nextSpawn: 2,
+      defender: 0,
+      sentry: 0,
+      crasher: 0,
+    };
+    if (isMazeVariant() && state.maze) {
+      punchMazeAt(ship.x, ship.y, 520);
+      punchMazeAt(state.escort.goalX, state.escort.goalY, 640);
+      rebuildMazeWalls();
+    }
+    note("Escort the mothership to the far goal.");
+  }
+
+  function spawnNestFoe(kind) {
+    const e = state.escort;
+    if (!e) return;
+    const ids = kind === "defender"
+      ? ["nest_guardian", "nest_keeper", "nest_warden"]
+      : kind === "sentry"
+        ? ["sentry_gun", "sentry_swarm", "sentry_trap"]
+        : ["basic"];
+    const id = ids[irand(0, ids.length - 1)];
+    const def = TankCatalog.get(id);
+    const tank = createTank({
+      name: kind === "crasher" ? "Crasher" : (def && def.name ? def.name : "Nest"),
+      ai: true,
+      classId: id,
+      team: "boss",
+      color: TEAMS.boss.color,
+      score: kind === "crasher" ? xpForLevel(15) : kind === "sentry" ? xpForLevel(30) : xpForLevel(LEVEL_CAP),
+      pos: { x: rand(WORLD.w * 0.58, WORLD.w - 200), y: rand(200, WORLD.h - 200) },
+      keepPos: true,
+    });
+    tank.nest = kind;
+    tank.noRespawn = true;
+    tank.spawnProtect = 0;
+    tank.aiJob = "hunt";
+    tank.aiFocus = "gun";
+    applyLevel(tank);
+    tank.health = tank.maxHealth;
+    state.tanks.push(tank);
+    e[kind] = (e[kind] || 0) + 1;
+  }
+
+  function onNestFoeDown(tank) {
+    const e = state.escort;
+    if (!e || !tank || !tank.nest) return;
+    e[tank.nest] = Math.max(0, (e[tank.nest] || 0) - 1);
+  }
+
+  function escortLost() {
+    if (state.mode !== "escort" || state.closing) return;
+    beginArenaClose("The escort fell. The nest wins.");
+  }
+
+  function updateEscort() {
+    const e = state.escort;
+    if (!e || state.mode !== "escort" || state.closing) return;
+    const ship = e.ship;
+    if (!ship || !ship.alive) return;
+    if (ship.x >= WORLD.w - e.goalW) {
+      beginArenaClose("The mothership reached the goal!");
+      return;
+    }
+    if (state.time < e.nextSpawn) return;
+    e.nextSpawn = state.time + 1.7;
+    const roll = Math.random();
+    if (e.defender < 3 && roll < 0.16) spawnNestFoe("defender");
+    else if (e.sentry < 7 && roll < 0.48) spawnNestFoe("sentry");
+    else if (e.crasher < 16) spawnNestFoe("crasher");
+  }
+
+  function infectGeom() {
+    const cols = 14;
+    const rows = 14;
+    return { cols, rows, cw: WORLD.w / cols, ch: WORLD.h / rows };
+  }
+
+  function infectAt(x, y) {
+    const g = state.infect;
+    if (!g) return false;
+    const c = clamp(Math.floor(x / g.cw), 0, g.cols - 1);
+    const r = clamp(Math.floor(y / g.ch), 0, g.rows - 1);
+    return !!g.cells[r * g.cols + c];
+  }
+
+  function infectCount() {
+    const g = state.infect;
+    if (!g) return 0;
+    let n = 0;
+    for (const on of g.cells) if (on) n++;
+    return n;
+  }
+
+  function infectIndex(c, r) {
+    const g = state.infect;
+    if (!g || c < 0 || r < 0 || c >= g.cols || r >= g.rows) return -1;
+    return r * g.cols + c;
+  }
+
+  function startInfection() {
+    const geo = infectGeom();
+    const cells = Array(geo.cols * geo.rows).fill(false);
+    const c0 = Math.floor(geo.cols / 2) - 1;
+    const r0 = Math.floor(geo.rows / 2) - 1;
+    for (let r = 0; r < 2; r++) {
+      for (let c = 0; c < 2; c++) cells[(r0 + r) * geo.cols + (c0 + c)] = true;
+    }
+    state.infect = { ...geo, cells, reverse: 0, next: 2.4, bossAt: 10 };
+    note("The infection is spreading.");
+  }
+
+  function infectGrow() {
+    const g = state.infect;
+    const seeds = [];
+    for (let i = 0; i < g.cells.length; i++) if (g.cells[i]) seeds.push(i);
+    if (!seeds.length) return;
+    const at = seeds[irand(0, seeds.length - 1)];
+    const c = at % g.cols;
+    const r = Math.floor(at / g.cols);
+    const dir = [[1, 0], [-1, 0], [0, 1], [0, -1]][irand(0, 3)];
+    const ni = infectIndex(c + dir[0], r + dir[1]);
+    if (ni >= 0 && !g.cells[ni]) g.cells[ni] = true;
+  }
+
+  function infectShrink() {
+    const g = state.infect;
+    const edges = [];
+    for (let r = 0; r < g.rows; r++) {
+      for (let c = 0; c < g.cols; c++) {
+        const i = infectIndex(c, r);
+        if (!g.cells[i]) continue;
+        const open = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dc, dr]) => {
+          const ni = infectIndex(c + dc, r + dr);
+          return ni < 0 || !g.cells[ni];
+        });
+        if (open) edges.push(i);
+      }
+    }
+    if (edges.length) g.cells[edges[irand(0, edges.length - 1)]] = false;
+  }
+
+  function spawnNestBoss() {
+    const g = state.infect;
+    const spots = [];
+    for (let i = 0; i < g.cells.length; i++) if (g.cells[i]) spots.push(i);
+    if (!spots.length) return;
+    const at = spots[irand(0, spots.length - 1)];
+    const c = at % g.cols;
+    const r = Math.floor(at / g.cols);
+    const id = ["nest_guardian", "nest_keeper", "nest_warden", "summoner"][irand(0, 3)];
+    const def = TankCatalog.get(id);
+    const tank = createTank({
+      name: def && def.name ? def.name : "Nest Boss",
+      ai: true,
+      classId: id,
+      team: "boss",
+      color: TEAMS.boss.color,
+      score: xpForLevel(LEVEL_CAP),
+      pos: { x: (c + 0.5) * g.cw, y: (r + 0.5) * g.ch },
+      keepPos: true,
+    });
+    tank.boss = true;
+    tank.nestBoss = true;
+    tank.spawnProtect = 0;
+    tank.aiJob = "hunt";
+    applyLevel(tank);
+    tank.health = tank.maxHealth;
+    state.tanks.push(tank);
+    note("A nest boss has appeared.");
+  }
+
+  function onNestBossKilled() {
+    const g = state.infect;
+    if (!g || state.closing) return;
+    g.reverse = Math.max(0, g.reverse) + rand(14, 36);
+    note("The infection pulls back.");
+  }
+
+  function updateInfection() {
+    const g = state.infect;
+    if (!g || state.mode !== "infection" || state.closing) return;
+    if (state.time >= g.bossAt) {
+      g.bossAt = state.time + 26;
+      const alive = state.tanks.filter((t) => t.alive && t.nestBoss).length;
+      if (alive < 2) spawnNestBoss();
+    }
+    if (state.time < g.next) return;
+    g.next = state.time + 2.4;
+    const full = g.cols * g.rows;
+    if (infectCount() >= full) {
+      beginArenaClose("The infection has taken over the map!");
+      return;
+    }
+    if (g.reverse > 0) {
+      g.reverse -= 2.4;
+      if (infectCount() <= 1) {
+        beginArenaClose("Blue stopped the infection!");
+        return;
+      }
+      infectShrink();
+      if (infectCount() <= 1) {
+        beginArenaClose("Blue stopped the infection!");
+        return;
+      }
+      if (g.reverse <= 0) note("The infection spreads again.");
+    } else {
+      infectGrow();
+      if (infectCount() >= full) beginArenaClose("The infection has taken over the map!");
+    }
+  }
+
+  function startEpicenter() {
+    const inset = Math.min(2450, WORLD.w * 0.22);
+    const spots = [
+      { x: inset, y: inset },
+      { x: WORLD.w - inset, y: inset },
+      { x: inset, y: WORLD.h - inset },
+      { x: WORLD.w - inset, y: WORLD.h - inset },
+    ];
+    state.epic = {
+      rings: spots.map((s) => ({ x: s.x, y: s.y, r: EPIC_RING, team: null })),
+      scores: { blue: 0, red: 0 },
+    };
+    if (isMazeVariant() && state.maze) {
+      for (const ring of state.epic.rings) punchMazeAt(ring.x, ring.y, ring.r * 0.9);
+      rebuildMazeWalls();
+    }
+    note("Hold a ring alone to score.");
+  }
+
+  function updateEpicenter(dt) {
+    const e = state.epic;
+    if (!e || state.mode !== "epicenter" || state.closing) return;
+    const tanks = state.tanks.filter((t) => t.alive && !t.boss && !t.dominator && !t.mothership && (t.team === "blue" || t.team === "red"));
+    for (const ring of e.rings) {
+      let blue = 0;
+      let red = 0;
+      for (const t of tanks) {
+        if ((t.x - ring.x) ** 2 + (t.y - ring.y) ** 2 > ring.r * ring.r) continue;
+        if (t.team === "blue") blue++;
+        else red++;
+      }
+      ring.team = blue > 0 && red === 0 ? "blue" : red > 0 && blue === 0 ? "red" : null;
+      if (ring.team) e.scores[ring.team] += dt;
+    }
+    for (const id of ["blue", "red"]) {
+      if (e.scores[id] >= EPIC_GOAL) {
+        beginArenaClose(`${TEAMS[id].name} holds the epicenter!`);
+        return;
+      }
+    }
+  }
+
+  function noteKillRace(victim, killer) {
+    if (state.mode !== "killrace" || state.closing) return;
+    if (!killer || !killer.team || !victim || victim.team == null) return;
+    if (killer.team === victim.team) return;
+    if (victim.boss || victim.fodder || victim.dominator || victim.mothership || victim.closer) return;
+    if (!state.kills) state.kills = { blue: 0, red: 0 };
+    const id = killer.team;
+    state.kills[id] = (state.kills[id] || 0) + 1;
+    note(`${TEAMS[id] ? TEAMS[id].name : "A team"} scored!`);
+    if (state.kills[id] >= KILL_RACE_GOAL) beginArenaClose(`${TEAMS[id].name} wins the kill race!`);
+  }
+
+  function noteHideKill(victim, killer) {
+    const h = state.hide;
+    if (state.mode !== "hide" || !h || state.closing) return;
+    if (!victim || victim.team !== "green" || !killer || killer.team !== "red") return;
+    if (victim.boss || victim.mothership || victim.dominator) return;
+    h.red = (h.red || 0) + 1;
+    note("The seekers gained a point.");
+    if (h.red >= HIDE_GOAL) beginArenaClose("The seekers win!");
+  }
+
+  function updateHide() {
+    const h = state.hide;
+    if (!h || state.mode !== "hide" || state.closing) return;
+    if (state.time < h.next) return;
+    h.next = state.time + HIDE_TICK;
+    const hiders = state.tanks.some((t) => t.alive && t.team === "green" && !t.boss && !t.mothership);
+    if (!hiders) return;
+    h.green = (h.green || 0) + 1;
+    note("The hiders gained a point.");
+    if (h.green >= HIDE_GOAL) beginArenaClose("The hiders win!");
+  }
+
+  function bootModes() {
+    state.soccerOT = 0;
+    state.rush = null;
+    state.escort = null;
+    state.infect = null;
+    state.epic = null;
+    state.hide = null;
+    state.kills = { blue: 0, red: 0, green: 0, purple: 0 };
+    if (state.mode === "bossrush") startBossRush();
+    if (state.mode === "escort") startEscort();
+    if (state.mode === "infection") startInfection();
+    if (state.mode === "epicenter") startEpicenter();
+    if (state.mode === "hide") {
+      state.hide = { green: 0, red: 0, next: HIDE_TICK };
+      note("Hiders score by lasting. Seekers score by tagging.");
+    }
+    if (state.mode === "killrace") note("First team to 50 kills.");
+  }
+
+  function specialTimerText() {
+    if (state.closing) return "";
+    if (isSoccerMode()) {
+      const left = Math.max(0, soccerDeadline() - state.time);
+      return `${state.soccerOT ? "Extra time" : "Full time"} ${formatClock(left)}`;
+    }
+    if (state.mode === "bossrush" && state.rush) {
+      const r = state.rush;
+      const wave = Math.min(r.waves.length, Math.max(1, r.index || 1));
+      const wait = r.left <= 0 && r.index < r.waves.length ? ` · next ${Math.ceil(Math.max(0, r.nextAt - state.time))}s` : "";
+      return `Wave ${wave}/${r.waves.length} · ${r.left} left${wait}`;
+    }
+    if (state.mode === "escort" && state.escort && state.escort.ship && state.escort.ship.alive) {
+      const left = Math.max(0, (WORLD.w - state.escort.goalW) - state.escort.ship.x);
+      const hp = state.escort.ship.maxHealth ? Math.round(100 * state.escort.ship.health / state.escort.ship.maxHealth) : 0;
+      return `Goal ${Math.round(left)} · ship ${hp}%`;
+    }
+    if (state.mode === "infection" && state.infect) {
+      const g = state.infect;
+      const n = infectCount();
+      const back = g.reverse > 0 ? ` · back ${Math.ceil(g.reverse)}s` : "";
+      return `Nest ${n}/${g.cols * g.rows}${back}`;
+    }
+    if (state.mode === "epicenter" && state.epic) {
+      const s = state.epic.scores;
+      return `Blue ${Math.floor(s.blue)} · ${Math.floor(s.red)} Red`;
+    }
+    if (state.mode === "killrace" && state.kills) {
+      return `Blue ${state.kills.blue || 0}/${KILL_RACE_GOAL} · ${state.kills.red || 0}/${KILL_RACE_GOAL} Red`;
+    }
+    if (state.mode === "hide" && state.hide) {
+      const left = Math.max(0, state.hide.next - state.time);
+      return `Hiders ${state.hide.green}/${HIDE_GOAL} · Seekers ${state.hide.red}/${HIDE_GOAL} · ${left.toFixed(0)}s`;
+    }
+    return "";
+  }
+
+  function paintWorldModes() {
+    if (state.mode === "escort" && state.escort) {
+      const e = state.escort;
+      TankfieldGL.rect(WORLD.w - e.goalW, 0, e.goalW, WORLD.h, rgbOf(TEAMS.blue.color), 0.18);
+    }
+    if (state.mode === "infection" && state.infect) {
+      const g = state.infect;
+      const col = rgbOf(TEAMS.boss.color);
+      for (let r = 0; r < g.rows; r++) {
+        for (let c = 0; c < g.cols; c++) {
+          if (!g.cells[r * g.cols + c]) continue;
+          TankfieldGL.rect(c * g.cw, r * g.ch, g.cw, g.ch, col, 0.22);
+        }
+      }
+    }
+    if (state.mode === "epicenter" && state.epic) {
+      for (const ring of state.epic.rings) {
+        const hex = ring.team && TEAMS[ring.team] ? TEAMS[ring.team].color : "#f0d848";
+        const col = rgbOf(hex);
+        TankfieldGL.shape(ring.x, ring.y, ring.r, 0, 0, col, col, 8, 0.16, 0.7);
+      }
+    }
+  }
+
+  function paintMinimapModes(mctx, mapX, mapY, s) {
+    if (state.mode === "escort" && state.escort) {
+      const e = state.escort;
+      mctx.fillStyle = TEAMS.blue.color;
+      mctx.globalAlpha = 0.28;
+      mctx.fillRect(mapX(WORLD.w - e.goalW), 0, (e.goalW / WORLD.w) * s, s);
+      mctx.globalAlpha = 1;
+    }
+    if (state.mode === "infection" && state.infect) {
+      const g = state.infect;
+      mctx.fillStyle = TEAMS.boss.color;
+      mctx.globalAlpha = 0.45;
+      for (let r = 0; r < g.rows; r++) {
+        for (let c = 0; c < g.cols; c++) {
+          if (!g.cells[r * g.cols + c]) continue;
+          mctx.fillRect(mapX(c * g.cw), mapY(r * g.ch), (g.cw / WORLD.w) * s, (g.ch / WORLD.h) * s);
+        }
+      }
+      mctx.globalAlpha = 1;
+    }
+    if (state.mode === "epicenter" && state.epic) {
+      for (const ring of state.epic.rings) {
+        mctx.beginPath();
+        mctx.arc(mapX(ring.x), mapY(ring.y), (ring.r / WORLD.w) * s, 0, TAU);
+        mctx.fillStyle = ring.team && TEAMS[ring.team] ? TEAMS[ring.team].color : "#f0d848";
+        mctx.globalAlpha = 0.35;
+        mctx.fill();
+        mctx.globalAlpha = 1;
+        mctx.strokeStyle = "#333";
+        mctx.lineWidth = 1;
+        mctx.stroke();
+      }
+    }
   }
 
   function soccerAutoTarget(tank, range) {
@@ -2941,7 +3511,9 @@
       const own = mine || "green";
       return splitTwoTeams(count, own, own === "red" ? "green" : "red");
     }
-    if (mode === "siege") return Array(count).fill("blue");
+    if (mode === "siege" || mode === "bossrush" || mode === "escort" || mode === "infection") return Array(count).fill("blue");
+    if ((mode === "killrace" || mode === "epicenter") && mine) return splitTwoTeams(count, mine, mine === "blue" ? "red" : "blue");
+    if (mode === "hide" && mine) return splitTwoTeams(count, mine, mine === "green" ? "red" : "green");
     if (mode === "teamhunt") return Array(count).fill(HUNTER_TEAM);
     return [];
   }
@@ -2995,6 +3567,12 @@
       soccer4: "4 Soccer",
       assault: "Assault",
       siege: "Siege",
+      bossrush: "Boss Rush",
+      escort: "Escort",
+      infection: "Infection",
+      epicenter: "Epicenter",
+      killrace: "Kill Race",
+      hide: "Hide and Seek",
       growth: "Growth",
       onehp: "1 HP",
       royale: "Battle Royale",
@@ -3034,7 +3612,7 @@
 
   function teamMode(mode) {
     const m = mode == null ? state.mode : mode;
-    return m === "tdm" || isFourTeamMode(m) || m === "tag" || m === "protect" || m === "domination" || m === "assault" || m === "siege" || m === "teamhunt" || isSoccerMode(m);
+    return m === "tdm" || isFourTeamMode(m) || m === "tag" || m === "protect" || m === "domination" || m === "assault" || m === "siege" || m === "teamhunt" || isSoccerMode(m) || m === "bossrush" || m === "escort" || m === "infection" || m === "epicenter" || m === "killrace" || m === "hide";
   }
 
   function healerAllowed(tank) {
@@ -3063,7 +3641,9 @@
   }
 
   function pickStartTeam(mode) {
-    if (mode === "siege") return "blue";
+    if (mode === "siege" || mode === "bossrush" || mode === "escort" || mode === "infection") return "blue";
+    if (mode === "killrace" || mode === "epicenter") return Math.random() < 0.5 ? "red" : "blue";
+    if (mode === "hide") return Math.random() < 0.5 ? "green" : "red";
     if (mode === "teamhunt") return HUNTER_TEAM;
     if (mode === "tdm" || mode === "domination") return Math.random() < 0.5 ? "red" : "blue";
     if (isSoccer4(mode)) return ["blue", "green", "red", "purple"][irand(0, 3)];
@@ -3075,7 +3655,7 @@
   }
 
   function createTank(opts) {
-    const pos = opts.pos || randomInWorld(200);
+    const pos = modeSpawn(opts) || opts.pos || randomInWorld(200);
     const tank = {
       type: "tank",
       id: opts.id || Math.random().toString(36).slice(2),
@@ -3652,6 +4232,7 @@
       if (isMazeVariant()) buildSoccerMaze();
       resetSoccerBall();
     }
+    bootModes();
     populateWorld();
     const team = pickStartTeam(state.mode);
     if (state.mode === "protect") spawnMotherships();
@@ -3810,6 +4391,11 @@
     notePlayerKill(tank, payout);
     if (isHuntMode()) refreshHunted();
     if (tank.boss || tank.fodder) onSiegeEnemyKilled();
+    if (tank.rush) onRushBossKilled();
+    if (tank.nestBoss) onNestBossKilled();
+    if (tank.nest) onNestFoeDown(tank);
+    noteKillRace(tank, credited);
+    noteHideKill(tank, credited);
     if (tank === state.player) {
       if (tank.mothership) {
         const body = state.pilotTank;
@@ -3835,7 +4421,8 @@
       }
       floater(tank.x, tank.y - tank.r - 8, `${TEAMS[tank.team] ? TEAMS[tank.team].name : ""} mothership down`);
       checkProtectClose();
-    } else if (!tank.closer && !tank.boss && !tank.fodder && !state.closing && !royaleLocked()) {
+      if (state.mode === "escort") escortLost();
+    } else if (!tank.closer && !tank.boss && !tank.fodder && !tank.noRespawn && !state.closing && !royaleLocked()) {
       const team = isTeamHunt() ? HUNTER_TEAM : tank.team;
       const kept = carryScore(deathScore);
       const focus = tank.aiFocus;
@@ -5173,7 +5760,9 @@
     if (isFourTeamMode()) return TEAM4.slice();
     if (state.mode === "assault") return ["blue", "green"];
     if (state.mode === "tag" || state.mode === "protect") return ["green", "red"];
-    if (state.mode === "siege") return ["blue"];
+    if (state.mode === "siege" || state.mode === "bossrush" || state.mode === "escort" || state.mode === "infection") return ["blue"];
+    if (state.mode === "hide") return ["green", "red"];
+    if (state.mode === "epicenter" || state.mode === "killrace") return ["blue", "red"];
     if (isSoccer4()) return ["blue", "green", "red", "purple"];
     if (isSoccerMode()) return ["blue", "green"];
     if (isTeamHunt()) return [HUNTER_TEAM, HUNTED_TEAM];
@@ -6595,7 +7184,15 @@
       shoot(tank, dt);
       return;
     }
+    if (tank.nest && !tank.boss) {
+      huntMarkAI(tank, dt, state.escort && state.escort.ship);
+      return;
+    }
     if (tank.boss || tank.fodder) {
+      if (tank.rush || tank.nestBoss) {
+        huntMarkAI(tank, dt, null);
+        return;
+      }
       const live = liveSanctuaries();
       if (tank.aiSanc && (!tank.aiSanc.alive || tank.aiSanc.sancFallen || tank.aiSanc.team !== "blue")) tank.aiSanc = null;
       if (!tank.aiSanc) tank.aiSanc = nearest(tank, live, 99999) || live[0] || null;
@@ -6667,6 +7264,10 @@
         }
       }
       if ((tx - tank.x) ** 2 + (ty - tank.y) ** 2 < 160 * 160) tank.aiT = 0;
+      if (tank.escort && state.escort) {
+        tx = state.escort.goalX;
+        ty = state.escort.goalY;
+      }
       if (state.maze) {
         const steered = steerAround(tank, tx, ty);
         tx = steered.x;
@@ -7542,7 +8143,12 @@
       beginRoyaleStorm();
     }
     if (isRoyale()) checkRoyale();
-    if (!state.closing && isSoccerMode() && state.time >= SOCCER_MATCH) finishSoccer();
+    if (!state.closing && isSoccerMode() && state.time >= soccerDeadline()) finishSoccer();
+    updateBossRush();
+    updateEscort();
+    updateInfection();
+    updateEpicenter(dt);
+    updateHide();
     if (!state.closing && state.mode !== "siege" && !isSoccerMode() && state.time >= FFA_CLOSE_AT) beginArenaClose("4 hours up. Starting a fresh server.");
     updateDoms(dt);
     updateAssault(dt);
@@ -7592,7 +8198,8 @@
       }
       tank.bodyHitT = Math.max(0, tank.bodyHitT - dt);
       if (tank.spawnProtect > 0) tank.spawnProtect = Math.max(0, tank.spawnProtect - dt);
-      const invading = tank.team && zoneAt(tank.x, tank.y) && zoneAt(tank.x, tank.y) !== tank.team;
+      const nestBurn = state.mode === "infection" && tank.team && tank.team !== "boss" && !tank.boss && !tank.fodder && infectAt(tank.x, tank.y);
+      const invading = (tank.team && zoneAt(tank.x, tank.y) && zoneAt(tank.x, tank.y) !== tank.team) || nestBurn;
       const inStorm = isRoyale() && royaleLocked() && !royaleInside(tank);
       if (tank.devGod && !(tank.dominator && tank.destroyed)) {
         tank.health = tank.maxHealth;
@@ -7608,7 +8215,7 @@
           if (tank === state.player) shake = Math.max(shake, 6);
           killTank(tank, null, "the red zone");
         } else {
-          let burn = (tank.maxHealth + (tank.maxShield || 0)) * (inStorm ? royaleBurnRate() : 0.32) * dt;
+          let burn = (tank.maxHealth + (tank.maxShield || 0)) * (inStorm ? royaleBurnRate() : nestBurn ? 0.1 : 0.32) * dt;
           if ((tank.shield || 0) > 0) {
             const soak = Math.min(tank.shield, burn);
             tank.shield -= soak;
@@ -7618,7 +8225,7 @@
           if (burn > 0) tank.health -= burn;
           tank.bodyHitT = 0.08;
           if (tank === state.player) shake = Math.max(shake, inStorm ? 3 : 4);
-          if (tank.health <= 0) killTank(tank, null, inStorm ? "the storm" : (state.mode === "siege" ? "the red zone" : isSoccerMode() ? `the ${zoneAt(tank.x, tank.y)} goal` : `the ${zoneAt(tank.x, tank.y)} base`));
+          if (tank.health <= 0) killTank(tank, null, inStorm ? "the storm" : nestBurn ? "the infection" : (state.mode === "siege" ? "the red zone" : isSoccerMode() ? `the ${zoneAt(tank.x, tank.y)} goal` : `the ${zoneAt(tank.x, tank.y)} base`));
         }
       } else {
         tank.health = Math.min(tank.maxHealth, tank.health + st.regen * dt);
@@ -7963,8 +8570,8 @@
         } else {
           els.closeTimer.textContent = `Hold ${live}/${need} to win · ${resetText}`;
         }
-      } else if (isSoccerMode()) {
-        els.closeTimer.textContent = `Full time ${formatClock(SOCCER_MATCH - state.time)}`;
+      } else if (specialTimerText()) {
+        els.closeTimer.textContent = specialTimerText();
       } else if (state.mode === "siege") {
         const wave = Math.max(1, (state.siegeWave || 0) + 1);
         const live = liveSanctuaries().length;
@@ -8103,7 +8710,7 @@
     } else if (isSoccerMode()) {
       const g = state.goals || {};
       const teams = soccerTeams();
-      rows.push({ color: "#3a3a3a", label: `Time left ${formatClock(SOCCER_MATCH - state.time)}`, sort: 1e9 });
+      rows.push({ color: "#3a3a3a", label: `Time left ${formatClock(Math.max(0, soccerDeadline() - state.time))}`, sort: 1e9 });
       for (const id of teams) {
         rows.push({ color: TEAMS[id].color, label: `${TEAMS[id].name} — ${g[id] || 0} goals`, sort: g[id] || 0 });
       }
@@ -8128,6 +8735,33 @@
       const remaining = state.siegeRemaining || 0;
       rows.push({ color: TEAMS.blue.color, label: `Blue — ${live}/${all} bases`, sort: live });
       rows.push({ color: TEAMS.boss.color, label: `Bosses — ${remaining} left`, sort: remaining });
+    } else if (state.mode === "bossrush" && state.rush) {
+      const r = state.rush;
+      rows.push({ color: TEAMS.blue.color, label: `Wave ${Math.min(r.waves.length, Math.max(1, r.index))} / ${r.waves.length}`, sort: r.index });
+      rows.push({ color: TEAMS.boss.color, label: `Bosses — ${r.left} left`, sort: r.left });
+    } else if (state.mode === "escort" && state.escort) {
+      const ship = state.escort.ship;
+      const hp = ship && ship.alive && ship.maxHealth ? ship.health / ship.maxHealth : 0;
+      const foes = (state.escort.defender || 0) + (state.escort.sentry || 0) + (state.escort.crasher || 0);
+      rows.push({ color: TEAMS.blue.color, label: `Mothership — ${Math.round(hp * 100)}%`, sort: hp });
+      rows.push({ color: TEAMS.boss.color, label: `Nest — ${foes}`, sort: foes });
+    } else if (state.mode === "infection" && state.infect) {
+      const n = infectCount();
+      rows.push({ color: TEAMS.boss.color, label: `Infection — ${n} tiles`, sort: n });
+      rows.push({ color: TEAMS.blue.color, label: state.infect.reverse > 0 ? `Pulling back — ${Math.ceil(state.infect.reverse)}s` : "Spreading", sort: state.infect.reverse || 0 });
+    } else if (state.mode === "epicenter" && state.epic) {
+      for (const id of ["blue", "red"]) {
+        const pts = Math.floor(state.epic.scores[id] || 0);
+        rows.push({ color: TEAMS[id].color, label: `${TEAMS[id].name} — ${pts}/${EPIC_GOAL}`, sort: pts });
+      }
+    } else if (state.mode === "killrace") {
+      for (const id of ["blue", "red"]) {
+        const n = (state.kills && state.kills[id]) || 0;
+        rows.push({ color: TEAMS[id].color, label: `${TEAMS[id].name} — ${n}/${KILL_RACE_GOAL}`, sort: n });
+      }
+    } else if (state.mode === "hide" && state.hide) {
+      rows.push({ color: TEAMS.green.color, label: `Hiders — ${state.hide.green}/${HIDE_GOAL}`, sort: state.hide.green });
+      rows.push({ color: TEAMS.red.color, label: `Seekers — ${state.hide.red}/${HIDE_GOAL}`, sort: state.hide.red });
     } else {
       return null;
     }
@@ -8823,6 +9457,7 @@
         TankfieldGL.shape(b.x, b.y, b.r * 0.38, 0.2, 5, ink, ink, 0, 1, 0);
       }
     }
+    paintWorldModes();
     if (!isRoyale() && state.mode !== "protect" && !isSoccerMode() && !isMazeCombatMode()) {
       TankfieldGL.shape(WORLD.w / 2, WORLD.h / 2, 700, 0, 0, NEST_COL, NEST_COL, 0, 0.08, 0);
     }
@@ -9166,6 +9801,7 @@
         paintZone("boss", L.wall.x1, L.wall.y0, L.red.x1 - L.wall.x1, L.wall.y1 - L.wall.y0);
       }
     }
+    paintMinimapModes(mctx, mapX, mapY, s);
     for (const d of state.doms) {
       mctx.beginPath();
       mctx.arc(mapX(d.x), mapY(d.y), 7, 0, TAU);
@@ -9487,10 +10123,16 @@
     protect: "Two motherships roam · random team · start at 45 · [N] skip to 45 · [H] to take control · win or 4 hours starts a fresh server",
     maze: "FFA · open L / Y / zig wall clusters · start at 45 · fresh server after 4 hours",
     domination: "Shoot the 4 dominators · last 30 seconds of damage decides the team · both teams turns it yellow · all 4 owned by one team wins · or 4 hours starts a fresh server",
-    soccer: "Green vs blue · shoot the ball into the other goal · most goals after 90 minutes wins · ball hurts tanks that touch it · goals reach the side edges · optional maze in the open field · then a fresh server",
-    soccer4: "Four teams · left blue, right green, top red, bottom purple · last touch scores · corners belong to the deeper side · most goals after 90 minutes wins · optional maze · then a fresh server",
+    soccer: "Green vs blue · shoot the ball into the other goal · the whole ball has to cross the line · most goals after 90 minutes wins · a tie adds 3 minutes · then a fresh server",
+    soccer4: "Four teams · left blue, right green, top red, bottom purple · last touch scores · the whole ball has to cross the line · corners belong to the deeper side · a tie adds 3 minutes · then a fresh server",
     assault: "Blue attacks Green · Blue spawns across a 360-wide perimeter ring · smaller maze · capture zones · start at 45 · Green wins in 10:00 if they hold 3/4 · win or 4 hours starts a fresh server",
     siege: "One team · four bases · bosses spawn behind the red ring and push in · yellow bases do not shoot · shoot them to restore · endless until all four bases fall",
+    bossrush: "Blue versus a ladder of bosses · packs, then named bosses, then one last boss · 10 seconds between waves · clear the list to win",
+    escort: "Keep the blue mothership alive until it reaches the far goal · crashers, sentries, and nest bosses spawn from the nest",
+    infection: "A nest spreads across the map · kill a nest boss to pull it back · clear it to one tile to win · if it covers the map, the infection wins",
+    epicenter: "Blue vs red · stand alone in a ring to score · a shared ring scores for nobody · first to 1000",
+    killrace: "Blue vs red · first team to 50 kills · the last hitter gets the point",
+    hide: "Hiders (green) gain a point every 30 seconds they last · seekers (red) gain a point per tag · first to 25",
     growth: "FFA · grow past 45 to 1000 · everyone starts at 45 · never below 45 · [N] skip to 45 · fresh server after 4 hours",
     onehp: "Everyone for themselves · 1 HP · no shields · health stats do nothing · medium map · start at 45 · fresh server after 4 hours",
     royale: "1 min prep · shrinking storm to a random point · closes fully · damage ramps · last tank wins · then a fresh server",
