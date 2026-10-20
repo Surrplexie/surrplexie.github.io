@@ -634,15 +634,16 @@
     const f = soccerField();
     const g = soccerGoalDepth();
     const r = rad || 0;
-    const penL = (f.x0 + g) - (x - r);
-    const penR = (x + r) - (f.x1 - g);
+    // A radius means the whole body has to clear the goal line, the way a real ball must.
+    const penL = (f.x0 + g) - (x + r);
+    const penR = (x - r) - (f.x1 - g);
     if (!isSoccer4()) {
       if (penL > 0) return "blue";
       if (penR > 0) return "green";
       return null;
     }
-    const penT = (f.y0 + g) - (y - r);
-    const penB = (y + r) - (f.y1 - g);
+    const penT = (f.y0 + g) - (y + r);
+    const penB = (y - r) - (f.y1 - g);
     let best = null;
     let bestP = 0;
     if (penL > bestP) { best = "blue"; bestP = penL; }
