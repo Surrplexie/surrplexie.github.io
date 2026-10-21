@@ -1829,6 +1829,7 @@
       out.regen = 0;
       out.maxShield = 0;
       out.shieldRegen = 0;
+      out.resist = 0;
     }
     return out;
   }
@@ -8200,7 +8201,11 @@
     if (tryTagHit(target, src)) return;
     if (target.spawnProtect > 0 && !(src && src.closer)) return;
     if (src && src.spawnProtect > 0 && !src.closer) return;
-    if (target.type === "tank" && !target.dominator && !target.mothership && !target.closer) {
+    const glass = target.type === "tank" && isOneHp() && !target.closer && !target.mothership && !target.dominator;
+    if (glass && amount > 0) {
+      target.shield = 0;
+      amount = Math.max(amount, (target.health || 0) + 1);
+    } else if (target.type === "tank" && !target.dominator && !target.mothership && !target.closer) {
       amount *= Math.max(0, 1 - (tankStats(target).resist || 0));
     }
     let left = amount;
@@ -8393,6 +8398,12 @@
           tank.y = clamp(tank.y, L.inner.y0 + 28, L.inner.y1 - 28);
           pushOutWalls(tank);
         }
+      }
+      if (isOneHp() && !tank.closer && !tank.mothership && !tank.dominator && !tank.devGod) {
+        tank.maxHealth = 1;
+        tank.health = Math.min(tank.health, 1);
+        tank.maxShield = 0;
+        tank.shield = 0;
       }
       tank.bodyHitT = Math.max(0, tank.bodyHitT - dt);
       if (tank.spawnProtect > 0) tank.spawnProtect = Math.max(0, tank.spawnProtect - dt);
