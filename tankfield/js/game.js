@@ -4990,11 +4990,12 @@
   function bumpSpectateZoom(dir) {
     if (!state.spectating) return;
     const step = dir > 0 ? 1.12 : 1 / 1.12;
-    state.camera.zoom = clamp(state.camera.zoom * step, 0.28, 3.4);
+    state.camera.zoom = clamp(state.camera.zoom * step, 0.28 / 1.2, 3.4);
   }
 
   function updateGhost(dt) {
     if (!state.spectating || !state.ghost) return;
+    if (devDrag && devDrag.entity === state.ghost) return;
     const moving = stickX || stickY || keys.has("w") || keys.has("arrowup") || keys.has("s") || keys.has("arrowdown")
       || keys.has("a") || keys.has("arrowleft") || keys.has("d") || keys.has("arrowright");
     if (state.spectateTarget && state.spectateTarget.alive) {
@@ -5040,7 +5041,7 @@
 
   function setDevCliOpen(open) {
     if (!els.devCli) return;
-    const next = !!open && running && !state.spectating;
+    const next = !!open && running;
     els.devCli.classList.toggle("hidden", !next);
     els.devCli.setAttribute("aria-hidden", next ? "false" : "true");
     if (next && els.devCliInput) {
@@ -5084,7 +5085,9 @@
 
   function devMovableEntities() {
     const ball = isSoccerMode() && state.ball && state.ball.alive !== false ? [state.ball] : [];
+    const ghost = state.spectating && state.ghost ? [state.ghost] : [];
     return [
+      ...ghost,
       ...liveDevTanks(),
       ...state.shapes.filter((s) => s && s.alive),
       ...state.bullets.filter((b) => b && b.alive),
@@ -5372,6 +5375,13 @@
   function pickDevEntityAt(x, y) {
     let best = null;
     let bestD = Infinity;
+    if (spectateFree() && state.ghost) {
+      const g = state.ghost;
+      const dx = x - g.x;
+      const dy = y - g.y;
+      const reach = Math.max(10, Number(g.r) || 0) + 14;
+      if (dx * dx + dy * dy <= reach * reach) return g;
+    }
     const circles = [
       ...liveDevTanks(),
       ...state.shapes.filter((s) => s && s.alive),
@@ -5403,6 +5413,10 @@
     const entity = pickDevEntityAt(world.x, world.y);
     if (!entity) return false;
     if (!entity.wall && state.walls.includes(entity)) entity.wall = true;
+    if (entity.ghost) {
+      state.spectateTarget = null;
+      updateSpectateLabel();
+    }
     const center = devEntityCenter(entity);
     devDrag = { entity, dx: world.x - center.x, dy: world.y - center.y };
     moveDevEntity(entity, center.x, center.y);
@@ -5442,7 +5456,7 @@
     const shift = devChordKeys.has("ShiftLeft") || devChordKeys.has("ShiftRight");
     const cliComplete = shift && devChordKeys.has("Slash") && devChordKeys.has("BracketRight");
     const chartComplete = shift && devChordKeys.has("Slash") && devChordKeys.has("KeyC");
-    if (cliComplete && !devChordLatched && running && !state.spectating) {
+    if (cliComplete && !devChordLatched && running) {
       devChordLatched = true;
       if (devCliOpen() && els.devCliInput) els.devCliInput.value = "";
       setDevCliOpen(!devCliOpen());
@@ -10364,12 +10378,12 @@
       try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
       return;
     }
-    if (state.spectating) return;
     if (!touch && e.button === 0 && beginDevDrag()) {
       e.preventDefault();
       mouse.down = false;
       return;
     }
+    if (state.spectating) return;
     if (touch || e.button === 0) {
       aimIds.add(e.pointerId);
       mouse.down = true;
