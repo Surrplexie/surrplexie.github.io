@@ -284,6 +284,7 @@
     armsRace: false,
     oneHp: false,
     zeroScore: false,
+    shapesEnabled: true,
     botCount: 20,
     paused: false,
     playOpts: null,
@@ -3639,6 +3640,7 @@
     const bits = [];
     if (live && m !== "onehp" && state.oneHp) bits.push("1 HP");
     if (live && m !== "ffazero" && state.zeroScore) bits.push("0 Score");
+    if (live && state.shapesEnabled === false && !isSoccerMode(m)) bits.push("No Shapes");
     if (bits.length) label += ", " + bits.join(", ");
     return label;
   }
@@ -3950,7 +3952,7 @@
 
   function populateWorld() {
     state.shapes = [];
-    if (isSoccerMode()) return;
+    if (!state.shapesEnabled || isSoccerMode()) return;
     const growth = isGrowthVariant();
     const smallOnly = isRoyale() && !growth;
     const squares = growth ? 320 : smallOnly ? 160 : 220;
@@ -4222,6 +4224,7 @@
     const addonOk = !opts.sandbox && state.mode !== "sandbox" && state.mode !== "onehp" && state.mode !== "ffazero";
     state.oneHp = addonOk && !!opts.oneHp;
     state.zeroScore = addonOk && !!opts.zeroScore;
+    state.shapesEnabled = opts.shapesEnabled !== false;
     state.playOpts = {
       ...opts,
       mode: state.mode,
@@ -4230,6 +4233,7 @@
       armsRace: state.armsRace,
       oneHp: state.oneHp,
       zeroScore: state.zeroScore,
+      shapesEnabled: state.shapesEnabled,
     };
     state.botCount = clampBotCount(opts.botCount != null ? opts.botCount : menuBotCount);
     applyWorldSize(state.mode);
@@ -7011,7 +7015,7 @@
   }
 
   function maintainShapes() {
-    if (isSoccerMode()) return;
+    if (!state.shapesEnabled || isSoccerMode()) return;
     const counts = { square: 0, triangle: 0, pentagon: 0, alpha: 0, crasher: 0 };
     for (const s of state.shapes) if (s.alive) counts[s.kind]++;
     const want = isGrowthVariant()
@@ -7122,6 +7126,7 @@
       armsRace: state.armsRace,
       oneHp: state.oneHp,
       zeroScore: state.zeroScore,
+      shapesEnabled: state.shapesEnabled,
       botCount: state.botCount,
       sandbox: state.mode === "sandbox",
     };
@@ -10399,7 +10404,7 @@
 
   let menuMode = "ffa";
   let menuTeam = "blue";
-  const menuVariants = { maze: false, growth: false, arms: false };
+  const menuVariants = { maze: false, growth: false, arms: false, shapes: true };
   const menuAddons = { onehp: false, zero: false };
   const MODE_HINT = {
     ffa: "Everyone for themselves · start at 45 · kills pay 80–90% · respawn 15–20% · fresh server after 4 hours",
@@ -10448,7 +10453,7 @@
     saveName(name);
     const bots = menuBotCount;
     if (menuMode === "sandbox") {
-      startGame(name, { sandbox: true, classId: "basic", botCount: bots });
+      startGame(name, { sandbox: true, classId: "basic", botCount: bots, shapesEnabled: menuVariants.shapes });
       return;
     }
     const addonsOn = !addonsLocked();
@@ -10459,6 +10464,7 @@
       armsRace: menuVariants.arms,
       oneHp: addonsOn && menuAddons.onehp,
       zeroScore: addonsOn && menuAddons.zero,
+      shapesEnabled: menuVariants.shapes,
       botCount: bots,
     });
   }
@@ -10500,6 +10506,7 @@
       const mapNote = menuMode === "assault" || menuMode === "siege" ? "" : " · medium map";
       extras.push("1 HP · no shields · health stats do nothing" + mapNote);
     }
+    if (!menuVariants.shapes && menuMode !== "soccer" && menuMode !== "soccer4") extras.push("no shapes");
     hint.textContent = [base, ...extras].filter(Boolean).join(" · ");
   }
 
@@ -10551,15 +10558,18 @@
   function syncVariantToggles() {
     const sandbox = menuMode === "sandbox";
     document.querySelectorAll(".variant-toggle").forEach((button) => {
-      const active = !sandbox && !!menuVariants[button.dataset.variant];
+      const key = button.dataset.variant;
+      const locked = sandbox && key !== "shapes";
+      const active = !!menuVariants[key] && !locked;
       button.classList.toggle("active", active);
       button.setAttribute("aria-pressed", active ? "true" : "false");
-      button.disabled = sandbox;
+      button.disabled = locked;
     });
   }
 
   function toggleMenuVariant(variant) {
-    if (menuMode === "sandbox" || !(variant in menuVariants)) return;
+    if (!(variant in menuVariants)) return;
+    if (menuMode === "sandbox" && variant !== "shapes") return;
     menuVariants[variant] = !menuVariants[variant];
     syncVariantToggles();
     updateModeHint();
