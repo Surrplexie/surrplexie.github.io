@@ -1680,7 +1680,7 @@
   }
 
   function startScore() {
-    if (isZeroFfa() || isHuntMode()) return 0;
+    if (isZeroFfa()) return 0;
     return xpForLevel(LEVEL_CAP);
   }
 
@@ -3778,7 +3778,7 @@
   }
 
   function applyLevel(tank, allowBelowFloor = false) {
-    if (!allowBelowFloor && !isZeroFfa() && !isHuntMode() && tank && !tank.devScoreOverrideFloor && (isGrowthVariant() || state.armsRace) && !tank.closer && !tank.mothership && !tank.dominator && !tank.boss && !tank.fodder) {
+    if (!allowBelowFloor && !isZeroFfa() && tank && !tank.devScoreOverrideFloor && (isGrowthVariant() || state.armsRace) && !tank.closer && !tank.mothership && !tank.dominator && !tank.boss && !tank.fodder) {
       tank.score = Math.max(Number(tank.score) || 0, xpForLevel(LEVEL_CAP));
     }
     const next = levelFromScore(tank.score);
@@ -7282,10 +7282,9 @@
     const topScore = Math.max(0, Math.floor(Number(lead.score) || 0));
     const tied = alive.filter((t) => Math.max(0, Math.floor(Number(t.score) || 0)) === topScore);
     const prev = state.hunted;
-    let next;
-    if (prev && prev.alive && tied.includes(prev)) next = prev;
-    else if (topScore <= 0) next = tied[irand(0, tied.length - 1)];
-    else next = lead;
+    const next = (prev && prev.alive && tied.includes(prev))
+      ? prev
+      : tied[irand(0, tied.length - 1)];
     if (next !== prev) {
       state.hunted = next;
       if (prev && prev.alive) applyLevel(prev);
@@ -10410,8 +10409,8 @@
     tdm: "Red vs blue · random team · start at 45 · kills pay 80–90% · respawn 15–20% · fresh server after 4 hours",
     "4tdm": "Four bases · random team · start at 45 · fresh server after 4 hours",
     "4tdm-maze": "Four edge bases · open maze walls meet the spawn areas · random team · start at 45 · fresh server after 4 hours",
-    manhunt: "Everyone hunts #1 · start at 0 · a random tank is hunted while scores are tied at 0 · hunted kill pays 95% · other kills 80–90% · a 0-score kill pays 10 · respawn 15–20% · hunted gets a small boost · fresh server after 4 hours",
-    teamhunt: "Hunted (red) vs every hunter (blue) · start at 0 · a random tank is hunted while scores are tied at 0 · new #1 joins the hunted team · hunted kill pays 95% · other kills 80–90% · a 0-score kill pays 10 · respawn 15–20% · fresh server after 4 hours",
+    manhunt: "Everyone hunts #1 · start at 45 · a random tied #1 is hunted · hunted kill pays 95% · other kills 80–90% · a 0-score kill pays 10 · respawn 15–20% · hunted gets a small boost · fresh server after 4 hours",
+    teamhunt: "Hunted (red) vs every hunter (blue) · start at 45 · a random tied #1 is hunted · new #1 joins the hunted team · hunted kill pays 95% · other kills 80–90% · a 0-score kill pays 10 · respawn 15–20% · fresh server after 4 hours",
     tag: "Shoot to convert · random team · start at 45 · win or 4 hours starts a fresh server",
     protect: "Two motherships roam · random team · start at 45 · [N] skip to 45 · [H] to take control · win or 4 hours starts a fresh server",
     maze: "FFA · open L / Y / zig wall clusters · start at 45 · fresh server after 4 hours",
@@ -10438,8 +10437,8 @@
     "tdm-ar": "Red vs blue · Arms Race class tree · random team · start at 45 · kills pay 80–90% · respawn 15–20% · fresh server after 4 hours",
     "4tdm-ar": "Four bases · Arms Race class tree · random team · start at 45 · fresh server after 4 hours",
     "royalemaze-ar": "Royale Maze · Arms Race class tree · L / Y / zig clusters · storm closes fully · last tank wins · then a fresh server",
-    "manhunt-ar": "Manhunt · Arms Race class tree · start at 0 · a random tank is hunted while scores are tied at 0 · hunted kill pays 95% · other kills 80–90% · a 0-score kill pays 10 · respawn 15–20% · fresh server after 4 hours",
-    "teamhunt-ar": "Team Manhunt · Arms Race class tree · start at 0 · a random tank is hunted while scores are tied at 0 · hunted vs hunter team · new #1 joins the hunted team · hunted kill pays 95% · other kills 80–90% · a 0-score kill pays 10 · respawn 15–20% · fresh server after 4 hours",
+    "manhunt-ar": "Manhunt · Arms Race class tree · start at 45 · a random tied #1 is hunted · hunted kill pays 95% · other kills 80–90% · a 0-score kill pays 10 · respawn 15–20% · fresh server after 4 hours",
+    "teamhunt-ar": "Team Manhunt · Arms Race class tree · start at 45 · a random tied #1 is hunted · hunted vs hunter team · new #1 joins the hunted team · hunted kill pays 95% · other kills 80–90% · a 0-score kill pays 10 · respawn 15–20% · fresh server after 4 hours",
   };
 
   function saveName(name) {
