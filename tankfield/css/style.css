@@ -177,6 +177,25 @@ body.live-portrait #edit-ingame {
   display: none !important;
 }
 
+/* Dev chart / CLI stay normal window size during Live 9:16 (usable in the side bars). */
+body.live-portrait #dev-chart {
+  left: 12px;
+  top: 10px;
+  width: min(980px, calc(var(--win-w, 100vw) - 268px));
+  height: min(520px, calc(var(--win-h, 100vh) - 236px));
+  max-width: none;
+  transform: none;
+  z-index: 45;
+}
+
+body.live-portrait #dev-cli {
+  left: 12px;
+  bottom: 224px;
+  width: min(380px, calc(var(--win-w, 100vw) - 24px));
+  transform: none;
+  z-index: 45;
+}
+
 body.dev-move #game,
 body.dev-move #hud {
   cursor: grab;

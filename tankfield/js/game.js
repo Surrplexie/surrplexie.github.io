@@ -2047,6 +2047,9 @@
     }
     document.documentElement.style.setProperty("--app-w", `${width}px`);
     document.documentElement.style.setProperty("--app-h", `${height}px`);
+    // Full browser size for debug tools (chart/CLI) so Live 9:16 does not shrink them.
+    document.documentElement.style.setProperty("--win-w", `${winW}px`);
+    document.documentElement.style.setProperty("--win-h", `${winH}px`);
     if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (glOn) TankfieldGL.resize(width, height, dpr);
     if (changed && running) {
