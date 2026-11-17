@@ -788,8 +788,9 @@
     const filled = Array.from({ length: rows }, () => Array(cols).fill(false));
     const f = soccerField();
     const g = soccerClearDepth();
-    const pitchL = f.x0 + g;
-    const pitchR = f.x1 - g;
+    const edgeGap = cube * 2;
+    const pitchL = f.x0 + g + edgeGap;
+    const pitchR = f.x1 - g - edgeGap;
     const cx = (f.x0 + f.x1) / 2;
     const cy = (f.y0 + f.y1) / 2;
     const clear = 720;
@@ -798,9 +799,10 @@
       for (let c = 0; c < cols; c++) {
         const x = x0 + c * cube;
         const y = y0 + r * cube;
-        const pitchT = isSoccer4() ? f.y0 + g : f.y0;
-        const pitchB = isSoccer4() ? f.y1 - g : f.y1;
+        const pitchT = (isSoccer4() ? f.y0 + g : f.y0) + edgeGap;
+        const pitchB = (isSoccer4() ? f.y1 - g : f.y1) - edgeGap;
         if (x < pitchL || x + cube > pitchR || y < pitchT || y + cube > pitchB) continue;
+        if (x < edgeGap || y < edgeGap || x + cube > WORLD.w - edgeGap || y + cube > WORLD.h - edgeGap) continue;
         const mx = x + cube * 0.5;
         const my = y + cube * 0.5;
         if ((mx - cx) * (mx - cx) + (my - cy) * (my - cy) <= clear * clear) continue;
@@ -827,6 +829,8 @@
     for (const [r, c] of open) {
       if (!crowded(r, c)) filled[r][c] = true;
     }
+    clearMazeBorder(filled, rows, cols, 2);
+    clearMazeNearMainWalls(filled, rows, cols, x0, y0, cube, 2);
     state.maze = { cube, x0, y0, cols, rows, filled };
     rebuildMazeWalls();
     miniWallRev++;
@@ -2542,14 +2546,40 @@
     return { cube, cols, rows, x0, y0 };
   }
 
-  function clearMazeBorder(filled, rows, cols) {
+  function clearMazeBorder(filled, rows, cols, rings = 2) {
+    const n = Math.max(1, Math.min(rings | 0, Math.floor(Math.min(rows, cols) / 2)));
     for (let r = 0; r < rows; r++) {
-      filled[r][0] = false;
-      filled[r][cols - 1] = false;
+      for (let k = 0; k < n; k++) {
+        filled[r][k] = false;
+        filled[r][cols - 1 - k] = false;
+      }
     }
     for (let c = 0; c < cols; c++) {
-      filled[0][c] = false;
-      filled[rows - 1][c] = false;
+      for (let k = 0; k < n; k++) {
+        filled[k][c] = false;
+        filled[rows - 1 - k][c] = false;
+      }
+    }
+  }
+
+  // Keep maze solids at least 2 cubes off the world / soccer sideline walls so
+  // tanks cannot get wedged in a 1-block corridor against the border.
+  function clearMazeNearMainWalls(filled, rows, cols, x0, y0, cube, minGapCubes = 2) {
+    const gap = cube * Math.max(2, minGapCubes | 0);
+    const f = isSoccerMode() && !isSoccer4() ? soccerField() : null;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (!filled[r][c]) continue;
+        const x = x0 + c * cube;
+        const y = y0 + r * cube;
+        if (x < gap || y < gap || x + cube > WORLD.w - gap || y + cube > WORLD.h - gap) {
+          filled[r][c] = false;
+          continue;
+        }
+        if (f && (y < f.y0 + gap || y + cube > f.y1 - gap)) {
+          filled[r][c] = false;
+        }
+      }
     }
   }
 
@@ -2557,9 +2587,10 @@
     const { cube, cols, rows, x0, y0 } = mazeGrid();
     const filled = Array.from({ length: rows }, () => Array(cols).fill(false));
     const edgeBases = state.mode === "tdm" || isFourTeamMode();
+    const margin = 2;
     const inside = edgeBases
-      ? (r, c) => r >= 0 && r < rows && c >= 0 && c < cols
-      : (r, c) => r > 1 && r < rows - 2 && c > 1 && c < cols - 2;
+      ? (r, c) => r >= margin && r < rows - margin && c >= margin && c < cols - margin
+      : (r, c) => r > margin && r < rows - margin - 1 && c > margin && c < cols - margin - 1;
     const key = (r, c) => r + "," + c;
     const shapes = [
       [[0, 0], [1, 0]],
@@ -2604,9 +2635,12 @@
       return false;
     };
     const tryPlace = (cells0, tries) => {
+      const lo = margin;
+      const hiR = rows - 1 - margin;
+      const hiC = cols - 1 - margin;
       for (let t = 0; t < tries; t++) {
-        const seedR = irand(edgeBases ? 0 : 2, edgeBases ? rows - 1 : rows - 3);
-        const seedC = irand(edgeBases ? 0 : 2, edgeBases ? cols - 1 : cols - 3);
+        const seedR = irand(lo, Math.max(lo, hiR));
+        const seedC = irand(lo, Math.max(lo, hiC));
         const cells = cells0.map(([dc, dr]) => [seedR + dr, seedC + dc]);
         const skip = new Set(cells.map(([r, c]) => key(r, c)));
         let ok = true;
@@ -2654,9 +2688,9 @@
           if (inLeft || inRight || inTop || inBottom) filled[r][c] = false;
         }
       }
-    } else {
-      clearMazeBorder(filled, rows, cols);
     }
+    clearMazeBorder(filled, rows, cols, 2);
+    clearMazeNearMainWalls(filled, rows, cols, x0, y0, cube, 2);
     state.maze = { cube, x0, y0, cols, rows, filled };
     rebuildMazeWalls();
   }
@@ -2707,7 +2741,8 @@
         if ((r - cr) * (r - cr) + (c - cc) * (c - cc) <= hole * hole) filled[r][c] = false;
       }
     }
-    clearMazeBorder(filled, rows, cols);
+    clearMazeBorder(filled, rows, cols, 2);
+    clearMazeNearMainWalls(filled, rows, cols, x0, y0, cube, 2);
     state.maze = { cube, x0, y0, cols, rows, filled };
     rebuildMazeWalls();
   }
