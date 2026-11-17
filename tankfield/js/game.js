@@ -9067,10 +9067,14 @@
     leaderSig = "";
     const teamRows = teamBoardRows();
     const playerRows = ranked.map((t) => {
-      const name = `${t.name}${t === state.hunted ? " · hunted" : ""}`;
+      const hunted = t === state.hunted;
+      const name = `${t.name}${hunted ? " · hunted" : ""}`;
       const tankName = getDef(t).name;
-      const label = `${name} - ${tankName}: ${formatScore(t.score)}`;
-      return `<li class="${t === state.player ? "you" : ""} ${t === state.hunted ? "hunted" : ""}"><div class="lb-fill" style="width:${clamp((t.score / top) * 100, 8, 100)}%;background:${t.color}"></div><span class="lb-row"><canvas class="lb-icon" width="24" height="24"></canvas><span class="lb-label" title="${escapeHtml(label)}">${escapeHtml(label)}</span></span></li>`;
+      const scoreText = formatScore(t.score);
+      const head = `${name} - ${tankName}`;
+      const full = `${head}: ${scoreText}`;
+      const fill = hunted ? "#e8b020" : t.color;
+      return `<li class="${t === state.player ? "you" : ""} ${hunted ? "hunted" : ""}"><div class="lb-fill" style="width:${clamp((t.score / top) * 100, 8, 100)}%;background:${fill}"></div><span class="lb-row"><canvas class="lb-icon" width="24" height="24"></canvas><span class="lb-name" title="${escapeHtml(full)}">${escapeHtml(head)}</span><span class="lb-score">${escapeHtml(scoreText)}</span></span></li>`;
     }).join("");
     els.leaders.innerHTML = (teamRows
       ? teamRows.map((r) =>
