@@ -4059,10 +4059,22 @@
     return used;
   }
 
+  function liveFillerNames() {
+    return !!(state.live || (state.playOpts && state.playOpts.live));
+  }
+
+  function nextLiveBotName() {
+    const used = takenNames();
+    let i = 1;
+    while (used.has("bot " + i)) i++;
+    return "Bot " + i;
+  }
+
   function uniqueBotName(prefer) {
     const used = takenNames();
     const want = String(prefer || "").trim();
     if (want && !used.has(want.toLowerCase())) return want;
+    if (liveFillerNames()) return nextLiveBotName();
     const pool = BOT_NAMES.filter((n) => !used.has(n.toLowerCase()));
     if (pool.length) return pool[irand(0, pool.length - 1)];
     let i = 2;
@@ -4070,9 +4082,21 @@
     return "Bot " + i;
   }
 
+  function renumberLiveFillerBots() {
+    if (!liveFillerNames()) return;
+    let n = 1;
+    for (const t of state.tanks) {
+      if (!t || !t.ai || t.closer || t.mothership || t.dominator || t.boss || t.fodder || t.hostOnly) continue;
+      if (t.liveOwnerId) continue;
+      t.name = `Bot ${n++}`;
+      t.liveDisplay = null;
+    }
+  }
+
   function spawnBots() {
     const used = takenNames();
-    const names = state.live
+    const numbered = liveFillerNames();
+    const names = numbered
       ? []
       : BOT_NAMES.filter((n) => !used.has(n.toLowerCase())).sort(() => Math.random() - 0.5);
     const mine = state.player && state.player.team;
@@ -4090,7 +4114,7 @@
           : null;
       const home = state.mode === "protect" ? mothershipOf(team) : null;
       const bot = createTank({
-        name: state.live ? (`Bot ${i + 1}`) : (names[i] || uniqueBotName()),
+        name: numbered ? (`Bot ${i + 1}`) : (names[i] || uniqueBotName()),
         ai: true,
         score,
         classId: "basic",
@@ -4427,6 +4451,7 @@
     state.pilotTank = player;
     state.tanks.push(player);
     spawnBots();
+    if (state.live) renumberLiveFillerBots();
     refreshHunted();
     state.camera.x = player.x;
     state.camera.y = player.y;
@@ -4532,6 +4557,7 @@
       const panel = document.getElementById("live-hud");
       if (panel) panel.classList.remove("hidden");
     }
+    renumberLiveFillerBots();
     // After HUD is visible so the toast isn't cleared by menu teardown.
     setTimeout(() => note("Live mode · chat joins free · gifts buy drama", 5000), 0);
     if (opts.liveDemo && window.TankfieldLiveBridge && typeof window.TankfieldLiveBridge.demoBurst === "function") {
@@ -4682,10 +4708,10 @@
 
   function resetLiveBotName(tank) {
     if (!tank) return;
-    tank.name = uniqueBotName();
     tank.liveOwnerId = null;
     tank.liveDisplay = null;
     tank.liveColor = null;
+    tank.name = liveFillerNames() ? nextLiveBotName() : uniqueBotName();
   }
 
   function restartLiveRound() {
