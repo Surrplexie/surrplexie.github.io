@@ -42,6 +42,62 @@ button, input, textarea, select, a {
   pointer-events: none;
 }
 
+/* Live TikTok 9:16 portrait frame (in-match only). */
+body.live-portrait {
+  background: #070707;
+}
+
+body.live-portrait #game,
+body.live-portrait #labels {
+  inset: auto;
+  left: var(--live-left, 0px);
+  top: var(--live-top, 0px);
+  width: var(--live-w, 100%);
+  height: var(--live-h, 100%);
+}
+
+body.live-portrait #live-hud {
+  left: calc(var(--live-left, 0px) + 10px);
+  top: calc(var(--live-top, 0px) + 10px);
+  width: min(260px, calc(var(--live-w, 100%) - 20px));
+}
+
+body.live-portrait #scoreboard {
+  top: calc(var(--live-top, 0px) + 10px);
+  right: auto;
+  left: calc(var(--live-left, 0px) + var(--live-w, 100%) - 12px);
+  transform: translateX(-100%);
+  width: min(220px, calc(var(--live-w, 100%) - 24px));
+}
+
+body.live-portrait #spectate-bar {
+  left: calc(var(--live-left, 0px) + var(--live-w, 100%) * 0.5);
+  top: calc(var(--live-top, 0px) + 10px);
+  max-width: calc(var(--live-w, 100%) - 24px);
+}
+
+body.live-portrait #notes {
+  left: calc(var(--live-left, 0px) + var(--live-w, 100%) * 0.5);
+  top: calc(var(--live-top, 0px) + 56px);
+  max-width: min(420px, calc(var(--live-w, 100%) - 24px));
+}
+
+body.live-portrait #spectate-bar:not(.hidden) ~ #notes {
+  top: calc(var(--live-top, 0px) + 56px);
+}
+
+body.live-portrait #minimap-wrap {
+  right: auto;
+  bottom: auto;
+  left: calc(var(--live-left, 0px) + var(--live-w, 100%) - 10px);
+  top: calc(var(--live-top, 0px) + var(--live-h, 100%) - 10px);
+  transform: translate(-100%, -100%);
+}
+
+body.live-portrait #edit-ingame {
+  display: none !important;
+}
+
 body.dev-move #game,
 body.dev-move #hud {
   cursor: grab;
