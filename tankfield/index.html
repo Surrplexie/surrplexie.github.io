@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <meta name="robots" content="noindex, nofollow" />
   <title>Tankfield</title>
-  <link rel="stylesheet" href="css/style.css?v=125" />
+  <link rel="stylesheet" href="css/style.css?v=126" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet" />
@@ -177,11 +177,17 @@
         </div>
         <div id="arena-drop" class="rule-drop arena-drop">
           <button type="button" id="arena-drop-btn" class="rule-drop-btn" aria-expanded="false" aria-haspopup="true" aria-controls="arena-drop-menu">Arena ▾</button>
-          <div id="arena-drop-menu" class="rule-drop-menu arena-drop-menu hidden" role="group" aria-label="Arena size">
+          <div id="arena-drop-menu" class="rule-drop-menu arena-drop-menu hidden" role="group" aria-label="Arena options">
             <div class="arena-slider-row">
               <span class="arena-slider-label">Size</span>
               <input id="arena-size" type="range" min="1" max="200" value="100" />
               <input id="arena-size-num" type="number" min="1" max="200" value="100" inputmode="numeric" aria-label="Arena size percent" />
+              <span class="arena-slider-unit">%</span>
+            </div>
+            <div id="shape-rate-row" class="arena-slider-row">
+              <span class="arena-slider-label">Shapes</span>
+              <input id="shape-rate" type="range" min="1" max="200" value="100" />
+              <input id="shape-rate-num" type="number" min="1" max="200" value="100" inputmode="numeric" aria-label="Shape spawn rate percent" />
               <span class="arena-slider-unit">%</span>
             </div>
           </div>
@@ -419,7 +425,7 @@
   <script src="js/gl.js?v=7"></script>
   <script src="js/defs.js?v=115"></script>
   <script src="js/sample-tree.js?v=3"></script>
-  <script src="js/game.js?v=173"></script>
+  <script src="js/game.js?v=174"></script>
   <script src="js/editor.js?v=111"></script>
 </body>
 </html>

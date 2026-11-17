@@ -155,6 +155,9 @@
     botNum: document.getElementById("bot-count-num"),
     arenaRange: document.getElementById("arena-size"),
     arenaNum: document.getElementById("arena-size-num"),
+    shapeRateRange: document.getElementById("shape-rate"),
+    shapeRateNum: document.getElementById("shape-rate-num"),
+    shapeRateRow: document.getElementById("shape-rate-row"),
     arenaDropBtn: document.getElementById("arena-drop-btn"),
     arenaDropMenu: document.getElementById("arena-drop-menu"),
     play: document.getElementById("play-btn"),
@@ -270,6 +273,7 @@
   let shake = 0;
   let menuBotCount = 20;
   let menuArenaScale = 1;
+  let menuShapeRate = 1;
 
   const state = {
     player: null,
@@ -292,6 +296,7 @@
     shapesEnabled: true,
     botCount: 20,
     arenaScale: 1,
+    shapeRate: 1,
     paused: false,
     playOpts: null,
     selectedColor: "#00b2e1",
@@ -3957,19 +3962,48 @@
     else note(`You assisted ${killer.name} in killing ${victimLabel(victim)}${isHuntMode() && victim === state.hunted ? " · hunted 95%" : ""}.`);
   }
 
+  function shapeRate() {
+    const n = Number(state.shapeRate);
+    return Number.isFinite(n) ? clamp(n, 0.01, 2) : 1;
+  }
+
+  function scaleShapeCount(n) {
+    const exact = Math.max(0, Number(n) || 0) * shapeRate();
+    if (exact <= 0) return 0;
+    if (exact < 1) return exact >= 0.5 ? 1 : 0;
+    return Math.round(exact);
+  }
+
+  function shapeInterval(lo, hi) {
+    return rand(lo, hi) / shapeRate();
+  }
+
+  function alphaShapeCap() {
+    const r = shapeRate();
+    if (r < 0.35) return 0;
+    if (r <= 1) return 1;
+    return Math.min(3, Math.round(1 + (r - 1) * 2));
+  }
+
   function populateWorld() {
     state.shapes = [];
     if (!state.shapesEnabled || isSoccerMode()) return;
     const growth = isGrowthVariant();
     const smallOnly = isRoyale() && !growth;
-    const squares = growth ? 320 : smallOnly ? 160 : 220;
-    const pentas = growth ? 12 : smallOnly ? 0 : 6;
-    const tris = growth ? irand(4, 8) : smallOnly ? irand(6, 10) : irand(1, 3);
+    const squares = scaleShapeCount(growth ? 320 : smallOnly ? 160 : 220);
+    const pentas = scaleShapeCount(growth ? 12 : smallOnly ? 0 : 6);
+    const tris = scaleShapeCount(growth ? irand(4, 8) : smallOnly ? irand(6, 10) : irand(1, 3));
     for (let i = 0; i < squares; i++) state.shapes.push(createShape("square"));
     for (let i = 0; i < tris; i++) state.shapes.push(createShape("triangle"));
     for (let i = 0; i < pentas; i++) state.shapes.push(createShape("pentagon", nestPos()));
-    if (!smallOnly && state.mode !== "protect" && !isMazeCombatMode() && state.mode !== "siege") state.shapes.push(createShape("alpha"));
-    if (!smallOnly) for (let i = 0; i < 2; i++) state.shapes.push(createShape("crasher"));
+    if (!smallOnly && state.mode !== "protect" && !isMazeCombatMode() && state.mode !== "siege") {
+      const alphas = alphaShapeCap();
+      for (let i = 0; i < alphas; i++) state.shapes.push(createShape("alpha"));
+    }
+    if (!smallOnly) {
+      const crashers = Math.max(0, scaleShapeCount(2));
+      for (let i = 0; i < crashers; i++) state.shapes.push(createShape("crasher"));
+    }
   }
 
   function takenNames() {
@@ -4237,6 +4271,11 @@
       0.01,
       2
     );
+    state.shapeRate = clamp(
+      opts.shapeRate != null ? Number(opts.shapeRate) : menuShapeRate,
+      0.01,
+      2
+    );
     state.playOpts = {
       ...opts,
       mode: state.mode,
@@ -4247,6 +4286,7 @@
       zeroScore: state.zeroScore,
       shapesEnabled: state.shapesEnabled,
       arenaScale: state.arenaScale,
+      shapeRate: state.shapeRate,
     };
     state.botCount = clampBotCount(opts.botCount != null ? opts.botCount : menuBotCount);
     applyWorldSize(state.mode);
@@ -4280,9 +4320,9 @@
     if (isRoyale(state.mode)) pickStormCenter();
     state.respawnAt = 0;
     state.alphaRespawnAt = 0;
-    state.pentagonAt = rand(6, 12);
-    state.triangleAt = rand(60, 180);
-    state.crasherAt = rand(60, 120);
+    state.pentagonAt = shapeInterval(6, 12);
+    state.triangleAt = shapeInterval(60, 180);
+    state.crasherAt = shapeInterval(60, 120);
     state.classDismissed = false;
     state.classOptions = [];
     state.hunted = null;
@@ -7044,11 +7084,13 @@
     if (!state.shapesEnabled || isSoccerMode()) return;
     const counts = { square: 0, triangle: 0, pentagon: 0, alpha: 0, crasher: 0 };
     for (const s of state.shapes) if (s.alive) counts[s.kind]++;
-    const want = isGrowthVariant()
+    const wantBase = isGrowthVariant()
       ? { square: 320, triangle: 6 }
       : isRoyale()
         ? { square: 160, triangle: 8 }
         : { square: 220 };
+    const want = {};
+    for (const kind of Object.keys(wantBase)) want[kind] = scaleShapeCount(wantBase[kind]);
     for (const kind of Object.keys(want)) {
       while (counts[kind] < want[kind]) {
         state.shapes.push(createShape(kind));
@@ -7056,32 +7098,47 @@
       }
     }
     if ((!isRoyale() || isGrowthVariant()) && state.time >= state.pentagonAt) {
-      const n = irand(2, 5);
-      const pCap = isGrowthVariant() ? 40 : 24;
+      const n = Math.max(0, scaleShapeCount(irand(2, 5)));
+      const pCap = Math.max(1, scaleShapeCount(isGrowthVariant() ? 40 : 24));
       for (let i = 0; i < n && counts.pentagon < pCap; i++) {
         state.shapes.push(createShape("pentagon", nestPos()));
         counts.pentagon++;
       }
-      state.pentagonAt = state.time + rand(7, 16);
+      state.pentagonAt = state.time + shapeInterval(7, 16);
     }
     if ((!isRoyale() || isGrowthVariant()) && state.time >= state.triangleAt) {
-      const n = irand(1, 5);
-      for (let i = 0; i < n && counts.triangle < 22; i++) {
+      const n = Math.max(0, scaleShapeCount(irand(1, 5)));
+      const tCap = Math.max(1, scaleShapeCount(22));
+      for (let i = 0; i < n && counts.triangle < tCap; i++) {
         state.shapes.push(createShape("triangle"));
         counts.triangle++;
       }
-      state.triangleAt = state.time + rand(60, 180);
+      state.triangleAt = state.time + shapeInterval(60, 180);
     }
     if ((!isRoyale() || isGrowthVariant()) && state.time >= (state.crasherAt || 0)) {
-      if (counts.crasher < 7) {
+      const cCap = Math.max(1, scaleShapeCount(7));
+      if (counts.crasher < cCap) {
         state.shapes.push(createShape("crasher"));
         counts.crasher++;
       }
-      state.crasherAt = state.time + rand(60, 120);
+      state.crasherAt = state.time + shapeInterval(60, 120);
     }
-    if (counts.alpha < 1 && state.mode !== "protect" && !isMazeCombatMode() && state.mode !== "siege" && !isRoyale() && state.alphaRespawnAt > 0 && state.time >= state.alphaRespawnAt) {
-      state.shapes.push(createShape("alpha"));
-      state.alphaRespawnAt = 0;
+    const aCap = alphaShapeCap();
+    if (
+      aCap > 0
+      && counts.alpha < aCap
+      && state.mode !== "protect"
+      && !isMazeCombatMode()
+      && state.mode !== "siege"
+      && !isRoyale()
+    ) {
+      if (state.alphaRespawnAt > 0 && state.time >= state.alphaRespawnAt) {
+        state.shapes.push(createShape("alpha"));
+        counts.alpha++;
+        state.alphaRespawnAt = counts.alpha < aCap ? state.time + shapeInterval(25, 55) : 0;
+      } else if (state.alphaRespawnAt <= 0) {
+        state.alphaRespawnAt = state.time + shapeInterval(6, 18);
+      }
     }
   }
 
@@ -7155,6 +7212,7 @@
       shapesEnabled: state.shapesEnabled,
       botCount: state.botCount,
       arenaScale: state.arenaScale,
+      shapeRate: state.shapeRate,
       sandbox: state.mode === "sandbox",
     };
     startGame(state.spawnName, opts);
@@ -8274,7 +8332,7 @@
       }
       target.alive = false;
       burst(target.x, target.y, target.color, target.kind === "alpha" ? 36 : 12, 180);
-      if (target.kind === "alpha") state.alphaRespawnAt = state.time + rand(60, 120);
+      if (target.kind === "alpha") state.alphaRespawnAt = state.time + shapeInterval(60, 120);
       if (target.type === "shape") {
         const payout = applyKillScore(target, target.score, src, target.x, target.y);
         if (target.kind === "alpha") notePlayerKill(target, payout);
@@ -10478,6 +10536,7 @@
     saveName(name);
     const bots = menuBotCount;
     const arenaScale = menuArenaScale;
+    const shapeRate = menuShapeRate;
     if (menuMode === "sandbox") {
       startGame(name, {
         sandbox: true,
@@ -10485,6 +10544,7 @@
         botCount: bots,
         shapesEnabled: menuVariants.shapes,
         arenaScale,
+        shapeRate,
       });
       return;
     }
@@ -10499,6 +10559,7 @@
       shapesEnabled: menuVariants.shapes,
       botCount: bots,
       arenaScale,
+      shapeRate,
     });
   }
 
@@ -10513,6 +10574,8 @@
     if (row) row.classList.add("hidden");
     syncVariantToggles();
     syncRuleAddons();
+    syncShapeRateRow();
+    syncArenaDrop();
     updateModeHint();
   }
 
@@ -10541,6 +10604,7 @@
     }
     if (!menuVariants.shapes && menuMode !== "soccer" && menuMode !== "soccer4") extras.push("no shapes");
     if (arenaPct() !== 100) extras.push(`arena ${arenaPct()}%`);
+    if (!shapesRateLocked() && shapeRatePct() !== 100) extras.push(`shape rate ${shapeRatePct()}%`);
     hint.textContent = [base, ...extras].filter(Boolean).join(" · ");
   }
 
@@ -10606,6 +10670,8 @@
     if (menuMode === "sandbox" && variant !== "shapes") return;
     menuVariants[variant] = !menuVariants[variant];
     syncVariantToggles();
+    syncShapeRateRow();
+    syncArenaDrop();
     updateModeHint();
   }
 
@@ -10626,9 +10692,24 @@
     return Math.round(clamp(menuArenaScale, 0.01, 2) * 100);
   }
 
+  function shapeRatePct() {
+    return Math.round(clamp(menuShapeRate, 0.01, 2) * 100);
+  }
+
+  function shapesRateLocked() {
+    return !menuVariants.shapes || menuMode === "soccer" || menuMode === "soccer4";
+  }
+
   function arenaButtonLabel() {
-    const pct = arenaPct();
-    return pct === 100 ? "Arena ▾" : `Arena ${pct}% ▾`;
+    const bits = [];
+    if (arenaPct() !== 100) bits.push(`Size ${arenaPct()}%`);
+    if (!shapesRateLocked() && shapeRatePct() !== 100) bits.push(`Shapes ${shapeRatePct()}%`);
+    return (bits.length ? bits.join(" · ") : "Arena") + " ▾";
+  }
+
+  function arenaDropActive() {
+    const open = !!(els.arenaDropMenu && !els.arenaDropMenu.classList.contains("hidden"));
+    return open || arenaPct() !== 100 || (!shapesRateLocked() && shapeRatePct() !== 100);
   }
 
   function setArenaMenu(open) {
@@ -10638,15 +10719,24 @@
     const show = !!open;
     menu.classList.toggle("hidden", !show);
     btn.setAttribute("aria-expanded", show ? "true" : "false");
-    btn.classList.toggle("active", show || arenaPct() !== 100);
+    btn.classList.toggle("active", show || arenaDropActive());
+    syncShapeRateRow();
+  }
+
+  function syncShapeRateRow() {
+    const locked = shapesRateLocked();
+    if (els.shapeRateRow) els.shapeRateRow.classList.toggle("is-disabled", locked);
+    if (els.shapeRateRange) els.shapeRateRange.disabled = locked;
+    if (els.shapeRateNum) els.shapeRateNum.disabled = locked;
   }
 
   function syncArenaDrop() {
     const btn = els.arenaDropBtn;
     if (btn) {
       btn.textContent = arenaButtonLabel();
-      btn.classList.toggle("active", !!(els.arenaDropMenu && !els.arenaDropMenu.classList.contains("hidden")) || arenaPct() !== 100);
+      btn.classList.toggle("active", arenaDropActive());
     }
+    syncShapeRateRow();
   }
 
   function setMenuArenaPct(n) {
@@ -10657,6 +10747,16 @@
     syncArenaDrop();
     updateModeHint();
     try { localStorage.setItem("tankfield-arena", String(pct)); } catch (err) {}
+  }
+
+  function setMenuShapeRatePct(n) {
+    const pct = clamp(Math.round(Number(n) || 100), 1, 200);
+    menuShapeRate = pct / 100;
+    if (els.shapeRateRange) els.shapeRateRange.value = String(pct);
+    if (els.shapeRateNum) els.shapeRateNum.value = String(pct);
+    syncArenaDrop();
+    updateModeHint();
+    try { localStorage.setItem("tankfield-shape-rate", String(pct)); } catch (err) {}
   }
 
   function bindArenaSize() {
@@ -10671,6 +10771,18 @@
       });
       els.arenaNum.addEventListener("change", () => setMenuArenaPct(els.arenaNum.value || 100));
       els.arenaNum.addEventListener("keydown", (e) => { if (e.key === "Enter") playSelected(); });
+    }
+    if (els.shapeRateRange) {
+      els.shapeRateRange.addEventListener("input", () => setMenuShapeRatePct(els.shapeRateRange.value));
+    }
+    if (els.shapeRateNum) {
+      els.shapeRateNum.addEventListener("input", () => {
+        const raw = els.shapeRateNum.value;
+        if (raw === "") return;
+        setMenuShapeRatePct(raw);
+      });
+      els.shapeRateNum.addEventListener("change", () => setMenuShapeRatePct(els.shapeRateNum.value || 100));
+      els.shapeRateNum.addEventListener("keydown", (e) => { if (e.key === "Enter") playSelected(); });
     }
   }
 
@@ -10854,6 +10966,13 @@
     else syncArenaDrop();
   } catch (err) {
     syncArenaDrop();
+  }
+  try {
+    const savedShapes = localStorage.getItem("tankfield-shape-rate");
+    if (savedShapes != null) setMenuShapeRatePct(savedShapes);
+    else syncShapeRateRow();
+  } catch (err) {
+    syncShapeRateRow();
   }
   state.camera.x = WORLD.w / 2;
   state.camera.y = WORLD.h / 2;
