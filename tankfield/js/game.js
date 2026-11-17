@@ -153,6 +153,10 @@
     name: document.getElementById("name-input"),
     botRange: document.getElementById("bot-count"),
     botNum: document.getElementById("bot-count-num"),
+    arenaRange: document.getElementById("arena-size"),
+    arenaNum: document.getElementById("arena-size-num"),
+    arenaDropBtn: document.getElementById("arena-drop-btn"),
+    arenaDropMenu: document.getElementById("arena-drop-menu"),
     play: document.getElementById("play-btn"),
     workshopBtn: document.getElementById("workshop-btn"),
     again: document.getElementById("again-btn"),
@@ -265,6 +269,7 @@
   let running = false;
   let shake = 0;
   let menuBotCount = 20;
+  let menuArenaScale = 1;
 
   const state = {
     player: null,
@@ -286,6 +291,7 @@
     zeroScore: false,
     shapesEnabled: true,
     botCount: 20,
+    arenaScale: 1,
     paused: false,
     playOpts: null,
     selectedColor: "#00b2e1",
@@ -2742,22 +2748,22 @@
     note("You will be invulnerable until you move or shoot.");
   }
 
+  function arenaScale() {
+    const n = Number(state.arenaScale);
+    return Number.isFinite(n) ? clamp(n, 0.01, 2) : 1;
+  }
+
   function applyWorldSize(mode) {
-    if (mode === "assault") {
-      const s = irand(6750, 9000);
-      WORLD.w = s;
-      WORLD.h = s;
-    } else if (mode === "siege") {
-      const s = irand(8000, 9000);
-      WORLD.w = s;
-      WORLD.h = s;
-    } else if (mode === "onehp" || isRoyale(mode) || state.oneHp) {
-      WORLD.w = 8200;
-      WORLD.h = 8200;
-    } else {
-      WORLD.w = WORLD_OPEN;
-      WORLD.h = WORLD_OPEN;
-    }
+    let base;
+    if (mode === "assault") base = irand(6750, 9000);
+    else if (mode === "siege") base = irand(8000, 9000);
+    else if (mode === "onehp" || isRoyale(mode) || state.oneHp) base = 8200;
+    else base = WORLD_OPEN;
+    // Scale the arena bounds only. Entity / base / maze cell sizes stay fixed;
+    // placements that use WORLD fractions move with the new map size.
+    const s = Math.max(100, Math.round(base * arenaScale()));
+    WORLD.w = s;
+    WORLD.h = s;
   }
 
   function holdPoint(tank, goal, radius) {
@@ -4226,6 +4232,11 @@
     state.oneHp = addonOk && !!opts.oneHp;
     state.zeroScore = addonOk && !!opts.zeroScore;
     state.shapesEnabled = opts.shapesEnabled !== false;
+    state.arenaScale = clamp(
+      opts.arenaScale != null ? Number(opts.arenaScale) : menuArenaScale,
+      0.01,
+      2
+    );
     state.playOpts = {
       ...opts,
       mode: state.mode,
@@ -4235,6 +4246,7 @@
       oneHp: state.oneHp,
       zeroScore: state.zeroScore,
       shapesEnabled: state.shapesEnabled,
+      arenaScale: state.arenaScale,
     };
     state.botCount = clampBotCount(opts.botCount != null ? opts.botCount : menuBotCount);
     applyWorldSize(state.mode);
@@ -4441,7 +4453,14 @@
       : killPoolFromScore(deathScore, huntedKill);
     const payout = applyKillScore(tank, pool, killer, tank.x, tank.y);
     const credited = payout.killer;
-    tank.killedBy = cause || (credited ? credited.name : killer ? killer.name : "a polygon");
+    const killerName = killer && killer.type === "tank" && killer.name
+      ? killer.name
+      : killer && killer.type === "shape"
+        ? "a polygon"
+        : killer && killer.name
+          ? killer.name
+          : "a polygon";
+    tank.killedBy = cause || (credited ? credited.name : killerName);
     if (credited) {
       state.lastKiller = credited;
       credited.kills = (credited.kills || 0) + 1;
@@ -4600,6 +4619,8 @@
     }
     const shares = [];
     let sum = 0;
+    // Only living tanks claim. Dead chasers drop out so a later living
+    // group (or a shape finish with remaining living hitters) splits 100%.
     for (const [tank, amt] of totals) {
       if (!tank || tank.type !== "tank" || !tank.alive || tank.closer) continue;
       shares.push({ tank, amt });
@@ -4611,10 +4632,14 @@
   function applyKillScore(target, total, fallback, x, y) {
     total = Math.max(0, Math.floor(total));
     const claimable = (t) => t && t.alive && !t.closer && t.type === "tank";
-    const fb = claimable(dealerOf(fallback) || fallback) ? (dealerOf(fallback) || fallback) : null;
+    const raw = dealerOf(fallback) || fallback;
+    const fb = claimable(raw) ? raw : null;
     const me = state.player;
     if (total <= 0) return { killer: fb, playerAmt: 0 };
     const { shares, sum } = damageShares(target);
+    // Living tank damagers always take the full pool — even when a shape
+    // (or anything non-tank) lands the finishing blow. Shapes never gain score.
+    // If every prior hitter is dead and the finisher isn't a tank, the pool vanishes.
     if (sum <= 0 || !shares.length) {
       if (fb) giveScore(fb, total, x, y);
       return { killer: fb, playerAmt: fb === me ? total : 0 };
@@ -7129,6 +7154,7 @@
       zeroScore: state.zeroScore,
       shapesEnabled: state.shapesEnabled,
       botCount: state.botCount,
+      arenaScale: state.arenaScale,
       sandbox: state.mode === "sandbox",
     };
     startGame(state.spawnName, opts);
@@ -8651,7 +8677,9 @@
             return;
           }
           damage(s, tankStats(a).bodyDamage * 0.85, a);
-          damage(a, s.kind === "alpha" ? 18 : s.kind === "pentagon" ? 8 : 5, null);
+          // Pass the shape so death attribution is "a polygon"; score still
+          // pays living tank damagers via applyKillScore (shapes never claim).
+          damage(a, s.kind === "alpha" ? 18 : s.kind === "pentagon" ? 8 : 5, s);
           a.bodyHitT = 0.18;
         }
       });
@@ -10449,8 +10477,15 @@
     const name = trimNick(els.name && els.name.value, "Unnamed Tank");
     saveName(name);
     const bots = menuBotCount;
+    const arenaScale = menuArenaScale;
     if (menuMode === "sandbox") {
-      startGame(name, { sandbox: true, classId: "basic", botCount: bots, shapesEnabled: menuVariants.shapes });
+      startGame(name, {
+        sandbox: true,
+        classId: "basic",
+        botCount: bots,
+        shapesEnabled: menuVariants.shapes,
+        arenaScale,
+      });
       return;
     }
     const addonsOn = !addonsLocked();
@@ -10463,6 +10498,7 @@
       zeroScore: addonsOn && menuAddons.zero,
       shapesEnabled: menuVariants.shapes,
       botCount: bots,
+      arenaScale,
     });
   }
 
@@ -10504,6 +10540,7 @@
       extras.push("1 HP · no shields · health stats do nothing" + mapNote);
     }
     if (!menuVariants.shapes && menuMode !== "soccer" && menuMode !== "soccer4") extras.push("no shapes");
+    if (arenaPct() !== 100) extras.push(`arena ${arenaPct()}%`);
     hint.textContent = [base, ...extras].filter(Boolean).join(" · ");
   }
 
@@ -10585,9 +10622,62 @@
     }
   }
 
+  function arenaPct() {
+    return Math.round(clamp(menuArenaScale, 0.01, 2) * 100);
+  }
+
+  function arenaButtonLabel() {
+    const pct = arenaPct();
+    return pct === 100 ? "Arena ▾" : `Arena ${pct}% ▾`;
+  }
+
+  function setArenaMenu(open) {
+    const menu = els.arenaDropMenu;
+    const btn = els.arenaDropBtn;
+    if (!menu || !btn) return;
+    const show = !!open;
+    menu.classList.toggle("hidden", !show);
+    btn.setAttribute("aria-expanded", show ? "true" : "false");
+    btn.classList.toggle("active", show || arenaPct() !== 100);
+  }
+
+  function syncArenaDrop() {
+    const btn = els.arenaDropBtn;
+    if (btn) {
+      btn.textContent = arenaButtonLabel();
+      btn.classList.toggle("active", !!(els.arenaDropMenu && !els.arenaDropMenu.classList.contains("hidden")) || arenaPct() !== 100);
+    }
+  }
+
+  function setMenuArenaPct(n) {
+    const pct = clamp(Math.round(Number(n) || 100), 1, 200);
+    menuArenaScale = pct / 100;
+    if (els.arenaRange) els.arenaRange.value = String(pct);
+    if (els.arenaNum) els.arenaNum.value = String(pct);
+    syncArenaDrop();
+    updateModeHint();
+    try { localStorage.setItem("tankfield-arena", String(pct)); } catch (err) {}
+  }
+
+  function bindArenaSize() {
+    if (els.arenaRange) {
+      els.arenaRange.addEventListener("input", () => setMenuArenaPct(els.arenaRange.value));
+    }
+    if (els.arenaNum) {
+      els.arenaNum.addEventListener("input", () => {
+        const raw = els.arenaNum.value;
+        if (raw === "") return;
+        setMenuArenaPct(raw);
+      });
+      els.arenaNum.addEventListener("change", () => setMenuArenaPct(els.arenaNum.value || 100));
+      els.arenaNum.addEventListener("keydown", (e) => { if (e.key === "Enter") playSelected(); });
+    }
+  }
+
   if (els.start) {
     els.start.addEventListener("click", (e) => {
       if (!e.target.closest("#rule-drop")) setRuleMenu(false);
+      if (!e.target.closest("#arena-drop")) setArenaMenu(false);
       const btn = e.target.closest("button");
       if (!btn) return;
       if (btn.id === "play-btn") playSelected();
@@ -10598,6 +10688,9 @@
       } else if (btn.id === "rule-drop-btn") {
         const menu = document.getElementById("rule-drop-menu");
         setRuleMenu(menu && menu.classList.contains("hidden"));
+      } else if (btn.id === "arena-drop-btn") {
+        const menu = els.arenaDropMenu;
+        setArenaMenu(menu && menu.classList.contains("hidden"));
       } else if (btn.classList.contains("rule-opt")) {
         toggleMenuAddon(btn.dataset.addon);
       } else if (btn.classList.contains("server-row")) {
@@ -10747,12 +10840,20 @@
     }
   }
   bindBotCount();
+  bindArenaSize();
   try {
     const savedBots = localStorage.getItem("tankfield-bots");
     if (savedBots != null) setMenuBotCount(savedBots);
     else refreshBotCounts();
   } catch (err) {
     refreshBotCounts();
+  }
+  try {
+    const savedArena = localStorage.getItem("tankfield-arena");
+    if (savedArena != null) setMenuArenaPct(savedArena);
+    else syncArenaDrop();
+  } catch (err) {
+    syncArenaDrop();
   }
   state.camera.x = WORLD.w / 2;
   state.camera.y = WORLD.h / 2;
