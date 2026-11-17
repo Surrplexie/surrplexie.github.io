@@ -833,7 +833,7 @@
 
   function resetSoccerBall() {
     const f = soccerField();
-    state.ball = {
+    const next = {
       type: "ball",
       name: "Ball",
       x: (f.x0 + f.x1) / 2,
@@ -845,6 +845,15 @@
       lastTeam: null,
       prevTeam: null,
     };
+    // Keep spectate/camera on the same object across kickoffs.
+    if (state.ball) {
+      Object.assign(state.ball, next);
+    } else {
+      state.ball = next;
+    }
+    if (state.spectating && state.spectateTarget && state.spectateTarget.type === "ball") {
+      state.spectateTarget = state.ball;
+    }
   }
 
   function scoreSoccer(zone) {
@@ -1831,6 +1840,30 @@
       out.moveSpeed *= 1.08;
       out.reload = Math.max(0.08, out.reload * 0.9);
       out.fov *= 1.05;
+    }
+    if (tank && state.live) {
+      const t = state.time;
+      if (tank.liveShieldUntil && t < tank.liveShieldUntil) {
+        out.maxShield = Math.max(out.maxShield, out.maxHealth * 0.35);
+        out.shieldRegen = Math.max(out.shieldRegen, 18);
+        out.resist = Math.max(out.resist || 0, 0.22);
+      }
+      if (tank.liveDamageUntil && t < tank.liveDamageUntil) {
+        out.bodyDamage *= 1.12;
+        out.bulletDamage *= 1.12;
+      }
+      if (tank.liveOverdriveUntil && t < tank.liveOverdriveUntil) {
+        out.bodyDamage *= 1.28;
+        out.bulletDamage *= 1.28;
+        out.bulletPen *= 1.12;
+        out.moveSpeed *= 1.14;
+        out.reload = Math.max(0.06, out.reload * 0.82);
+        out.maxHealth *= 1.18;
+      } else if (tank.liveFatigueUntil && t < tank.liveFatigueUntil) {
+        out.bodyDamage *= 0.88;
+        out.bulletDamage *= 0.88;
+        out.moveSpeed *= 0.9;
+      }
     }
     if (growthTank) {
       out.fov *= 1 + Math.min(0.85, Math.max(0, (tank.r || 22) - 28) / 140);
@@ -4039,7 +4072,9 @@
 
   function spawnBots() {
     const used = takenNames();
-    const names = BOT_NAMES.filter((n) => !used.has(n.toLowerCase())).sort(() => Math.random() - 0.5);
+    const names = state.live
+      ? []
+      : BOT_NAMES.filter((n) => !used.has(n.toLowerCase())).sort(() => Math.random() - 0.5);
     const mine = state.player && state.player.team;
     const teams = botTeamsFor(state.mode, mine, state.botCount);
     const nBots = clampBotCount(state.botCount);
@@ -4055,7 +4090,7 @@
           : null;
       const home = state.mode === "protect" ? mothershipOf(team) : null;
       const bot = createTank({
-        name: names[i] || uniqueBotName(),
+        name: state.live ? (`Bot ${i + 1}`) : (names[i] || uniqueBotName()),
         ai: true,
         score,
         classId: "basic",
@@ -4336,6 +4371,9 @@
     state.classDismissed = false;
     state.classOptions = [];
     state.hunted = null;
+    state.live = !!opts.live;
+    state.liveCamTarget = null;
+    state.liveCamUntil = 0;
     state.mothership = null;
     state.pilotTank = null;
     state.closing = false;
@@ -4447,6 +4485,7 @@
       if (reopenChart) setDevChartOpen(true);
       try { renderStats(); } catch (err) { console.error(err); }
       try { renderClassPanel(); } catch (err) { console.error(err); }
+      if (state.live) enterLiveHostMode(opts);
       render();
     } catch (err) {
       console.error(err);
@@ -4454,6 +4493,228 @@
       if (els.hud) els.hud.classList.add("hidden");
       if (els.start) els.start.classList.remove("hidden");
     }
+  }
+
+  function enterLiveHostMode(opts = {}) {
+    const host = state.player;
+    if (host) {
+      host.alive = false;
+      host.noRespawn = true;
+      host.hostOnly = true;
+      host.deadHandled = true;
+      host.ai = false;
+      clearOwnedShots(host);
+      state.tanks = state.tanks.filter((t) => t !== host);
+    }
+    beginSpectate();
+    placeGhost(WORLD.w / 2, WORLD.h / 2);
+    enterFreeCam();
+    if (els.spectateAgain) els.spectateAgain.classList.add("hidden");
+    if (els.spectateDevRespawn) els.spectateDevRespawn.classList.add("hidden");
+    if (els.spectateLabel) els.spectateLabel.textContent = "Live host · free cam · chat claims tanks";
+    document.body.classList.add("live-host");
+    if (els.arenaMode) els.arenaMode.textContent = `${modeLabel()} · LIVE`;
+    note("Live mode · chat joins free · gifts buy drama", 5000);
+    const liveApi = window.TankfieldLive;
+    if (liveApi && typeof liveApi.activate === "function") {
+      liveApi.activate({
+        capacity: state.botCount,
+        mode: state.mode,
+        armsRace: !!state.armsRace,
+        growthVariant: !!state.growthVariant,
+      });
+    }
+    if (opts.liveDemo && window.TankfieldLiveBridge && typeof window.TankfieldLiveBridge.demoBurst === "function") {
+      setTimeout(() => window.TankfieldLiveBridge.demoBurst(), 600);
+    }
+  }
+
+  function liveRerollPool(tank, similar) {
+    const ids = Object.keys(TankCatalog.tanks || {}).filter((id) => {
+      const def = TankCatalog.tanks[id];
+      if (!def) return false;
+      if (def.arms && !isArmsMode()) return false;
+      if (String(id).startsWith("custom")) return false;
+      if (def.boss || def.dominator || def.mothership) return false;
+      if (/closer|sanctuary|dom_|arena_|assault_guard|mothership/i.test(id)) return false;
+      const need = def.needLevel || 1;
+      if (need > 45) return false;
+      return true;
+    });
+    if (!ids.length) return "basic";
+    if (!similar || !tank) return ids[irand(0, ids.length - 1)];
+    const cur = TankCatalog.get(tank.classId);
+    const need = (cur && cur.needLevel) || 1;
+    const band = ids.filter((id) => {
+      const n = (TankCatalog.tanks[id].needLevel || 1);
+      return Math.abs(n - need) <= 15;
+    });
+    const pool = band.length ? band : ids;
+    return pool[irand(0, pool.length - 1)];
+  }
+
+  function setLiveTankClass(tank, classId) {
+    if (!tank) return;
+    let id = classId;
+    if (!id || id === "random") id = liveRerollPool(tank, true);
+    if (!TankCatalog.tanks[id]) id = "basic";
+    tank.classId = id;
+    tank.customDef = null;
+    tank.respawnClassId = id;
+    clearOwnedShots(tank);
+    autoUpgradeBot(tank, true);
+    tank.health = tank.maxHealth;
+    tank.shield = tank.maxShield || 0;
+  }
+
+  function rerollLiveTank(tank, opts = {}) {
+    if (!tank) return;
+    setLiveTankClass(tank, liveRerollPool(tank, opts.similar !== false));
+  }
+
+  function recolorLiveTank(tank) {
+    if (!tank) return;
+    const hex = pickTeamColor(tank.color);
+    tank.color = hex;
+    tank.liveColor = hex;
+    for (const b of state.bullets) if (b.owner === tank) b.color = hex;
+  }
+
+  function healLiveTank(tank, frac) {
+    if (!tank || !tank.alive) return;
+    const f = clamp(Number(frac) || 0, 0, 1);
+    tank.health = clamp(tank.health + tank.maxHealth * f, 0, tank.maxHealth);
+    tank.shield = clamp((tank.shield || 0) + (tank.maxShield || 0) * f, 0, tank.maxShield || 0);
+  }
+
+  function bumpLiveLevels(tank, levels) {
+    if (!tank) return;
+    const add = Math.max(1, Math.min(2, Math.floor(Number(levels) || 1)));
+    const cap = levelCap();
+    const target = Math.min(cap, (tank.level || 1) + add);
+    tank.score = Math.max(tank.score || 0, xpForLevel(target));
+    applyLevel(tank);
+    if (tank.ai) autoUpgradeBot(tank, true);
+  }
+
+  function forceLiveHunted(tank, seconds) {
+    if (!tank) return;
+    state.hunted = tank;
+    applyLevel(tank);
+    applyTeamHuntRoles();
+    state.liveCamTarget = tank;
+    state.liveCamUntil = state.time + Math.max(3, Number(seconds) || 10);
+  }
+
+  function clearLiveForcedHunted() {
+    refreshHunted();
+  }
+
+  function liveSpotlight(tank, seconds) {
+    if (!tank) return;
+    state.liveCamTarget = tank;
+    state.liveCamUntil = state.time + Math.max(2, Number(seconds) || 8);
+    if (state.spectating) {
+      state.spectateTarget = tank;
+      updateSpectateLabel();
+    }
+  }
+
+  function liveShapeRush(seconds) {
+    state.liveShapeRushUntil = state.time + Math.max(5, Number(seconds) || 30);
+    for (let i = 0; i < 24; i++) {
+      const kind = i % 7 === 0 ? "pentagon" : (i % 3 === 0 ? "triangle" : "square");
+      state.shapes.push(createShape(kind));
+    }
+  }
+
+  function liveShapeRushTick(dt) {
+    if (!state.liveShapeRushUntil || state.time >= state.liveShapeRushUntil) return;
+    if (Math.random() < Math.min(0.9, dt * 4)) {
+      const kind = Math.random() < 0.12 ? "pentagon" : (Math.random() < 0.4 ? "triangle" : "square");
+      state.shapes.push(createShape(kind));
+    }
+  }
+
+  function liveUniverseChapter(opts = {}) {
+    const payer = opts.payer;
+    const secs = Math.max(10, Number(opts.seconds) || 40);
+    liveSpotlight(payer, Math.min(12, secs));
+    const ranked = rankedTanks();
+    const protectedIds = new Set(ranked.slice(0, 3).map((t) => t.id));
+    for (const t of state.tanks) {
+      if (!t.alive || !t.ai || t.closer || t.dominator || t.boss || t.fodder) continue;
+      if (protectedIds.has(t.id)) continue;
+      rerollLiveTank(t, { similar: false });
+      burst(t.x, t.y, t.color, 10, 120);
+    }
+    for (let i = 0; i < 40; i++) {
+      const a = rand(0, TAU);
+      const r = rand(40, 420);
+      const x = (payer ? payer.x : WORLD.w / 2) + Math.cos(a) * r;
+      const y = (payer ? payer.y : WORLD.h / 2) + Math.sin(a) * r;
+      burst(x, y, ["#f0d848", "#ff7a59", "#7ec8ff", "#c084fc"][i % 4], 6, 90);
+    }
+    note(opts.title || "Universe chapter", 5000);
+  }
+
+  function uniqueLiveName(prefer, exceptTank) {
+    const used = takenNames();
+    if (exceptTank && exceptTank.name) used.delete(String(exceptTank.name).trim().toLowerCase());
+    let base = trimNick(prefer, "Viewer");
+    if (!base) base = "Viewer";
+    if (!used.has(base.toLowerCase())) return base;
+    let i = 2;
+    while (used.has(`${base}_${i}`.toLowerCase()) || used.has(`${base} ${i}`.toLowerCase())) i++;
+    const next = `${base}_${i}`.slice(0, MAX_NICK_LENGTH);
+    return next;
+  }
+
+  function resetLiveBotName(tank) {
+    if (!tank) return;
+    tank.name = uniqueBotName();
+    tank.liveOwnerId = null;
+    tank.liveDisplay = null;
+    tank.liveColor = null;
+  }
+
+  function restartLiveRound() {
+    if (!state.live) return;
+    const mode = state.mode;
+    const bots = state.botCount;
+    const arms = state.armsRace;
+    const growth = state.growthVariant;
+    const maze = state.mazeVariant;
+    startGame("Host", {
+      live: true,
+      mode,
+      botCount: bots,
+      armsRace: arms,
+      growthVariant: growth,
+      mazeVariant: maze,
+      shapesEnabled: state.shapesEnabled !== false,
+      arenaScale: state.arenaScale,
+      shapeRate: state.shapeRate,
+    });
+  }
+
+  function startLiveGame(opts = {}) {
+    const mode = opts.mode || "manhunt";
+    const botCount = clampBotCount(opts.botCount != null ? opts.botCount : 100);
+    startGame("Host", {
+      live: true,
+      liveDemo: !!opts.demo,
+      mode,
+      botCount,
+      armsRace: !!opts.armsRace,
+      growthVariant: !!opts.growthVariant,
+      mazeVariant: !!opts.mazeVariant,
+      shapesEnabled: opts.shapesEnabled !== false,
+      oneHp: !!opts.oneHp,
+      zeroScore: !!opts.zeroScore,
+      arenaScale: opts.arenaScale,
+      shapeRate: opts.shapeRate,
+    });
   }
 
   function clearOwnedShots(owner) {
@@ -4464,9 +4725,16 @@
   }
 
   function rankedTanks(includeTank = null) {
-    return state.tanks
-      .filter((t) => (t.alive || t === includeTank) && !t.closer && !t.mothership && !t.dominator && !t.boss && !t.fodder)
+    const list = state.tanks
+      .filter((t) => (t.alive || t === includeTank) && !t.closer && !t.mothership && !t.dominator && !t.boss && !t.fodder && !t.hostOnly)
       .sort((a, b) => b.score - a.score);
+    const liveApi = window.TankfieldLive;
+    if (state.live && liveApi && liveApi.pinTank && liveApi.pinTank.alive && state.time < (liveApi.pinUntil || 0)) {
+      const pin = liveApi.pinTank;
+      const rest = list.filter((t) => t !== pin);
+      return [pin, ...rest];
+    }
+    return list;
   }
 
   function killTank(tank, killer, cause) {
@@ -4556,15 +4824,23 @@
       const focus = tank.aiFocus;
       setTimeout(() => {
         if (!running || state.closing || royaleLocked()) return;
-        const preserveClass = !!tank.respawnClassId;
+        const liveApi = window.TankfieldLive;
+        const liveNext = (state.live && liveApi && typeof liveApi.onBotDying === "function")
+          ? liveApi.onBotDying(tank)
+          : null;
+        const preserveClass = !!tank.respawnClassId && !(liveNext && liveNext.rebind);
+        const spawnName = (liveNext && liveNext.name) || tank.name;
+        const spawnClass = (liveNext && liveNext.rebind)
+          ? "basic"
+          : (tank.respawnClassId || "basic");
         const bot = createTank({
-          name: tank.name,
+          name: spawnName,
           ai: true,
-          score: kept,
-          classId: tank.respawnClassId || "basic",
-          customDef: tank.respawnCustomDef,
+          score: (liveNext && liveNext.rebind) ? startScore() : kept,
+          classId: spawnClass,
+          customDef: (liveNext && liveNext.rebind) ? null : tank.respawnCustomDef,
           team,
-          color: colorFor({ team }),
+          color: (liveNext && liveNext.rebind) ? colorFor({ team }) : (tank.liveColor || colorFor({ team })),
           pos: isSoccerMode() && team
             ? soccerSpawn(team)
             : (state.mode === "tdm" || isFourTeamMode()) && team
@@ -4594,7 +4870,28 @@
         } else if (state.mode === "siege") {
           bot.aiJob = Math.random() < 0.62 ? "defend" : "roam";
         }
-        autoUpgradeBot(bot, preserveClass);
+        if (liveNext) {
+          if (liveNext.liveOwnerId) {
+            bot.liveOwnerId = liveNext.liveOwnerId;
+            bot.livePlatform = liveNext.livePlatform || "tiktok";
+            bot.liveDisplay = liveNext.liveDisplay || bot.name;
+          }
+          if (liveNext.livePendingClassId) bot.livePendingClassId = liveNext.livePendingClassId;
+          if (!liveNext.rebind && tank.liveColor) {
+            bot.liveColor = tank.liveColor;
+            bot.color = tank.liveColor;
+          }
+        } else if (tank.liveOwnerId) {
+          bot.liveOwnerId = tank.liveOwnerId;
+          bot.livePlatform = tank.livePlatform;
+          bot.liveDisplay = tank.liveDisplay || tank.name;
+          if (tank.liveColor) {
+            bot.liveColor = tank.liveColor;
+            bot.color = tank.liveColor;
+          }
+          if (tank.livePendingClassId) bot.livePendingClassId = tank.livePendingClassId;
+        }
+        autoUpgradeBot(bot, preserveClass && !(bot.livePendingClassId));
         if (bot.guard) {
           bot.classId = "assault_guard";
           applyLevel(bot);
@@ -4603,6 +4900,9 @@
         bot.shield = bot.maxShield || 0;
         bot.spawnProtect = 0;
         state.tanks.push(bot);
+        if (state.live && liveApi && typeof liveApi.onBotRespawned === "function") {
+          liveApi.onBotRespawned(bot, tank);
+        }
         refreshHunted();
       }, 0);
     }
@@ -5025,8 +5325,18 @@
     return state.tanks.filter((t) => t.alive && !t.closer && !t.dominator);
   }
 
+  function soccerBallLive() {
+    return isSoccerMode() && state.ball && state.ball.alive !== false ? state.ball : null;
+  }
+
+  function spectateTargetLive(t) {
+    if (!t) return false;
+    if (t.type === "ball") return t.alive !== false && soccerBallLive() === t;
+    return !!t.alive;
+  }
+
   function spectateFree() {
-    return !!(state.spectating && state.ghost && !(state.spectateTarget && state.spectateTarget.alive));
+    return !!(state.spectating && state.ghost && !spectateTargetLive(state.spectateTarget));
   }
 
   function placeGhost(x, y) {
@@ -5040,9 +5350,23 @@
     };
   }
 
+  function snapSpectateGhost(target) {
+    if (!target || !state.ghost) return;
+    state.ghost.x = target.x;
+    state.ghost.y = target.y;
+  }
+
   function cameraFocus() {
+    if (state.live && state.liveCamUntil && state.time < state.liveCamUntil && state.liveCamTarget && state.liveCamTarget.alive) {
+      return state.liveCamTarget;
+    }
+    const liveApi = window.TankfieldLive;
+    if (state.live && liveApi && liveApi.spotlightTank && liveApi.spotlightTank.alive
+      && state.time < (liveApi.spotlightUntil || 0)) {
+      return liveApi.spotlightTank;
+    }
     if (state.spectating) {
-      if (state.spectateTarget && state.spectateTarget.alive) return state.spectateTarget;
+      if (spectateTargetLive(state.spectateTarget)) return state.spectateTarget;
       if (state.ghost) return state.ghost;
     }
     if (state.player && state.player.alive) return state.player;
@@ -5051,7 +5375,7 @@
 
   function viewFov() {
     const p = cameraFocus();
-    if (!p || p.ghost || !p.alive) return 1;
+    if (!p || p.ghost || !p.alive || p.type === "ball") return 1;
     return tankStats(p).fov || 1;
   }
 
@@ -5065,7 +5389,9 @@
     state.paused = !!(ws && !ws.classList.contains("hidden"));
     const src = state.player || state.camera;
     placeGhost(src.x, src.y);
-    state.spectateTarget = null;
+    const ball = soccerBallLive();
+    state.spectateTarget = ball || null;
+    if (ball) snapSpectateGhost(ball);
     if (els.spectateBar) els.spectateBar.classList.remove("hidden");
     updateSpectateLabel();
     try { renderClassPanel(); } catch (err) {}
@@ -5082,16 +5408,52 @@
   }
 
   function cycleSpectate(dir) {
+    const step = dir < 0 ? -1 : 1;
+    if (isSoccerMode()) {
+      const ball = soccerBallLive();
+      const tanks = spectateList();
+      const onTarget = spectateTargetLive(state.spectateTarget);
+      // Free cam (or lost target): first Tab always snaps to the ball.
+      if (!onTarget) {
+        state.spectateTarget = ball || tanks[0] || null;
+        snapSpectateGhost(state.spectateTarget);
+        updateSpectateLabel();
+        return;
+      }
+      if (ball && state.spectateTarget === ball) {
+        if (!tanks.length) {
+          updateSpectateLabel();
+          return;
+        }
+        state.spectateTarget = step > 0 ? tanks[0] : tanks[tanks.length - 1];
+        snapSpectateGhost(state.spectateTarget);
+        updateSpectateLabel();
+        return;
+      }
+      let i = tanks.indexOf(state.spectateTarget);
+      if (i < 0) {
+        state.spectateTarget = ball || tanks[0] || null;
+        snapSpectateGhost(state.spectateTarget);
+        updateSpectateLabel();
+        return;
+      }
+      const next = i + step;
+      if (next < 0 || next >= tanks.length) {
+        state.spectateTarget = ball || null;
+      } else {
+        state.spectateTarget = tanks[next];
+      }
+      snapSpectateGhost(state.spectateTarget);
+      updateSpectateLabel();
+      return;
+    }
     const list = spectateList();
     const slots = [null, ...list];
-    let i = state.spectateTarget && state.spectateTarget.alive ? slots.indexOf(state.spectateTarget) : 0;
+    let i = spectateTargetLive(state.spectateTarget) ? slots.indexOf(state.spectateTarget) : 0;
     if (i < 0) i = 0;
-    i = (i + dir + slots.length) % slots.length;
+    i = (i + step + slots.length) % slots.length;
     state.spectateTarget = slots[i];
-    if (state.spectateTarget && state.ghost) {
-      state.ghost.x = state.spectateTarget.x;
-      state.ghost.y = state.spectateTarget.y;
-    }
+    snapSpectateGhost(state.spectateTarget);
     updateSpectateLabel();
   }
 
@@ -5106,7 +5468,7 @@
     if (devDrag && devDrag.entity === state.ghost) return;
     const moving = stickX || stickY || keys.has("w") || keys.has("arrowup") || keys.has("s") || keys.has("arrowdown")
       || keys.has("a") || keys.has("arrowleft") || keys.has("d") || keys.has("arrowright");
-    if (state.spectateTarget && state.spectateTarget.alive) {
+    if (spectateTargetLive(state.spectateTarget)) {
       if (moving) enterFreeCam(state.spectateTarget);
       else return;
     }
@@ -5129,8 +5491,12 @@
   function updateSpectateLabel() {
     const t = state.spectateTarget;
     if (!els.spectateLabel) return;
-    if (t && t.alive) els.spectateLabel.textContent = `Spectating ${t.name}  ·  WASD to fly`;
-    else els.spectateLabel.textContent = "Free camera  ·  WASD · scroll zoom";
+    if (spectateTargetLive(t)) {
+      const label = t.type === "ball" ? "Ball" : t.name;
+      els.spectateLabel.textContent = `Spectating ${label}  ·  WASD to fly`;
+    } else {
+      els.spectateLabel.textContent = "Free camera  ·  WASD · scroll zoom";
+    }
   }
 
   function devCliOpen() {
@@ -6387,8 +6753,14 @@
     state.spectateTarget = null;
     state.ghost = null;
     state.camera.zoom = 1;
+    state.live = false;
+    document.body.classList.remove("live-host");
+    if (window.TankfieldLive && typeof window.TankfieldLive.deactivate === "function") {
+      window.TankfieldLive.deactivate();
+    }
     if (els.pause) els.pause.classList.add("hidden");
     if (els.spectateBar) els.spectateBar.classList.add("hidden");
+    if (els.spectateAgain) els.spectateAgain.classList.remove("hidden");
     clearNotes();
     els.death.classList.add("hidden");
     els.hud.classList.add("hidden");
@@ -7387,7 +7759,20 @@
       state.hunted = null;
       return;
     }
-    const alive = state.tanks.filter((t) => t.alive && !t.closer && !t.boss && !t.fodder && !t.mothership && !t.dominator);
+    const alive = state.tanks.filter((t) => t.alive && !t.closer && !t.boss && !t.fodder && !t.mothership && !t.dominator && !t.hostOnly);
+    const liveApi = window.TankfieldLive;
+    if (liveApi && liveApi.active && liveApi.forcedHunted && liveApi.forcedHunted.alive
+      && state.time < (liveApi.forcedHuntedUntil || 0)) {
+      const forced = liveApi.forcedHunted;
+      if (state.hunted !== forced) {
+        const prev = state.hunted;
+        state.hunted = forced;
+        if (prev && prev.alive) applyLevel(prev);
+        applyLevel(forced);
+        applyTeamHuntRoles();
+      }
+      return;
+    }
     if (isTeamHunt() && state.hunted && state.hunted.alive && alive.includes(state.hunted)) {
       applyTeamHuntRoles();
       return;
@@ -8490,7 +8875,10 @@
     updateInfection();
     updateEpicenter(dt);
     updateHide();
-    if (!state.closing && state.mode !== "siege" && !isSoccerMode() && state.time >= FFA_CLOSE_AT) beginArenaClose("4 hours up. Starting a fresh server.");
+    if (!state.live && !state.closing && state.mode !== "siege" && !isSoccerMode() && state.time >= FFA_CLOSE_AT) beginArenaClose("4 hours up. Starting a fresh server.");
+    if (state.live && window.TankfieldLive && typeof window.TankfieldLive.tick === "function") {
+      window.TankfieldLive.tick(dt);
+    }
     updateDoms(dt);
     updateAssault(dt);
     updateSiege(dt);
@@ -8928,7 +9316,8 @@
       }
       els.serverTotal.textContent = `Total ${formatScore(sum)}`;
     }
-    const p = state.spectating && state.spectateTarget && state.spectateTarget.alive ? state.spectateTarget : state.player;
+    const focus = state.spectating && spectateTargetLive(state.spectateTarget) ? state.spectateTarget : null;
+    const p = (focus && focus.type !== "ball") ? focus : state.player;
     if (!p) return;
     const next = Math.min(levelCap(), p.level + (p.level < levelCap() ? 1 : 0));
     const cur = xpForLevel(p.level);
@@ -10401,6 +10790,31 @@
     if (["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(k)) e.preventDefault();
     keys.add(k);
     if (e.code) keys.add(e.code.toLowerCase());
+    if (running && state.live && window.TankfieldLive) {
+      if (k === "g") {
+        e.preventDefault();
+        window.TankfieldLive.setGiftsPaused(!window.TankfieldLive.snapshot().giftsPaused);
+        note(window.TankfieldLive.snapshot().giftsPaused ? "Gifts paused" : "Gifts resumed", 2500);
+        return;
+      }
+      if (k === "q" && (e.shiftKey || e.altKey)) {
+        e.preventDefault();
+        window.TankfieldLive.clearQueue();
+        note("Live queue cleared", 2500);
+        return;
+      }
+      if (k === "r" && e.shiftKey) {
+        e.preventDefault();
+        restartLiveRound();
+        return;
+      }
+      if (k === "d" && e.shiftKey && window.TankfieldLiveBridge) {
+        e.preventDefault();
+        window.TankfieldLiveBridge.demoBurst();
+        note("Demo chat burst", 2000);
+        return;
+      }
+    }
     if (running && state.spectating && (k === "+" || k === "=" || e.code === "NumpadAdd")) {
       e.preventDefault();
       bumpSpectateZoom(1);
@@ -10835,6 +11249,22 @@
       const btn = e.target.closest("button");
       if (!btn) return;
       if (btn.id === "play-btn") playSelected();
+      else if (btn.id === "live-btn") {
+        setMenuBotCount(100);
+        startLiveGame({
+          mode: menuMode === "sandbox" ? "manhunt" : menuMode,
+          botCount: 100,
+          armsRace: menuVariants.arms,
+          growthVariant: menuVariants.growth,
+          mazeVariant: menuVariants.maze,
+          shapesEnabled: menuVariants.shapes,
+          oneHp: !addonsLocked() && menuAddons.onehp,
+          zeroScore: !addonsLocked() && menuAddons.zero,
+          arenaScale: menuArenaScale,
+          shapeRate: menuShapeRate,
+          demo: !!(window.location.search || "").includes("livedemo"),
+        });
+      }
       else if (btn.id === "workshop-btn") openWorkshop();
       else if (btn.id === "options-btn") {
         const panel = document.getElementById("options-panel");
@@ -10900,6 +11330,8 @@
 
   window.TankfieldGame = {
     startGame,
+    startLiveGame,
+    restartLiveRound,
     getDef,
     drawPreview,
     botCount: () => menuBotCount,
@@ -10928,6 +11360,21 @@
     },
     playing: () => running,
     applyLevel,
+    note,
+    floater,
+    setLiveTankClass,
+    rerollLiveTank,
+    recolorLiveTank,
+    healLiveTank,
+    bumpLiveLevels,
+    forceLiveHunted,
+    clearLiveForcedHunted,
+    liveSpotlight,
+    liveShapeRush,
+    liveShapeRushTick,
+    liveUniverseChapter,
+    uniqueLiveName,
+    resetLiveBotName,
     COLORS,
     TEAM_COLORS,
     stats: STATS,
@@ -11021,4 +11468,21 @@
   last = performance.now();
   requestAnimationFrame(frame);
   els.name.focus();
+  try {
+    const q = new URLSearchParams(window.location.search || "");
+    if (q.get("live") === "1" || q.get("live") === "true") {
+      setTimeout(() => {
+        startLiveGame({
+          mode: q.get("mode") || "manhunt",
+          botCount: 100,
+          armsRace: q.get("arms") === "1",
+          growthVariant: q.get("growth") === "1",
+          demo: q.get("demo") === "1" || q.get("livedemo") === "1",
+        });
+        if (q.get("ws") === "1" && window.TankfieldLiveBridge) {
+          window.TankfieldLiveBridge.connectWs(q.get("wsUrl") || "ws://127.0.0.1:8787");
+        }
+      }, 80);
+    }
+  } catch (err) {}
 })();
