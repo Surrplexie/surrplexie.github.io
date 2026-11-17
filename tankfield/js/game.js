@@ -3,6 +3,7 @@
 
   const WORLD = { w: 11500, h: 11500 };
   const WORLD_OPEN = 11500;
+  const GRID_STEP = 24;
   const ASSAULT_ZONE = 360;
   const TAU = Math.PI * 2;
   const STAT_MAX = 9;
@@ -321,6 +322,7 @@
     royaleRestartAt: 0,
     stormX: null,
     stormY: null,
+    royaleMaxR: 0,
     respawnAt: 0,
     walls: [],
     extraWalls: [],
@@ -2758,6 +2760,12 @@
     return Number.isFinite(n) ? clamp(n, 0.01, 2) : 1;
   }
 
+  function snapWorldSize(raw) {
+    // Keep arena edges on the rendered grid at every size % (1–200).
+    const step = GRID_STEP;
+    return Math.max(step * 8, Math.round(Math.max(100, raw) / step) * step);
+  }
+
   function applyWorldSize(mode) {
     let base;
     if (mode === "assault") base = irand(6750, 9000);
@@ -2766,7 +2774,7 @@
     else base = WORLD_OPEN;
     // Scale the arena bounds only. Entity / base / maze cell sizes stay fixed;
     // placements that use WORLD fractions move with the new map size.
-    const s = Math.max(100, Math.round(base * arenaScale()));
+    const s = snapWorldSize(base * arenaScale());
     WORLD.w = s;
     WORLD.h = s;
   }
@@ -4315,9 +4323,11 @@
     state.camera.zoom = 1;
     state.lastKiller = null;
     state.royaleRestartAt = 0;
+    state.royaleMaxR = 0;
     state.stormX = WORLD.w / 2;
     state.stormY = WORLD.h / 2;
     if (isRoyale(state.mode)) pickStormCenter();
+    else state.royaleMaxR = coverRadiusFor(mapDeadCenter());
     state.respawnAt = 0;
     state.alphaRespawnAt = 0;
     state.pentagonAt = shapeInterval(6, 12);
@@ -4721,22 +4731,50 @@
     return (isMazeVariant() && m !== "protect") || m === "maze" || isRoyale(m);
   }
 
+  function snapToGrid(v) {
+    return Math.round(v / GRID_STEP) * GRID_STEP;
+  }
+
+  function mapDeadCenter() {
+    return { x: WORLD.w * 0.5, y: WORLD.h * 0.5 };
+  }
+
+  function coverRadiusFor(c) {
+    return Math.hypot(Math.max(c.x, WORLD.w - c.x), Math.max(c.y, WORLD.h - c.y));
+  }
+
   function pickStormCenter() {
     const pad = Math.min(WORLD.w, WORLD.h) * 0.2;
-    state.stormX = rand(pad, WORLD.w - pad);
-    state.stormY = rand(pad, WORLD.h - pad);
+    state.stormX = snapToGrid(rand(pad, WORLD.w - pad));
+    state.stormY = snapToGrid(rand(pad, WORLD.h - pad));
+    // Freeze starting cover so moving the close point later does not resize the safe zone.
+    state.royaleMaxR = coverRadiusFor({ x: state.stormX, y: state.stormY });
+  }
+
+  function stormAnchor() {
+    return {
+      x: state.stormX != null ? state.stormX : mapDeadCenter().x,
+      y: state.stormY != null ? state.stormY : mapDeadCenter().y,
+    };
   }
 
   function stormCenter() {
+    const mid = mapDeadCenter();
+    const anchor = stormAnchor();
+    if (!isRoyale() || state.time < ROYALE_PREP) return anchor;
+    const t = clamp((state.time - ROYALE_PREP) / ROYALE_SHRINK, 0, 1);
+    // Hold the random close point, then ease into dead center for the final collapse.
+    const moveT = clamp((t - 0.55) / 0.45, 0, 1);
+    const u = moveT * moveT * (3 - 2 * moveT);
     return {
-      x: state.stormX != null ? state.stormX : WORLD.w / 2,
-      y: state.stormY != null ? state.stormY : WORLD.h / 2,
+      x: lerp(anchor.x, mid.x, u),
+      y: lerp(anchor.y, mid.y, u),
     };
   }
 
   function royaleMaxR() {
-    const c = stormCenter();
-    return Math.hypot(Math.max(c.x, WORLD.w - c.x), Math.max(c.y, WORLD.h - c.y));
+    if (state.royaleMaxR > 0) return state.royaleMaxR;
+    return coverRadiusFor(stormAnchor());
   }
 
   function royaleRadius() {
@@ -9745,7 +9783,7 @@
       if (stormOn) storm = [c.x, c.y, Math.max(rr, 0), 1];
       TankfieldGL.begin({
         camX: cam.x, camY: cam.y, zoom, shakeX: sx, shakeY: sy,
-        bg: rgbOf(COLORS.bg), grid: rgbOf(COLORS.grid), gridStep: 24,
+        bg: rgbOf(COLORS.bg), grid: rgbOf(COLORS.grid), gridStep: GRID_STEP,
         storm, stormCol: [210 / 255, 64 / 255, 42 / 255, 0.2],
       });
       if (rr > 4) {
@@ -9755,7 +9793,7 @@
     } else {
       TankfieldGL.begin({
         camX: cam.x, camY: cam.y, zoom, shakeX: sx, shakeY: sy,
-        bg: rgbOf(COLORS.bg), grid: rgbOf(COLORS.grid), gridStep: 24,
+        bg: rgbOf(COLORS.bg), grid: rgbOf(COLORS.grid), gridStep: GRID_STEP,
         storm, stormCol: [0, 0, 0, 0],
       });
     }
