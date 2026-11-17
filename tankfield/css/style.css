@@ -142,6 +142,15 @@ body.dev-move:active #hud {
   border-color: #8a6410;
 }
 
+body.live-lobby .tagline {
+  color: #8a6410;
+  font-weight: 700;
+}
+
+body.live-lobby #live-btn {
+  box-shadow: 0 0 0 2px rgba(201, 146, 20, 0.45);
+}
+
 .server-filters {
   display: flex;
   flex-wrap: wrap;

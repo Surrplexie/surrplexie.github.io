@@ -4698,13 +4698,76 @@
     });
   }
 
+  let liveLobby = false;
+  let liveWsWanted = false;
+  let liveWsUrl = "ws://127.0.0.1:8787";
+
+  function isLiveQuery() {
+    try {
+      const q = new URLSearchParams(window.location.search || "");
+      return q.get("live") === "1" || q.get("live") === "true";
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function syncLiveLobbyUi() {
+    const on = !!liveLobby;
+    document.body.classList.toggle("live-lobby", on);
+    const tag = document.querySelector(".tagline");
+    if (tag) tag.textContent = on ? "Live lobby · pick mode & settings, then Live" : "Local game";
+    const liveBtn = document.getElementById("live-btn");
+    if (liveBtn) {
+      liveBtn.textContent = on ? "Start Live" : "Live";
+      liveBtn.title = on
+        ? "Host spectates · uses your selected mode & settings"
+        : "Host spectates · chat claims tanks";
+    }
+    const playBtn = document.getElementById("play-btn");
+    if (playBtn && on) playBtn.title = "Normal local play (not Live chat claims)";
+  }
+
+  function ensureLiveWs() {
+    if (!liveWsWanted || !window.TankfieldLiveBridge || typeof window.TankfieldLiveBridge.connectWs !== "function") return;
+    window.TankfieldLiveBridge.connectWs(liveWsUrl);
+  }
+
+  function enterLiveLobby(opts = {}) {
+    liveLobby = true;
+    if (opts.ws) {
+      liveWsWanted = true;
+      if (opts.wsUrl) liveWsUrl = opts.wsUrl;
+    }
+    syncLiveLobbyUi();
+    ensureLiveWs();
+  }
+
+  function startLiveFromMenu(extra = {}) {
+    const mode = menuMode === "sandbox" ? "manhunt" : menuMode;
+    startLiveGame({
+      mode,
+      botCount: menuBotCount,
+      armsRace: menuVariants.arms,
+      growthVariant: menuVariants.growth,
+      mazeVariant: menuVariants.maze,
+      shapesEnabled: menuVariants.shapes,
+      oneHp: !addonsLocked() && menuAddons.onehp,
+      zeroScore: !addonsLocked() && menuAddons.zero,
+      arenaScale: menuArenaScale,
+      shapeRate: menuShapeRate,
+      demo: !!(extra.demo || (window.location.search || "").includes("livedemo")),
+    });
+  }
+
   function startLiveGame(opts = {}) {
-    const mode = opts.mode || "manhunt";
-    const botCount = clampBotCount(opts.botCount != null ? opts.botCount : 100);
+    const mode = opts.mode || menuMode || "ffa";
+    const botCount = clampBotCount(opts.botCount != null ? opts.botCount : menuBotCount);
+    if (liveLobby || isLiveQuery()) enterLiveLobby({ ws: liveWsWanted || isLiveQuery() });
+    ensureLiveWs();
     startGame("Host", {
       live: true,
       liveDemo: !!opts.demo,
-      mode,
+      mode: mode === "sandbox" ? "manhunt" : mode,
       botCount,
       armsRace: !!opts.armsRace,
       growthVariant: !!opts.growthVariant,
@@ -6765,6 +6828,11 @@
     els.death.classList.add("hidden");
     els.hud.classList.add("hidden");
     els.start.classList.remove("hidden");
+    if (liveLobby || isLiveQuery()) {
+      liveLobby = true;
+      syncLiveLobbyUi();
+      ensureLiveWs();
+    }
     resize();
     const ws = document.getElementById("workshop");
     if (ws) ws.classList.add("hidden");
@@ -11250,20 +11318,8 @@
       if (!btn) return;
       if (btn.id === "play-btn") playSelected();
       else if (btn.id === "live-btn") {
-        setMenuBotCount(100);
-        startLiveGame({
-          mode: menuMode === "sandbox" ? "manhunt" : menuMode,
-          botCount: 100,
-          armsRace: menuVariants.arms,
-          growthVariant: menuVariants.growth,
-          mazeVariant: menuVariants.maze,
-          shapesEnabled: menuVariants.shapes,
-          oneHp: !addonsLocked() && menuAddons.onehp,
-          zeroScore: !addonsLocked() && menuAddons.zero,
-          arenaScale: menuArenaScale,
-          shapeRate: menuShapeRate,
-          demo: !!(window.location.search || "").includes("livedemo"),
-        });
+        if (isLiveQuery() || liveLobby) enterLiveLobby({ ws: liveWsWanted || isLiveQuery() });
+        startLiveFromMenu();
       }
       else if (btn.id === "workshop-btn") openWorkshop();
       else if (btn.id === "options-btn") {
@@ -11471,18 +11527,26 @@
   try {
     const q = new URLSearchParams(window.location.search || "");
     if (q.get("live") === "1" || q.get("live") === "true") {
-      setTimeout(() => {
-        startLiveGame({
-          mode: q.get("mode") || "manhunt",
-          botCount: 100,
-          armsRace: q.get("arms") === "1",
-          growthVariant: q.get("growth") === "1",
-          demo: q.get("demo") === "1" || q.get("livedemo") === "1",
-        });
-        if (q.get("ws") === "1" && window.TankfieldLiveBridge) {
-          window.TankfieldLiveBridge.connectWs(q.get("wsUrl") || "ws://127.0.0.1:8787");
-        }
-      }, 80);
+      enterLiveLobby({
+        ws: q.get("ws") === "1" || q.get("ws") === "true",
+        wsUrl: q.get("wsUrl") || "ws://127.0.0.1:8787",
+      });
+      // Optional: ?autostart=1 still jumps straight in for scripts/overlays.
+      if (q.get("autostart") === "1" || q.get("autostart") === "true") {
+        setTimeout(() => {
+          startLiveGame({
+            mode: q.get("mode") || menuMode || "ffa",
+            botCount: q.get("bots") != null ? Number(q.get("bots")) : menuBotCount,
+            armsRace: q.get("arms") === "1" || menuVariants.arms,
+            growthVariant: q.get("growth") === "1" || menuVariants.growth,
+            mazeVariant: menuVariants.maze,
+            shapesEnabled: menuVariants.shapes,
+            demo: q.get("demo") === "1" || q.get("livedemo") === "1",
+            arenaScale: menuArenaScale,
+            shapeRate: menuShapeRate,
+          });
+        }, 80);
+      }
     }
   } catch (err) {}
 })();

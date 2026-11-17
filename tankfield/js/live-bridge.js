@@ -94,21 +94,43 @@
 
   // Optional local WebSocket bridge: ws://127.0.0.1:8787
   let socket = null;
+  let socketUrl = "ws://127.0.0.1:8787";
+  let reconnectTimer = null;
+
+  function scheduleReconnect() {
+    if (reconnectTimer) return;
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      connectWs(socketUrl);
+    }, 1500);
+  }
+
   function connectWs(url) {
-    const target = url || "ws://127.0.0.1:8787";
+    const target = url || socketUrl || "ws://127.0.0.1:8787";
+    socketUrl = target;
     try {
+      if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)
+        && socket.url === target) {
+        return true;
+      }
       if (socket) {
-        try { socket.close(); } catch (e) {}
+        try { socket.onclose = null; socket.close(); } catch (e) {}
       }
       socket = new WebSocket(target);
+      socket.addEventListener("open", () => {
+        console.log("[TankfieldLiveBridge] connected", target);
+      });
       socket.addEventListener("message", (ev) => {
         try {
           const data = JSON.parse(ev.data);
           push(data, data.platform);
         } catch (err) {}
       });
+      socket.addEventListener("close", () => scheduleReconnect());
+      socket.addEventListener("error", () => {});
       return true;
     } catch (err) {
+      scheduleReconnect();
       return false;
     }
   }
