@@ -512,6 +512,12 @@
     renderHud(false);
   }
 
+  function showPanel(visible) {
+    const panel = document.getElementById("live-hud");
+    if (!panel) return;
+    panel.classList.toggle("hidden", !visible);
+  }
+
   function activate(cfg) {
     Object.assign(live.config, cfg || {});
     live.active = true;
@@ -526,15 +532,27 @@
     live.pinTank = null;
     live.chapterTitle = null;
     live.giftsPaused = false;
-    const panel = document.getElementById("live-hud");
-    if (panel) panel.classList.remove("hidden");
-    renderHud();
+    showPanel(true);
+    renderHud(true);
   }
 
-  function deactivate() {
+  function deactivate(opts = {}) {
     live.active = false;
-    const panel = document.getElementById("live-hud");
-    if (panel) panel.classList.add("hidden");
+    // Keep the side panel up in the Live lobby so hosts still see queue/status.
+    if (!opts.keepPanel) showPanel(false);
+    else renderHud(true);
+  }
+
+  function showLobby(cfg) {
+    Object.assign(live.config, cfg || {});
+    live.active = false;
+    showPanel(true);
+    const statusEl = document.querySelector("#live-hud [data-live=status]");
+    if (statusEl) {
+      statusEl.textContent = "Lobby · pick mode, then Start Live";
+      statusEl.classList.remove("paused");
+    }
+    renderHud(true);
   }
 
   function kickOwner(userId) {
@@ -647,6 +665,8 @@
   window.TankfieldLive = {
     activate,
     deactivate,
+    showLobby,
+    showPanel,
     ingest,
     handleChat,
     handleGift,

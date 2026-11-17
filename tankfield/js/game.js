@@ -4506,15 +4506,18 @@
       clearOwnedShots(host);
       state.tanks = state.tanks.filter((t) => t !== host);
     }
+    if (els.hud) els.hud.classList.remove("hidden");
+    if (els.start) els.start.classList.add("hidden");
     beginSpectate();
     placeGhost(WORLD.w / 2, WORLD.h / 2);
     enterFreeCam();
+    if (els.spectateBar) els.spectateBar.classList.remove("hidden");
     if (els.spectateAgain) els.spectateAgain.classList.add("hidden");
     if (els.spectateDevRespawn) els.spectateDevRespawn.classList.add("hidden");
     if (els.spectateLabel) els.spectateLabel.textContent = "Live host · free cam · chat claims tanks";
     document.body.classList.add("live-host");
+    document.body.classList.remove("live-lobby");
     if (els.arenaMode) els.arenaMode.textContent = `${modeLabel()} · LIVE`;
-    note("Live mode · chat joins free · gifts buy drama", 5000);
     const liveApi = window.TankfieldLive;
     if (liveApi && typeof liveApi.activate === "function") {
       liveApi.activate({
@@ -4523,7 +4526,14 @@
         armsRace: !!state.armsRace,
         growthVariant: !!state.growthVariant,
       });
+    } else if (liveApi && typeof liveApi.showPanel === "function") {
+      liveApi.showPanel(true);
+    } else {
+      const panel = document.getElementById("live-hud");
+      if (panel) panel.classList.remove("hidden");
     }
+    // After HUD is visible so the toast isn't cleared by menu teardown.
+    setTimeout(() => note("Live mode · chat joins free · gifts buy drama", 5000), 0);
     if (opts.liveDemo && window.TankfieldLiveBridge && typeof window.TankfieldLiveBridge.demoBurst === "function") {
       setTimeout(() => window.TankfieldLiveBridge.demoBurst(), 600);
     }
@@ -4740,6 +4750,15 @@
     }
     syncLiveLobbyUi();
     ensureLiveWs();
+    const liveApi = window.TankfieldLive;
+    if (liveApi && typeof liveApi.showLobby === "function") {
+      liveApi.showLobby({ capacity: menuBotCount });
+    } else if (liveApi && typeof liveApi.showPanel === "function") {
+      liveApi.showPanel(true);
+    } else {
+      const panel = document.getElementById("live-hud");
+      if (panel) panel.classList.remove("hidden");
+    }
   }
 
   function startLiveFromMenu(extra = {}) {
@@ -6819,7 +6838,7 @@
     state.live = false;
     document.body.classList.remove("live-host");
     if (window.TankfieldLive && typeof window.TankfieldLive.deactivate === "function") {
-      window.TankfieldLive.deactivate();
+      window.TankfieldLive.deactivate({ keepPanel: !!(liveLobby || isLiveQuery()) });
     }
     if (els.pause) els.pause.classList.add("hidden");
     if (els.spectateBar) els.spectateBar.classList.add("hidden");
@@ -6832,6 +6851,12 @@
       liveLobby = true;
       syncLiveLobbyUi();
       ensureLiveWs();
+      const liveApi = window.TankfieldLive;
+      if (liveApi && typeof liveApi.showLobby === "function") liveApi.showLobby({ capacity: menuBotCount });
+      else {
+        const panel = document.getElementById("live-hud");
+        if (panel) panel.classList.remove("hidden");
+      }
     }
     resize();
     const ws = document.getElementById("workshop");

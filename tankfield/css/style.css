@@ -1269,7 +1269,7 @@ kbd {
   position: fixed;
   left: 12px;
   top: 12px;
-  z-index: 10;
+  z-index: 25;
   width: min(280px, calc(var(--app-w) - 24px));
   padding: 10px 12px;
   border-radius: 10px;
@@ -1281,6 +1281,10 @@ kbd {
   line-height: 1.35;
   pointer-events: auto;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+
+body.live-lobby #live-hud {
+  top: 12px;
 }
 
 #live-hud.hidden {

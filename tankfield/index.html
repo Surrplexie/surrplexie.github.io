@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <meta name="robots" content="noindex, nofollow" />
   <title>Tankfield</title>
-  <link rel="stylesheet" href="css/style.css?v=130" />
+  <link rel="stylesheet" href="css/style.css?v=131" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet" />
@@ -218,6 +218,20 @@
     </div>
   </div>
 
+  <aside id="live-hud" class="hidden" aria-label="Live stream HUD">
+    <div data-live="chapter" class="live-chapter hidden"></div>
+    <div data-live="status" class="live-status">Live · chat joins free</div>
+    <div data-live="queue">Queue 0 · Field 0/0</div>
+    <div data-live="claim">Claim · —</div>
+    <div data-live="gift">Gift · —</div>
+    <div data-live="blocked" class="live-blocked hidden"></div>
+    <div class="live-actions">
+      <button type="button" data-live-action="pause-gifts">Gifts [G]</button>
+      <button type="button" data-live-action="clear-queue">Clear queue</button>
+      <button type="button" data-live-action="reset-round">Reset round</button>
+    </div>
+  </aside>
+
   <div id="hud" class="hidden">
     <div id="scoreboard">
       <ol id="leader-list"></ol>
@@ -247,20 +261,6 @@
       <button id="spectate-menu" type="button">Menu</button>
     </div>
     <div id="notes"></div>
-
-    <aside id="live-hud" class="hidden" aria-label="Live stream HUD">
-      <div data-live="chapter" class="live-chapter hidden"></div>
-      <div data-live="status" class="live-status">Live · chat joins free</div>
-      <div data-live="queue">Queue 0 · Field 0/0</div>
-      <div data-live="claim">Claim · —</div>
-      <div data-live="gift">Gift · —</div>
-      <div data-live="blocked" class="live-blocked hidden"></div>
-      <div class="live-actions">
-        <button type="button" data-live-action="pause-gifts">Gifts [G]</button>
-        <button type="button" data-live-action="clear-queue">Clear queue</button>
-        <button type="button" data-live-action="reset-round">Reset round</button>
-      </div>
-    </aside>
 
     <section id="dev-cli" class="hidden" aria-hidden="true">
       <div id="dev-cli-output" role="log" aria-live="polite"></div>
@@ -443,9 +443,9 @@
 
   <script src="js/gl.js?v=7"></script>
   <script src="js/defs.js?v=116"></script>
-  <script src="js/live.js?v=2"></script>
+  <script src="js/live.js?v=3"></script>
   <script src="js/live-bridge.js?v=2"></script>
-  <script src="js/game.js?v=182"></script>
+  <script src="js/game.js?v=183"></script>
   <script src="js/editor.js?v=111"></script>
 </body>
 </html>
