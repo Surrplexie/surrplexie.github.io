@@ -8026,9 +8026,13 @@
     return ent.r * ent.r;
   }
 
+  // Cover the largest arena (200% of open map) so scaled worlds stay in-hash.
+  // A too-small grid clamped query mins past the max cell and skipped all hits.
+  const HASH_SPAN = Math.ceil(WORLD_OPEN * 2.1 + 512);
+
   function makeHash(cell) {
-    const cols = Math.ceil(14000 / cell);
-    const heads = new Int32Array(cols * cols);
+    const cols = Math.max(8, Math.ceil(HASH_SPAN / cell));
+    let heads = new Int32Array(cols * cols);
     const next = new Int32Array(4096);
     let cells = new Int32Array(4096);
     const items = new Array(4096);
@@ -8036,6 +8040,7 @@
     let count = 0;
     let maxR = 0;
     let cap = 4096;
+    const clip = (v) => (v < 0 ? 0 : v >= cols ? cols - 1 : v);
     const hash = {
       on: false,
       get count() { return count; },
@@ -8055,16 +8060,13 @@
           const grownCells = new Int32Array(cap);
           grownCells.set(cells);
           cells = grownCells;
+          while (items.length < cap) items.push(null);
         }
         const i = count++;
         items[i] = ent;
         ent._seq = i;
-        let cx = (ent.x / cell) | 0;
-        let cy = (ent.y / cell) | 0;
-        if (cx < 0) cx = 0;
-        else if (cx >= cols) cx = cols - 1;
-        if (cy < 0) cy = 0;
-        else if (cy >= cols) cy = cols - 1;
+        const cx = clip((ent.x / cell) | 0);
+        const cy = clip((ent.y / cell) | 0);
         const k = cy * cols + cx;
         cells[i] = k;
         const link = hash._next;
@@ -8075,14 +8077,12 @@
       finish() { hash.on = true; },
       query(x, y, rad, fn) {
         const reach = rad + maxR;
-        let x0 = ((x - reach) / cell) | 0;
-        let y0 = ((y - reach) / cell) | 0;
-        let x1 = ((x + reach) / cell) | 0;
-        let y1 = ((y + reach) / cell) | 0;
-        if (x0 < 0) x0 = 0;
-        if (y0 < 0) y0 = 0;
-        if (x1 >= cols) x1 = cols - 1;
-        if (y1 >= cols) y1 = cols - 1;
+        let x0 = clip(((x - reach) / cell) | 0);
+        let y0 = clip(((y - reach) / cell) | 0);
+        let x1 = clip(((x + reach) / cell) | 0);
+        let y1 = clip(((y + reach) / cell) | 0);
+        if (x0 > x1) { const t = x0; x0 = x1; x1 = t; }
+        if (y0 > y1) { const t = y0; y0 = y1; y1 = t; }
         const link = hash._next;
         for (let cy = y0; cy <= y1; cy++) {
           const row = cy * cols;
