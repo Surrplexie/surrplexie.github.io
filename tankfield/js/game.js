@@ -2014,8 +2014,8 @@
   function fitLivePortraitZoom() {
     if (!livePortraitActive() || !width) return;
     // Zoom out so more of the horizontal field (bases / sidelines) fits in 9:16.
-    const span = Math.max(1400, WORLD.w * 0.48);
-    const next = clamp(width / span, 0.32, 0.82);
+    const span = Math.max(1600, WORLD.w * 0.56);
+    const next = clamp(width / span, 0.3, 0.74);
     state.camera.zoom = next;
   }
 
