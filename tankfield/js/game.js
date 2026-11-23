@@ -269,7 +269,6 @@
   let miniWallRev = 0;
   let pageZ = 1;
   let zoomFix = null;
-  let liveFrame = { active: false, left: 0, top: 0, w: 0, h: 0 };
   let last = 0;
   let running = false;
   let shake = 0;
@@ -1975,57 +1974,13 @@
     mouse.y = ((e.clientY - rect.top) / rh) * height;
   }
 
-  function livePortraitActive() {
-    return !!(running && state.live);
-  }
-
-  function syncLivePortraitFrame(winW, winH) {
-    const root = document.documentElement;
-    if (!livePortraitActive()) {
-      liveFrame = { active: false, left: 0, top: 0, w: winW, h: winH };
-      document.body.classList.remove("live-portrait");
-      root.style.removeProperty("--live-left");
-      root.style.removeProperty("--live-top");
-      root.style.removeProperty("--live-w");
-      root.style.removeProperty("--live-h");
-      return { width: winW, height: winH };
-    }
-    // Overlay/HUD frame stays 9:16 so panels keep their portrait positions,
-    // but the live canvas itself uses the full window again.
-    const target = 9 / 16;
-    let fw;
-    let fh;
-    let fl;
-    let ft;
-    if (winW / Math.max(1, winH) > target) {
-      fh = winH;
-      fw = fh * target;
-      fl = (winW - fw) * 0.5;
-      ft = 0;
-    } else {
-      fw = winW;
-      fh = fw / target;
-      fl = 0;
-      ft = (winH - fh) * 0.5;
-    }
-    liveFrame = { active: true, left: fl, top: ft, w: fw, h: fh };
-    document.body.classList.add("live-portrait");
-    root.style.setProperty("--live-left", `${fl}px`);
-    root.style.setProperty("--live-top", `${ft}px`);
-    root.style.setProperty("--live-w", `${fw}px`);
-    root.style.setProperty("--live-h", `${fh}px`);
-    return { width: winW, height: winH };
-  }
-
   function resize() {
     applyAntiZoom();
     const nativeDpr = (window.devicePixelRatio || 1) / pageZ;
     dpr = Math.min(Math.max(nativeDpr, 1), 2);
-    const winW = window.innerWidth * pageZ;
-    const winH = window.innerHeight * pageZ;
-    const frame = syncLivePortraitFrame(winW, winH);
-    width = frame.width;
-    height = frame.height;
+    // Live and normal play share the same full-window canvas / chart scaling.
+    width = window.innerWidth * pageZ;
+    height = window.innerHeight * pageZ;
     const pw = Math.max(1, Math.floor(width * dpr));
     const ph = Math.max(1, Math.floor(height * dpr));
     // Assigning canvas width clears the bitmap even when the value is unchanged,
@@ -2041,9 +1996,6 @@
     }
     document.documentElement.style.setProperty("--app-w", `${width}px`);
     document.documentElement.style.setProperty("--app-h", `${height}px`);
-    // Full browser size for debug tools (chart/CLI) so Live 9:16 does not shrink them.
-    document.documentElement.style.setProperty("--win-w", `${winW}px`);
-    document.documentElement.style.setProperty("--win-h", `${winH}px`);
     if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (glOn) TankfieldGL.resize(width, height, dpr);
     if (changed && running) {
@@ -6948,7 +6900,6 @@
     state.camera.zoom = 1;
     state.live = false;
     document.body.classList.remove("live-host");
-    document.body.classList.remove("live-portrait");
     if (window.TankfieldLive && typeof window.TankfieldLive.deactivate === "function") {
       window.TankfieldLive.deactivate({ keepPanel: !!(liveLobby || isLiveQuery()) });
     }
