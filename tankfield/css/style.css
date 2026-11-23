@@ -42,6 +42,160 @@ button, input, textarea, select, a {
   pointer-events: none;
 }
 
+/* Live TikTok 9:16 portrait frame (in-match only). Browser stays landscape. */
+body.live-portrait {
+  background: #070707;
+}
+
+body.live-portrait #game,
+body.live-portrait #labels {
+  inset: auto;
+  left: var(--live-left, 0px);
+  top: var(--live-top, 0px);
+  width: var(--live-w, 100%);
+  height: var(--live-h, 100%);
+}
+
+body.live-portrait #live-hud {
+  left: calc(var(--live-left, 0px) + 8px);
+  top: calc(var(--live-top, 0px) + 8px);
+  width: min(188px, calc(var(--live-w, 100%) * 0.42));
+  padding: 7px 8px;
+  font-size: 11px;
+  transform: scale(0.86);
+  transform-origin: top left;
+  z-index: 12;
+}
+
+body.live-portrait #live-hud .live-actions {
+  gap: 4px;
+  margin-top: 6px;
+}
+
+body.live-portrait #live-hud .live-actions button {
+  padding: 3px 6px;
+  font-size: 10px;
+}
+
+body.live-portrait #spectate-bar {
+  left: calc(var(--live-left, 0px) + var(--live-w, 100%) * 0.5);
+  top: calc(var(--live-top, 0px) + 8px);
+  max-width: calc(var(--live-w, 100%) - 20px);
+  padding: 4px 8px;
+  gap: 4px;
+  font-size: 11px;
+  transform: translateX(-50%) scale(0.84);
+  transform-origin: top center;
+  z-index: 13;
+}
+
+body.live-portrait #spectate-bar button {
+  padding: 4px 7px;
+  font-size: 11px;
+}
+
+body.live-portrait #spectate-label {
+  max-width: 9em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.live-portrait #scoreboard {
+  top: calc(var(--live-top, 0px) + 46px);
+  right: auto;
+  left: calc(var(--live-left, 0px) + var(--live-w, 100%) - 8px);
+  transform: translateX(-100%) scale(0.78);
+  transform-origin: top right;
+  width: min(168px, calc(var(--live-w, 100%) * 0.4));
+  z-index: 11;
+}
+
+body.live-portrait #scoreboard::before {
+  margin: 0 0 3px 16px;
+  font-size: 12px;
+}
+
+body.live-portrait #leader-list {
+  font-size: 10px;
+  max-height: calc(var(--live-h, 100%) * 0.36);
+  overflow: hidden;
+}
+
+body.live-portrait #leader-list li {
+  height: 14px;
+  margin: 0 0 2px 16px;
+  width: calc(100% - 16px);
+  border-width: 1px;
+  border-radius: 7px;
+}
+
+body.live-portrait #leader-list li.team-tot {
+  height: 16px;
+  margin-bottom: 3px;
+  font-size: 10px;
+}
+
+body.live-portrait #notes {
+  left: calc(var(--live-left, 0px) + var(--live-w, 100%) * 0.5);
+  top: calc(var(--live-top, 0px) + 46px);
+  max-width: min(280px, calc(var(--live-w, 100%) - 28px));
+  transform: translateX(-50%) scale(0.86);
+  transform-origin: top center;
+  z-index: 12;
+}
+
+body.live-portrait #spectate-bar:not(.hidden) ~ #notes {
+  top: calc(var(--live-top, 0px) + 46px);
+}
+
+body.live-portrait .note {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+body.live-portrait #minimap-wrap {
+  right: auto;
+  bottom: auto;
+  left: calc(var(--live-left, 0px) + var(--live-w, 100%) - 8px);
+  top: calc(var(--live-top, 0px) + var(--live-h, 100%) - 8px);
+  transform: translate(-100%, -100%) scale(0.82);
+  transform-origin: bottom right;
+  gap: 2px;
+}
+
+body.live-portrait #meta-info {
+  font-size: 9px;
+}
+
+body.live-portrait #minimap {
+  width: 120px !important;
+  height: 120px !important;
+}
+
+body.live-portrait #edit-ingame {
+  display: none !important;
+}
+
+/* Chart / CLI stay full-window 16:9 size (not shrunk into the 9:16 frame). */
+body.live-portrait #dev-chart {
+  left: 12px;
+  top: 10px;
+  width: min(980px, calc(var(--win-w, 100vw) - 268px));
+  height: min(520px, calc(var(--win-h, 100vh) - 236px));
+  max-width: none;
+  transform: none;
+  z-index: 45;
+}
+
+body.live-portrait #dev-cli {
+  left: 12px;
+  bottom: 224px;
+  width: min(380px, calc(var(--win-w, 100vw) - 24px));
+  transform: none;
+  z-index: 45;
+}
+
 body.dev-move #game,
 body.dev-move #hud {
   cursor: grab;
