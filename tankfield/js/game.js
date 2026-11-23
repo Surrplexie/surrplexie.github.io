@@ -1990,6 +1990,8 @@
       root.style.removeProperty("--live-h");
       return { width: winW, height: winH };
     }
+    // Overlay/HUD frame stays 9:16 so panels keep their portrait positions,
+    // but the live canvas itself uses the full window again.
     const target = 9 / 16;
     let fw;
     let fh;
@@ -2012,15 +2014,7 @@
     root.style.setProperty("--live-top", `${ft}px`);
     root.style.setProperty("--live-w", `${fw}px`);
     root.style.setProperty("--live-h", `${fh}px`);
-    return { width: fw, height: fh };
-  }
-
-  function fitLivePortraitZoom() {
-    if (!livePortraitActive() || !width) return;
-    // Zoom out so more of the horizontal field (bases / sidelines) fits in 9:16.
-    const span = Math.max(1600, WORLD.w * 0.56);
-    const next = clamp(width / span, 0.3, 0.74);
-    state.camera.zoom = next;
+    return { width: winW, height: winH };
   }
 
   function resize() {
@@ -4649,7 +4643,6 @@
     }
     renumberLiveFillerBots();
     resize();
-    fitLivePortraitZoom();
     // After HUD is visible so the toast isn't cleared by menu teardown.
     setTimeout(() => note("Live mode · chat joins free · gifts buy drama", 5000), 0);
     if (opts.liveDemo && window.TankfieldLiveBridge && typeof window.TankfieldLiveBridge.demoBurst === "function") {

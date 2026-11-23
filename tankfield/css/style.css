@@ -42,18 +42,10 @@ button, input, textarea, select, a {
   pointer-events: none;
 }
 
-/* Live TikTok 9:16 portrait frame (in-match only). */
+/* Live TikTok 9:16 overlay frame (in-match only).
+   Game canvas stays full-bleed; HUD/minimap/scoreboard keep portrait positions. */
 body.live-portrait {
   background: #070707;
-}
-
-body.live-portrait #game,
-body.live-portrait #labels {
-  inset: auto;
-  left: var(--live-left, 0px);
-  top: var(--live-top, 0px);
-  width: var(--live-w, 100%);
-  height: var(--live-h, 100%);
 }
 
 body.live-portrait #live-hud {
