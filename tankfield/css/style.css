@@ -42,20 +42,7 @@ button, input, textarea, select, a {
   pointer-events: none;
 }
 
-/* Live TikTok 9:16 portrait frame (in-match only). Browser stays landscape. */
-body.live-portrait {
-  background: #070707;
-}
-
-body.live-portrait #game,
-body.live-portrait #labels {
-  inset: auto;
-  left: var(--live-left, 0px);
-  top: var(--live-top, 0px);
-  width: var(--live-w, 100%);
-  height: var(--live-h, 100%);
-}
-
+/* Live: full-bleed 16:9 canvas; only on-screen HUD uses 9:16 placements. */
 body.live-portrait #live-hud {
   left: calc(var(--live-left, 0px) + 8px);
   top: calc(var(--live-top, 0px) + 8px);

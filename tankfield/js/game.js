@@ -1979,7 +1979,7 @@
     return !!(running && state.live);
   }
 
-  function syncLivePortraitFrame(winW, winH) {
+  function syncLivePortraitHud(winW, winH) {
     const root = document.documentElement;
     if (!livePortraitActive()) {
       liveFrame = { active: false, left: 0, top: 0, w: winW, h: winH };
@@ -1988,9 +1988,10 @@
       root.style.removeProperty("--live-top");
       root.style.removeProperty("--live-w");
       root.style.removeProperty("--live-h");
-      return { width: winW, height: winH };
+      return;
     }
-    // Live play only: letterbox the game to 9:16. Browser/window stays landscape.
+    // Live only: HUD placements use a centered 9:16 guide.
+    // Canvas itself stays full-window 16:9.
     const target = 9 / 16;
     let fw;
     let fh;
@@ -2013,15 +2014,6 @@
     root.style.setProperty("--live-top", `${ft}px`);
     root.style.setProperty("--live-w", `${fw}px`);
     root.style.setProperty("--live-h", `${fh}px`);
-    return { width: fw, height: fh };
-  }
-
-  function fitLivePortraitZoom() {
-    if (!livePortraitActive() || !width) return;
-    // Zoom out so more of the horizontal field (bases / sidelines) fits in 9:16.
-    const span = Math.max(1600, WORLD.w * 0.56);
-    const next = clamp(width / span, 0.3, 0.74);
-    state.camera.zoom = next;
   }
 
   function resize() {
@@ -2030,9 +2022,10 @@
     dpr = Math.min(Math.max(nativeDpr, 1), 2);
     const winW = window.innerWidth * pageZ;
     const winH = window.innerHeight * pageZ;
-    const frame = syncLivePortraitFrame(winW, winH);
-    width = frame.width;
-    height = frame.height;
+    // Live canvas is full-bleed 16:9; only HUD uses the 9:16 guide.
+    syncLivePortraitHud(winW, winH);
+    width = winW;
+    height = winH;
     const pw = Math.max(1, Math.floor(width * dpr));
     const ph = Math.max(1, Math.floor(height * dpr));
     // Assigning canvas width clears the bitmap even when the value is unchanged,
@@ -2048,7 +2041,7 @@
     }
     document.documentElement.style.setProperty("--app-w", `${width}px`);
     document.documentElement.style.setProperty("--app-h", `${height}px`);
-    // Chart / CLI keep full browser (16:9) size during Live 9:16.
+    // Chart / CLI stay fixed at full browser scale during Live.
     document.documentElement.style.setProperty("--win-w", `${winW}px`);
     document.documentElement.style.setProperty("--win-h", `${winH}px`);
     if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -4650,7 +4643,6 @@
     }
     renumberLiveFillerBots();
     resize();
-    fitLivePortraitZoom();
     // After HUD is visible so the toast isn't cleared by menu teardown.
     setTimeout(() => note("Live mode · chat joins free · gifts buy drama", 5000), 0);
     if (opts.liveDemo && window.TankfieldLiveBridge && typeof window.TankfieldLiveBridge.demoBurst === "function") {
