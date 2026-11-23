@@ -164,12 +164,12 @@ body.live-portrait #edit-ingame {
   display: none !important;
 }
 
-/* Chart / CLI stay full-window 16:9 size (not shrunk into the 9:16 frame). */
+/* Chart / CLI keep the same 16:9 layout size as normal play (not HUD-guide scaled). */
 body.live-portrait #dev-chart {
   left: 12px;
   top: 10px;
-  width: min(980px, calc(var(--win-w, 100vw) - 268px));
-  height: min(520px, calc(var(--win-h, 100vh) - 236px));
+  width: min(980px, calc(var(--app-w) - 268px));
+  height: min(520px, calc(var(--app-h) - 236px));
   max-width: none;
   transform: none;
   z-index: 45;
@@ -178,7 +178,7 @@ body.live-portrait #dev-chart {
 body.live-portrait #dev-cli {
   left: 12px;
   bottom: 224px;
-  width: min(380px, calc(var(--win-w, 100vw) - 24px));
+  width: min(380px, calc(var(--app-w) - 24px));
   transform: none;
   z-index: 45;
 }

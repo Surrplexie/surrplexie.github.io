@@ -6672,14 +6672,33 @@
     }
   }
 
+  function chartPlotMetrics() {
+    const plot = els.devChartPlot;
+    // Layout CSS px (not getBoundingClientRect) so drawing/tip match under body anti-zoom.
+    const w = Math.max(10, plot.clientWidth || plot.offsetWidth || 10);
+    const h = Math.max(10, plot.clientHeight || plot.offsetHeight || 10);
+    const ratio = Math.min(Math.max((window.devicePixelRatio || 1) / pageZ, 1), 2);
+    return { w, h, ratio };
+  }
+
+  function chartPointerToPlot(e, target) {
+    const box = target.getBoundingClientRect();
+    const bw = box.width || 1;
+    const bh = box.height || 1;
+    // Map viewport pointer back into layout CSS px used by drawDevChart / tip.
+    const layoutW = target.clientWidth || bw;
+    const layoutH = target.clientHeight || bh;
+    return {
+      x: ((e.clientX - box.left) / bw) * layoutW,
+      y: ((e.clientY - box.top) / bh) * layoutH,
+    };
+  }
+
   function drawDevChart() {
     const canvas = els.devChartCanvas;
     const plot = els.devChartPlot;
     if (!canvas || !plot || !devChart.open) return;
-    const rect = plot.getBoundingClientRect();
-    const ratio = window.devicePixelRatio || 1;
-    const w = Math.max(10, rect.width);
-    const h = Math.max(10, rect.height);
+    const { w, h, ratio } = chartPlotMetrics();
     const bw = Math.max(1, Math.floor(w * ratio));
     const bh = Math.max(1, Math.floor(h * ratio));
     if (canvas.width !== bw || canvas.height !== bh) {
@@ -6896,8 +6915,7 @@
     }
     if (els.devChartCanvas) {
       els.devChartCanvas.addEventListener("mousemove", (e) => {
-        const box = els.devChartCanvas.getBoundingClientRect();
-        devChart.hover = { x: e.clientX - box.left, y: e.clientY - box.top };
+        devChart.hover = chartPointerToPlot(e, els.devChartCanvas);
         requestDevChartDraw();
       });
       els.devChartCanvas.addEventListener("mouseleave", () => {
